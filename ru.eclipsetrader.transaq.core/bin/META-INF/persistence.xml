@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="2.1" xmlns="http://xmlns.jcp.org/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence http://xmlns.jcp.org/xml/ns/persistence/persistence_2_1.xsd">
+	<persistence-unit name="tq4j" transaction-type="RESOURCE_LOCAL">
+		<class>ru.eclipsetrader.transaq.core.data.BooleanConverter</class>
+		<class>ru.eclipsetrader.transaq.core.data.DefaultJPAListener</class>
+		<class>ru.eclipsetrader.transaq.core.model.internal.Server</class>
+		<class>ru.eclipsetrader.transaq.core.model.internal.Market</class>
+		<class>ru.eclipsetrader.transaq.core.model.internal.CandleKind</class>
+		<class>ru.eclipsetrader.transaq.core.model.internal.Security</class>
+		<class>ru.eclipsetrader.transaq.core.model.internal.Client</class>
+		<class>ru.eclipsetrader.transaq.core.model.internal.Board</class>
+		<class>ru.eclipsetrader.transaq.core.model.internal.ServerSession</class>
+		<class>ru.eclipsetrader.transaq.core.model.internal.SecurityPosition</class>
+		<class>ru.eclipsetrader.transaq.core.model.internal.Board</class>
+		<class>ru.eclipsetrader.transaq.core.model.internal.MoneyPosition</class>
+		<class>ru.eclipsetrader.transaq.core.model.internal.FortsPosition</class>
+		<class>ru.eclipsetrader.transaq.core.model.internal.FortsMoneyPosition</class>
+		<class>ru.eclipsetrader.transaq.core.model.internal.Trade</class>
+		<class>ru.eclipsetrader.transaq.core.model.internal.Order</class>
+		<class>ru.eclipsetrader.transaq.core.model.internal.TickTrade</class>
+		<exclude-unlisted-classes>false</exclude-unlisted-classes>
+		<properties>
+			<property name="eclipselink.jdbc.batch-writing" value="Oracle-JDBC"/>
+			<property name="javax.persistence.jdbc.url" value="jdbc:oracle:thin:@localhost:1521:A"/>
+			<property name="javax.persistence.jdbc.user" value="tq4j"/>
+			<property name="javax.persistence.jdbc.password" value="temptemp_1"/>
+			<property name="javax.persistence.jdbc.driver" value="oracle.jdbc.OracleDriver"/>
+			
+			<property name="eclipselink.logging.level" value="INFO"/>
+			<property name="eclipselink.logging.parameters" value="true"/>
+			<property name="eclipselink.logging.session" value="true"/>
+			<property name="eclipselink.logging.thread" value="true"/>
+			<property name="eclipselink.logging.exceptions" value="true"/>
+
+		</properties>
+	</persistence-unit>
+</persistence>

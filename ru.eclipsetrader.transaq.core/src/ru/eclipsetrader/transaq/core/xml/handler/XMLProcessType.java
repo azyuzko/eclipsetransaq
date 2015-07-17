@@ -1,0 +1,28 @@
+package ru.eclipsetrader.transaq.core.xml.handler;
+
+public enum XMLProcessType {
+
+	COMMAND,
+	
+	ERROR,
+	MESSAGES,
+	MARKETS,
+	BOARDS,
+	CANDLEKINDS,
+	SECURITIES,
+	PITS,
+	CLIENT,
+	POSITIONS,
+	OVERNIGHT, 
+	SERVER_STATUS,
+	ALLTRADES,
+	QUOTATIONS,
+	QUOTES,
+	TICKS,
+	CANDLES,
+	SEC_INFO,
+	SEC_INFO_UPD,
+	ORDERS,
+	NEWS_HEADER,
+	TRADES;
+}
