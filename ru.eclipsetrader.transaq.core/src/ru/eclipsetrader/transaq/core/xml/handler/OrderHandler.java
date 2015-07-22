@@ -46,7 +46,7 @@ public class OrderHandler extends DefaultHandler {
 		case order:
 			processingType = ProcessingType.ORDER;
 			transactionId = attributes.getValue("transactionid");
-			currentOrder = DataManager.getOrder(transactionId);
+			//currentOrder = DataManager.getOrder(transactionId);
 			if (currentOrder == null) {
 				currentOrder = DataManager.merge(new Order(transactionId));
 			}

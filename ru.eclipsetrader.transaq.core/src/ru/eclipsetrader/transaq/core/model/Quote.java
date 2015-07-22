@@ -1,10 +1,10 @@
-package ru.eclipsetrader.transaq.core.model.internal;
+package ru.eclipsetrader.transaq.core.model;
 
-import ru.eclipsetrader.transaq.core.model.BoardType;
+import java.util.Date;
+
 
 public class Quote {
-
-	Integer secid;
+	
 	BoardType board;
 	String seccode;
 	double price;
@@ -12,13 +12,21 @@ public class Quote {
 	int yield;
 	int buy;
 	int sell;
-
-	public Integer getSecid() {
-		return secid;
+	
+	Date time; // time of object construction
+	
+	public Quote(BoardType board, String seccode) {
+		this.time = new Date();
+		this.board = board;
+		this.seccode = seccode;
 	}
 
-	public void setSecid(Integer secid) {
-		this.secid = secid;
+	public Date getTime() {
+		return time;
+	}
+
+	public void setTime(Date time) {
+		this.time = time;
 	}
 
 	public BoardType getBoard() {

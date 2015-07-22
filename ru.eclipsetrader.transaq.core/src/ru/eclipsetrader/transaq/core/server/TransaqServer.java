@@ -26,6 +26,7 @@ import ru.eclipsetrader.transaq.core.event.Observer;
 import ru.eclipsetrader.transaq.core.event.osgi.OSGIServerStatusEvent;
 import ru.eclipsetrader.transaq.core.exception.CommandException;
 import ru.eclipsetrader.transaq.core.exception.ConnectionException;
+import ru.eclipsetrader.transaq.core.exception.UnimplementedException;
 import ru.eclipsetrader.transaq.core.interfaces.ITransaqServer;
 import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
 import ru.eclipsetrader.transaq.core.model.ConnectionStatus;
@@ -74,45 +75,6 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 	
 	public final Event<ServerSession> onConnectEstablished = new Event<ServerSession>("TransaqServer.onConnectEstablished", eventThreadGroup);
 	public final Event<String> onDisconnected = new Event<String>("TransaqServer.onDisconnected", eventThreadGroup);
-	/*public final InstrumentMassEvent<Quote> onQuotesUpdate = new InstrumentMassEvent<Quote>("TransaqServer.onQuotesUpdate", eventThreadGroup);
-	 TODO refactor
-	public final InstrumentEvent<SecurityPosition> onSecurityPositionUpdate = new InstrumentEvent<SecurityPosition>("TransaqServer.onSecurityPositionUpdate");
-	public final InstrumentEvent<MoneyPosition> onMoneyPositionUpdate = new InstrumentEvent<MoneyPosition>("TransaqServer.onMoneyPositionUpdate");
-	public final InstrumentEvent<FortsPosition> onFortsPositionUpdate = new InstrumentEvent<FortsPosition>("TransaqServer.onFortsPositionUpdate");
-	public final Event<FortsMoneyPosition> onFortsMoneyPositionUpdate = new Event<FortsMoneyPosition>("TransaqServer.onFortsMoneyPositionUpdate");
-	public final InstrumentEvent<CandleGraph> onCandlesReceive = new InstrumentEvent<CandleGraph>("TransaqServer.onCandlesReceive");
-	public final InstrumentEvent<TickTrade> onTickTradesReceive = new InstrumentEvent<TickTrade>("TransaqServer.onTickTradesReceive", eventThreadGroup);
-	public final InstrumentEvent<Trade> onTradeReceive = new InstrumentEvent<Trade>("TransaqServer.onTradeReceive", eventThreadGroup);
-	public final InstrumentEvent<Order> onOrderReceive = new InstrumentEvent<Order>("TransaqServer.onOrderReceive", eventThreadGroup);
-	*/
-	
-	/*public TransaqServer(Server server) {
-		this.server = server;
-		this.session = new ServerSession(server.getId());
-		this.transaqLibrary = new TransaqLibrary();
-		initExtentions();		
-
-		try {
-			this.parser = Utils.getSAXParserFactory().newSAXParser();
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-	
-	private void initExtentions() {
-		IExtensionPoint extensionPoint = Platform.getExtensionRegistry().getExtensionPoint("ru.eclipsetrader.transaq.core.events.OnTransaqServerEvent");
-		List<IConnectionStatus> connectionStatusEvents = new ArrayList<IConnectionStatus>();		
-		for (IConfigurationElement configElement : extensionPoint.getConfigurationElements()) {
-			try {
-				Object connectionStatusInstance = configElement.createExecutableExtension("onConnectionStatus");
-				if (connectionStatusInstance instanceof IConnectionStatus) {
-					connectionStatusEvents.add((IConnectionStatus)connectionStatusInstance);
-				}
-			} catch (CoreException e) {
-				e.printStackTrace();
-			}
-		}
-	}*/
 	
 	public TransaqServer(final String serverId) {
 		
@@ -222,7 +184,6 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 			}
 			
 			CoreActivator.getEventAdmin().postEvent(OSGIServerStatusEvent.getEvent(serverId, newStatus));
-			
 		}
 	}
 	
@@ -269,6 +230,15 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 		session.setSessionId(sessionId);		
 		session.setStatus(ConnectionStatus.CONNECTING);
 	}
+	
+	public void reconnect() {
+		if (session.getStatus() != ConnectionStatus.DISCONNECTED) {
+			throw new RuntimeException("Unable to reconnect from state " + getStatus());
+		}
+		
+		// TODO reconnect
+		throw new UnimplementedException();
+	}
 
 	public void connect(String serverId) throws ConnectionException {
 		long startTime = System.currentTimeMillis();
@@ -281,7 +251,7 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 		initNewSession();
 		
 		try {
-			TransaqLibrary.SendCommand(server.createSubscribeCommand());
+			TransaqLibrary.SendCommand(server.createConnectCommand());
 		} catch (CommandException ex) {
 			throw new ConnectionException("Ошибка при подключении к серверу: <" + ex.getMessage()+ ">", ex);
 		}
@@ -324,7 +294,7 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 	public void changePass(String newPass) throws CommandException {
 		logger.warn("Changing password!");
 		ChangePasswordCommand changePasswordCommand = new ChangePasswordCommand(server.getPassword(), newPass);
-		TransaqLibrary.SendCommand(changePasswordCommand.createSubscribeCommand());
+		TransaqLibrary.SendCommand(changePasswordCommand.createConnectCommand());
 	}
 	
 	public void close() {

@@ -11,7 +11,7 @@ public class GetHistoryDataCommand extends BaseCommand {
 	boolean reset = true;
 
 	@Override
-	public String createSubscribeCommand() {
+	public String createConnectCommand() {
 		/*
 		 * <command id="gethistorydata">
 		 *  <security>

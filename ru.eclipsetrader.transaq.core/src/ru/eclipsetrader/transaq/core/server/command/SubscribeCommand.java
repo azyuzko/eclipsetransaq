@@ -40,7 +40,7 @@ public class SubscribeCommand extends BaseCommand {
 		return quotes;
 	}
 
-	public String createSubscribeCommand() {
+	public String createConnectCommand() {
 		return createCommand("subscribe");
 	}
 	

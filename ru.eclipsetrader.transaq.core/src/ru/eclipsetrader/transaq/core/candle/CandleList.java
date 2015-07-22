@@ -6,6 +6,8 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.TreeMap;
 
+import org.apache.commons.lang3.time.DateUtils;
+
 import ru.eclipsetrader.transaq.core.interfaces.ITQTickTrade;
 import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.PriceType;
@@ -22,11 +24,16 @@ public class CandleList {
 	public CandleList(CandleType candleType){
 		super();
 		this.candleType = candleType;
-		System.out.println("CandleList " + candleType + " created..");
+		// System.out.println("CandleList " + candleType + " created..");
+	}
+	
+	public CandleList(CandleType candleType, Collection<Candle> candles) {
+		this(candleType);
+		appendCandles(candles);
 	}
 	
 	public Date[] dates() {
-		return map.values().toArray(new Date[map.size()]);
+		return map.keySet().toArray(new Date[map.size()]);
 	}
 	
 	public double[] values(PriceType priceType) {
@@ -72,40 +79,72 @@ public class CandleList {
 	}
 	
 	public Candle getLastCandle() {
-		return map.lastEntry().getValue();
+		if (map.size() > 0) {
+			return map.lastEntry().getValue();
+		} else {
+			return null;
+		}
 	}
 	
 	public void appendCandles(Collection<Candle> candles) {
-		System.out.println("appendCandles size = " + candles.size() + " to " + candleType);
+		// System.out.println("appendCandles size = " + candles.size() + " to " + candleType);
 		for (Candle candle : candles) {
 			map.put(candle.getDate(), candle);
 		}
-		//TODO refactor  onCandleListChange.notifyObservers(this);
 	}
 	
 	public void putCandle(Candle candle) {
 		map.put(candle.getDate(), candle);
 	}
 	
+	/**
+	 * Ищет ближайшую к указанной дату начала свечи для указанного размера
+	 * Хорошая задача для кандидатов на java-разработчиков :)
+	 * @param toDate дата
+	 * @param candleType размер свечи
+	 * @return
+	 */
+	public static Date closestCandleStartTime(Date toDate, CandleType candleType) {
+		long size = candleType.getSeconds();
+		switch (candleType) {
+		case CANDLE_1M: return DateUtils.truncate(toDate, Calendar.MINUTE);
+		case CANDLE_1H: return DateUtils.truncate(toDate, Calendar.HOUR);
+		case CANDLE_1D: return DateUtils.truncate(toDate, Calendar.DATE);
+		case CANDLE_1W: return DateUtils.truncate(toDate, Calendar.WEEK_OF_MONTH);
+		default:
+			break;
+		}
+		Date result = DateUtils.truncate(toDate, candleType.getCalendarBase());
+		long delta = toDate.getTime() - result.getTime();
+		int mod = (int) (delta % (size * 1000));
+		
+		return DateUtils.addMilliseconds(toDate, -mod);
+	}
+	
+	/**
+	 * Кладет тик в свечу
+	 * @param trade
+	 * @return
+	 */
 	public Candle processTradeInCandle(ITQTickTrade trade) {
 		
-		Candle topCandle = getLastCandle();
+		Candle topCandle = getLastCandle(); // если свечей нет, вернет null
 		
-		Date newTime = new Date(topCandle.getDate().getTime() + (candleType.getSeconds()) * 1000 ); // перешагнули за размер свечи
+		Date newTime = new Date(0); // minimal date
 		
-		if (trade.getTime() == null) {
-			throw new RuntimeException("trade.getTime() is null");
+		if (topCandle != null) {
+			newTime = new Date(topCandle.getDate().getTime() + (candleType.getSeconds()) * 1000 ); // перешагнули за размер свечи
+			
+			if (trade.getTime() == null) {
+				throw new RuntimeException("trade.getTime() is null");
+			}
 		}
 		
 		if (trade.getTime().after(newTime)) {
 			
-			Calendar cal = Calendar.getInstance(); // locale-specific
-			cal.setTime(trade.getTime());
-			cal.set(Calendar.SECOND, 0);
-			cal.set(Calendar.MILLISECOND, 0);
-			newTime = new Date(cal.getTimeInMillis());
+			newTime = closestCandleStartTime(trade.getTime(), candleType);
 			
-			System.out.println("New candle starting from " + Utils.formatDate(newTime));
+			// System.out.println("New candle starting from " + Utils.formatDate(newTime));
 			topCandle = new Candle();
 			topCandle.setDate(newTime);
 			map.put(trade.getTime(), topCandle);
@@ -141,7 +180,11 @@ public class CandleList {
 	}
 	
 	public static void main(String[] args) {
-		CandleList cl = new CandleList(CandleType.CANDLE_1H);
+		
+		Date dt1 = Utils.parseDate("15.02.2015 21:37:56.145");
+		System.out.println(Utils.formatDate(closestCandleStartTime(dt1, CandleType.CANDLE_1D)));
+
+	/*	CandleList cl = new CandleList(CandleType.CANDLE_1H);
 		Candle c1 = new Candle();
 		c1.setDate(Utils.parseDate("16.07.2015 23:00:00.000"));
 		c1.setOpen(1.2);
@@ -164,7 +207,7 @@ public class CandleList {
 		
 		System.out.println("-- truncate --");
 		
-		System.out.println(cl.toString());
+		System.out.println(cl.toString());*/
 		
 	}
 	

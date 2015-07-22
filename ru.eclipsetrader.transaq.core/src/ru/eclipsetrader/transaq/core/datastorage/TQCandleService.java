@@ -50,8 +50,10 @@ public class TQCandleService implements ITQCandleService {
 		@Override
 		public void update(CandleGraph candleGraph) {
 			candleBuffer.addAll(candleGraph.getCandles());
+			System.out.println("candleGraph.getCandles().size = " + candleGraph.getCandles().size() + " status = " + candleGraph.getStatus());
 			if (candleGraph.getStatus() == CandleStatus.NO_MORE || candleGraph.getStatus() == CandleStatus.FULL_PROVIDED) {
 				synchronized (candlesWait) {
+					System.out.println("Notify waiters");
 					candlesWait.notify();	
 				}				
 			}
@@ -107,26 +109,37 @@ public class TQCandleService implements ITQCandleService {
 		throw new IllegalArgumentException("CandleType for periodId = " + periodId + " not found!");
 	}
 	
+	public List<Candle> getHistoryData(ITQSymbol security, CandleType candleType, int count) {
+		return getHistoryData(security, candleType, count, true);
+	}
+	
 	// получим свечи
-	public List<Candle> getHistoryData(ITQSymbol security, CandleType candleType, int count) {		
+	public List<Candle> getHistoryData(ITQSymbol security, CandleType candleType, int count, boolean reset) {		
 		System.out.println("Calling getHistoryData for <" + TQSymbol.symbolKey(security) + ">");
 		GetHistoryDataCommand getHistoryDataCommand = new GetHistoryDataCommand();
 		getHistoryDataCommand.setBoard(security.getBoard());
 		getHistoryDataCommand.setSeccode(security.getSeccode());
 		getHistoryDataCommand.setPeriodId(getCandleKindByType(candleType).getId());
 		getHistoryDataCommand.setCandleCount(count);
-		TransaqLibrary.SendCommand(getHistoryDataCommand.createSubscribeCommand());
+		getHistoryDataCommand.setReset(reset);
+		TransaqLibrary.SendCommand(getHistoryDataCommand.createConnectCommand());
 		// опчистим буфер
 		candleBuffer.clear();
 		
 		synchronized (candlesWait) {
 			try {
-				candlesWait.wait(10000);
+				candlesWait.wait(100000);
 				return candleBuffer;
 			} catch (InterruptedException e) {
 				throw new RuntimeException("Candles hasn't been received due 10 seconds", e);
 			}
 		}
+	}
+
+	@Override
+	public void persist(TQSymbol symbol, CandleType candleType,
+			List<Candle> candles) {
+		DataManager.batchCandles(symbol, candleType, candles);		
 	}
 
 }

@@ -16,4 +16,6 @@ public interface ITransaqServerManager {
 	ITransaqServer connect(String serverId);
 	
 	void disconnect();
+	
+	void reconnect();
 }

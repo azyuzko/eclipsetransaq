@@ -23,10 +23,9 @@ import java.util.UUID;
 import javax.persistence.Id;
 import javax.xml.parsers.SAXParserFactory;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import ru.eclipsetrader.transaq.core.model.internal.Order;
 
 public class Utils {
 	
@@ -201,6 +200,35 @@ public class Utils {
 			e.printStackTrace();
 			return t;
 		}
+	}
+
+	public static String printArray(double[] data) {
+		return printArray(data, null);
+	}
+	
+	public static String printArray(double[] data, String format) {
+		return printArray(ArrayUtils.toObject(data), format);
+	}
+
+	public static String printArray(Object[] data) {
+		return printArray(data);
+	}
+	
+	public static String printArray(Object[] data, String format) {
+		StringBuilder sb = new StringBuilder();
+		if (data != null) {
+			for (Object d : data) {
+				if (format != null) {
+					sb.append(String.format(format, d));
+				} else {
+					sb.append(d);
+				}
+				sb.append(" ");
+			}
+		} else {
+			sb.append("empty");
+		}
+		return sb.toString();
 	}
 	
 	public static void main(String[] args) {

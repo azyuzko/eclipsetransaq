@@ -16,7 +16,7 @@ public class ChangePasswordCommand extends BaseCommand {
 	}
 
 	@Override
-	public String createSubscribeCommand() {
+	public String createConnectCommand() {
 		StringBuilder sb = new StringBuilder();
 		sb.append("<command id=\"change_pass\"");
 		sb.append("oldpass=\"" + oldPass + "\"");

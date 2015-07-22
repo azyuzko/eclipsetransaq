@@ -6,19 +6,39 @@ import java.util.TreeMap;
 
 import ru.eclipsetrader.transaq.core.interfaces.ITQTickTrade;
 import ru.eclipsetrader.transaq.core.model.Candle;
+import ru.eclipsetrader.transaq.core.model.TQSymbol;
 
 public class CandleStorage  {
-
+	
+	TQSymbol symbol;
+	
 	private TreeMap<CandleType, CandleList> storage = new TreeMap<>(CandleType.comparator);
 
-	public CandleStorage() {
-		
+	public CandleStorage(TQSymbol symbol) {
+		this.symbol = symbol;
 	}
 	
 	public CandleStorage(CandleType[] candleTypes) {
 		for (CandleType candleType : candleTypes) {
 			storage.put(candleType, new CandleList(candleType));
 		}
+	}
+	
+	
+	/**
+	 * Создает пустой список свечей
+	 * @param candleType
+	 * @return
+	 */
+	public CandleList createCandleTypeList(CandleType candleType) {
+		for (CandleType ct :getCandleTypes()) {
+			if (ct == candleType) {
+				throw new RuntimeException("Candle type " + candleType + "already exists");
+			}
+		}
+		CandleList result = new CandleList(candleType);
+		addCandleList(result);
+		return result;
 	}
 	
 	/**

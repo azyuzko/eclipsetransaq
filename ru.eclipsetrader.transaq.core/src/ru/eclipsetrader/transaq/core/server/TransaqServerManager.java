@@ -41,6 +41,13 @@ public class TransaqServerManager implements ITransaqServerManager {
 		return result;
 	}
 
+	@Override
+	public void reconnect() {
+		if (TransaqServer.getInstance() == null) {
+			throw new RuntimeException("Cannot reconnect empty server!");
+		}
+		TransaqServer.getInstance().reconnect();
+	}
 
 	@Override
 	public ITransaqServer connect(String serverId) {

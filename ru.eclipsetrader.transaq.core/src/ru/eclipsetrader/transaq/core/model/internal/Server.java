@@ -44,7 +44,7 @@ public class Server extends BaseCommand implements ITQServer {
 	@Convert(converter = BooleanConverter.class)
 	boolean dbLogging = false;
 
-	public String createSubscribeCommand() {
+	public String createConnectCommand() {
 		return ("<command id=\"connect\">" + "<login>$LOGIN$</login>"
 				+ "<password>$PASSWORD$</password>" + "<host>$HOST$</host>"
 				+ "<port>$PORT$</port>" + "<logsdir>$LOG_DIR$</logsdir>"

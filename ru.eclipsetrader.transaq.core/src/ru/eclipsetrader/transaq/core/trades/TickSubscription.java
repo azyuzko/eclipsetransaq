@@ -1,12 +1,11 @@
 package ru.eclipsetrader.transaq.core.trades;
 
-import ru.eclipsetrader.transaq.core.interfaces.ITQSymbol;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 
 public class TickSubscription {
 
 	TQSymbol symbol;
-	String tradeno = "0";
+	String tradeno = "1";
 	
 	public TickSubscription(TQSymbol symbol, String tradeno) {
 		this.symbol = symbol;
@@ -14,7 +13,7 @@ public class TickSubscription {
 	}
 	
 	public TickSubscription(TQSymbol symbol) {
-		this(symbol, "0");
+		this(symbol, "1");
 	}
 
 	public TQSymbol getSymbol() {

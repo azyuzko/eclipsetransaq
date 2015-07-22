@@ -1,21 +1,39 @@
 package ru.eclipsetrader.transaq.core.quotes;
 
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
 
+import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.event.Observer;
-import ru.eclipsetrader.transaq.core.exception.UnimplementedException;
 import ru.eclipsetrader.transaq.core.instruments.TQInstrumentService;
 import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
+import ru.eclipsetrader.transaq.core.model.Quote;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
-import ru.eclipsetrader.transaq.core.model.internal.Quote;
 import ru.eclipsetrader.transaq.core.model.internal.SymbolGapMap;
 import ru.eclipsetrader.transaq.core.server.command.SubscribeCommand;
 import ru.eclipsetrader.transaq.core.services.ITQQuoteService;
 
-public class TQQuoteService implements ITQQuoteService {
+public class TQQuoteService implements ITQQuoteService, Closeable {
+	
+	ArrayBlockingQueue<List<Quote>> quoteQueue = new ArrayBlockingQueue<List<Quote>>(300);
+	
+	Thread dbWriteThread = new Thread(new Runnable() {
+		@Override
+		public void run() {
+			while (!Thread.interrupted()) {
+				try {
+					List<Quote> list = quoteQueue.take();
+					DataManager.batchQuoteList(list);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	});
 	
 	static TQQuoteService instance;
 	public static TQQuoteService getInstance() {
@@ -26,6 +44,12 @@ public class TQQuoteService implements ITQQuoteService {
 	}
 	
 	private TQQuoteService() {
+		dbWriteThread.start();
+	}
+	
+	@Override
+	public void close() {
+		dbWriteThread.interrupt();
 	}
 	
 	Observer<List<SymbolGapMap>> quoteGapObserver = new Observer<List<SymbolGapMap>>(){
@@ -34,6 +58,7 @@ public class TQQuoteService implements ITQQuoteService {
 			Map<TQSymbol, List<Quote>> quoteMap = applyQuoteGap(gapList);
 			for (TQSymbol symbol : quoteMap.keySet()) {
 				List<Quote> quotesList = quoteMap.get(symbol);
+				quoteQueue.add(quotesList);
 				TQInstrumentService.getInstance().getIQuotesObserver().update(symbol, quotesList);
 			}
 		}
@@ -54,7 +79,7 @@ public class TQQuoteService implements ITQQuoteService {
 				quoteList = new ArrayList<Quote>();
 				quoteMap.put(key, quoteList);
 			}
-			Quote quote = new Quote();
+			Quote quote = new Quote(key.getBoard(), key.getSeccode());
 			for (String attr : quoteGap.keySet()) {
 				if ("buy".equals(attr)) quote.setBuy(Integer.valueOf(quoteGap.get(attr)));				
 				else if ("price".equals(attr)) quote.setPrice(Double.valueOf(quoteGap.get(attr)));
@@ -70,7 +95,7 @@ public class TQQuoteService implements ITQQuoteService {
 	public void subscribe(TQSymbol symbol) {
 		SubscribeCommand subscribeCommand = new SubscribeCommand();
 		subscribeCommand.subscribeQuotes(symbol);
-		TransaqLibrary.SendCommand(subscribeCommand.createSubscribeCommand());
+		TransaqLibrary.SendCommand(subscribeCommand.createConnectCommand());
 	}
 
 	@Override
@@ -80,18 +105,16 @@ public class TQQuoteService implements ITQQuoteService {
 		TransaqLibrary.SendCommand(subscribeCommand.createUnsubscribeCommand());
 	}
 
-	@Override
-	public void subscribe(TQSymbol[] symbols) {
+	public void subscribe(List<TQSymbol> symbols) {
 		SubscribeCommand subscribeCommand = new SubscribeCommand();
 		for (TQSymbol symbol : symbols) {
 			subscribeCommand.subscribeQuotes(symbol);
 		}
-		TransaqLibrary.SendCommand(subscribeCommand.createSubscribeCommand());
+		TransaqLibrary.SendCommand(subscribeCommand.createConnectCommand());
 		
 	}
 
-	@Override
-	public void unsubscribe(TQSymbol[] symbols) {
+	public void unsubscribe(List<TQSymbol> symbols) {
 		SubscribeCommand subscribeCommand = new SubscribeCommand();
 		for (TQSymbol symbol : symbols) {
 			subscribeCommand.subscribeQuotes(symbol);
@@ -99,10 +122,6 @@ public class TQQuoteService implements ITQQuoteService {
 		TransaqLibrary.SendCommand(subscribeCommand.createUnsubscribeCommand());
 	}
 
-	@Override
-	public void unsubscribeAll() {
-		throw new UnimplementedException();
-	}
-	
+
 
 }

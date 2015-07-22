@@ -58,24 +58,6 @@ public class TQQuotationService implements ITQQuotationService {
 		// TODO Auto-generated method stub
 		
 	}
-
-	@Override
-	public void subscribe(TQSymbol[] symbols) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void unsubscribe(TQSymbol[] symbols) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void unsubscribeAll() {
-		// TODO Auto-generated method stub
-		
-	}
 	
 	public void applyQuotationGap(SymbolGapMap gapMap) {
 		TQSymbol symbol = new TQSymbol(gapMap.getBoard(), gapMap.getSeccode());

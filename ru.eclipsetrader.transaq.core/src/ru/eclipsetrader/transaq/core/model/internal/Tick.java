@@ -21,7 +21,6 @@ public abstract class Tick extends ServerObject implements ITQTickTrade {
 
 	@Id
 	String tradeno;
-	Integer secid;
 
 	@Embedded
 	TQSymbol symbol = new TQSymbol();
@@ -42,14 +41,6 @@ public abstract class Tick extends ServerObject implements ITQTickTrade {
 
 	public Tick(String serverId) {
 		super(serverId);
-	}
-
-	public Integer getSecid() {
-		return secid;
-	}
-
-	public void setSecid(Integer secid) {
-		this.secid = secid;
 	}
 
 	public String getTradeno() {

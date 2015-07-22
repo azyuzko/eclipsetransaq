@@ -47,6 +47,7 @@ public class TransaqLibrary {
 		//TODO refactoring if (TransaqServer.INSTANCE.getServer().isDbLogging()) {
 		//	DatabaseManager.writeOutputEvent(data);
 		// }
+		System.out.println("send command " + data);
 		synchronized (library) {
 			Pointer pResult = library.SendCommand(data);
 			String result = pResult.getString(0);

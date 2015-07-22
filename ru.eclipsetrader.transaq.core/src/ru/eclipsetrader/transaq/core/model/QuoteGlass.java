@@ -1,8 +1,6 @@
 package ru.eclipsetrader.transaq.core.model;
 
 import java.util.TreeMap;
-
-import ru.eclipsetrader.transaq.core.model.internal.Quote;
 /**
  * Стакан котировок
  * SortedMap<Цена, Кол-во> 

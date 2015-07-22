@@ -1,5 +1,7 @@
 package ru.eclipsetrader.transaq.core.xml.handler;
 
+import java.util.ArrayList;
+
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
@@ -21,7 +23,7 @@ public class QuotesHandler extends BaseXMLProcessor<SymbolGapMap> {
 		switch (QNAME.valueOf(qName)) {
 		
 		case quotes:
-			tempList.clear();
+			tempList = new ArrayList<SymbolGapMap>();
 			break;
 		
 		case quote:

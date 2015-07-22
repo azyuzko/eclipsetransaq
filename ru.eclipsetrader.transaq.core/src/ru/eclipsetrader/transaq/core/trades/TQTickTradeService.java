@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 
-import org.apache.commons.collections4.queue.CircularFifoQueue;
-
 import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.event.MassObserver;
 import ru.eclipsetrader.transaq.core.instruments.TQInstrumentService;
@@ -22,13 +20,11 @@ import ru.eclipsetrader.transaq.core.services.ITQTickTradeService;
 
 public class TQTickTradeService implements ITQTickTradeService, Closeable {
 	
-	public static int GET_ALL_TICKS_TIMEOUT = 1000 * 10;
-	
 	// храним последние 1000 тиков
-	CircularFifoQueue<String> knownTicks = new CircularFifoQueue<>(1000);
+	// CircularFifoQueue<String> knownTicks = new CircularFifoQueue<>(1000);
 	
 	SubscribeTicks subscribeTicks = new SubscribeTicks();
-	ArrayBlockingQueue<List<TickTrade>> queue = new ArrayBlockingQueue<>(50);
+	ArrayBlockingQueue<List<TickTrade>> queue = new ArrayBlockingQueue<>(300);
 	
 	Thread dbWriteThread = new Thread(new Runnable() {
 		@Override
@@ -36,7 +32,7 @@ public class TQTickTradeService implements ITQTickTradeService, Closeable {
 			while (!Thread.interrupted()) {
 				try {
 					List<TickTrade> list = queue.take();
-					DataManager.mergeList(list);
+					DataManager.batchTickList(list);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
@@ -112,7 +108,7 @@ public class TQTickTradeService implements ITQTickTradeService, Closeable {
 	public void subscribeAllTrades(TQSymbol symbol) {
 		SubscribeCommand cmd = new SubscribeCommand();
 		cmd.subscribeAllTrades(symbol);
-		TransaqLibrary.SendCommand(cmd.createSubscribeCommand());
+		TransaqLibrary.SendCommand(cmd.createConnectCommand());
 	}
 
 	@Override
@@ -124,7 +120,14 @@ public class TQTickTradeService implements ITQTickTradeService, Closeable {
 	
 	@Override
 	public void subscribeTicks(TQSymbol symbol) {
-		subscribeTicks.addSubscription(new TickSubscription(symbol, "1"));
+		subscribeTicks.addSubscription(new TickSubscription(symbol));
+		TransaqLibrary.SendCommand(subscribeTicks.createCommand());
+	}
+	
+	public void subscribeTicks(List<TQSymbol> symbols) {
+		for (TQSymbol symbol : symbols) {
+			subscribeTicks.addSubscription(new TickSubscription(symbol));
+		}
 		TransaqLibrary.SendCommand(subscribeTicks.createCommand());
 	}
 

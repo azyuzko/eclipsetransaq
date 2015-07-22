@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.interfaces.ITQSymbol;
 import ru.eclipsetrader.transaq.core.trades.TickSubscription;
 
@@ -43,7 +44,14 @@ public class SubscribeTicks {
 			sb.append("<security>");
 			sb.append("<board>" + ts.getSymbol().getBoard() + "</board>");
 			sb.append("<seccode>" + ts.getSymbol().getSeccode() + "</seccode>");
-			sb.append("<tradeno>" + ts.getTradeno() + "</tradeno>");
+			
+			String tradeno = DataManager.getMaxTickNo(ts.getSymbol());
+
+			if (tradeno == null) {
+				tradeno = "1"; // все тики за день
+			}
+			
+			sb.append("<tradeno>" + tradeno + "</tradeno>");
 			sb.append("</security>");
 		}
 		sb.append("<filter>" + false + "</filter>");
