@@ -5,9 +5,8 @@ import java.util.List;
 import ru.eclipsetrader.transaq.core.candle.CandleList;
 import ru.eclipsetrader.transaq.core.candle.CandleStorage;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
-import ru.eclipsetrader.transaq.core.data.DataManager;
-import ru.eclipsetrader.transaq.core.datastorage.TQCandleService;
-import ru.eclipsetrader.transaq.core.event.Event;
+import ru.eclipsetrader.transaq.core.candle.TQCandleService;
+import ru.eclipsetrader.transaq.core.interfaces.IProcessingContext;
 import ru.eclipsetrader.transaq.core.interfaces.ITQTickTrade;
 import ru.eclipsetrader.transaq.core.model.Quote;
 import ru.eclipsetrader.transaq.core.model.QuoteGlass;
@@ -16,23 +15,17 @@ import ru.eclipsetrader.transaq.core.model.TQSymbol;
 
 public class Instrument {
 	
-	static ThreadGroup instrumentThreads = new ThreadGroup("Instrument threads groups");
-	
 	private TQSymbol symbol;
 	private QuoteGlass glass = new QuoteGlass();
 	private CandleStorage candleStorage;
-	// private Map<IndicatorFunction, double[]> indicators = new HashMap<IndicatorFunction, double[]>();
-	
-	public Event<Object> onTick;
+	IProcessingContext context;
 
-	public Instrument(TQSymbol symbol, CandleType[] candleTypes) {
+	public Instrument(TQSymbol symbol) {
 		this.symbol = symbol;
 		this.candleStorage = new CandleStorage(symbol);
-		this.onTick = new Event<Object>("BaseInstrument.onTick", instrumentThreads);
-		for (CandleType ct : candleTypes) {
+		for (CandleType ct : context.getCandleTypes()) {
 			candleStorage.createCandleTypeList(ct);
 		}
-		// TQInstrumentService.getInstance().instruments.put(symbol, this);
 	}
 	
 	public QuoteGlass getQuoteGlass() {

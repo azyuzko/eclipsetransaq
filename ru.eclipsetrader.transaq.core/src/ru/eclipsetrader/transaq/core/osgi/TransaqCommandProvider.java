@@ -10,7 +10,7 @@ import ru.eclipsetrader.transaq.core.CoreActivator;
 import ru.eclipsetrader.transaq.core.Settings;
 import ru.eclipsetrader.transaq.core.candle.CandleStorage;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
-import ru.eclipsetrader.transaq.core.datastorage.TQCandleService;
+import ru.eclipsetrader.transaq.core.candle.TQCandleService;
 import ru.eclipsetrader.transaq.core.instruments.Instrument;
 import ru.eclipsetrader.transaq.core.instruments.TQInstrumentService;
 import ru.eclipsetrader.transaq.core.interfaces.ITransaqServer;
@@ -212,25 +212,25 @@ public class TransaqCommandProvider implements CommandProvider {
 			String seccode = ci.nextArgument();
 			String count = ci.nextArgument();
 			String reset = ci.nextArgument();
-			CandleType candleType = CandleType.CANDLE_1M;
 			if (board == null && seccode == null || count == null) {
 				ci.println("Argument required");
 				return;
 			}
 						
 			TQSymbol symbol = new TQSymbol(board, seccode);
-			List<Candle> candles = TQCandleService.getInstance().getHistoryData(symbol, candleType, Integer.valueOf(count), reset == null ? true : Boolean.valueOf(reset));
-			System.out.println("start persist");
-			TQCandleService.getInstance().persist(symbol, candleType, candles);
-			System.out.println("end persist");
+			for (CandleType candleType : TQCandleService.getInstance().getCandleTypes()) {
+				System.out.println("get candles " + candleType);
+				List<Candle> candles = TQCandleService.getInstance().getHistoryData(symbol, candleType, Integer.valueOf(count), reset == null ? true : Boolean.valueOf(reset));
+				System.out.println("start persist");
+				TQCandleService.getInstance().persist(symbol, candleType, candles);
+				System.out.println("end persist");
+			}
 			break;
 		}
 		
 		case "test": {
 			ci.execute("transaq show trace on");
 			TQSymbol symbol = new TQSymbol(BoardType.FUT, "SiU5");
-			Instrument i = new Instrument(symbol, new CandleType[] { CandleType.CANDLE_1M });
-			i.backfillCandles(CandleType.CANDLE_1M, 1000);
 			break;
 		}
 

@@ -79,7 +79,7 @@ public class TQQuoteService implements ITQQuoteService, Closeable {
 				quoteList = new ArrayList<Quote>();
 				quoteMap.put(key, quoteList);
 			}
-			Quote quote = new Quote(key.getBoard(), key.getSeccode());
+			Quote quote = new Quote(quoteGap.getTime(), key.getBoard(), key.getSeccode());
 			for (String attr : quoteGap.keySet()) {
 				if ("buy".equals(attr)) quote.setBuy(Integer.valueOf(quoteGap.get(attr)));				
 				else if ("price".equals(attr)) quote.setPrice(Double.valueOf(quoteGap.get(attr)));

@@ -1,5 +1,6 @@
 package ru.eclipsetrader.transaq.core.model.internal;
 
+import java.util.Date;
 import java.util.HashMap;
 
 import ru.eclipsetrader.transaq.core.model.BoardType;
@@ -12,11 +13,13 @@ import ru.eclipsetrader.transaq.core.model.BoardType;
 public class SymbolGapMap extends HashMap<String, String> {
 
 	private static final long serialVersionUID = 1250896457729641149L;
+	
 	BoardType board;
 	String seccode;
+	Date time;
 	
-	public SymbolGapMap() {
-		
+	public SymbolGapMap(Date time) {
+		this.time = time;
 	}
 
 	public BoardType getBoard() {
@@ -33,6 +36,14 @@ public class SymbolGapMap extends HashMap<String, String> {
 
 	public void setSeccode(String seccode) {
 		this.seccode = seccode;
+	}
+
+	public Date getTime() {
+		return time;
+	}
+
+	public void setTime(Date time) {
+		this.time = time;
 	}
 	
 	

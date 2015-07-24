@@ -20,9 +20,6 @@ import ru.eclipsetrader.transaq.core.services.ITQTickTradeService;
 
 public class TQTickTradeService implements ITQTickTradeService, Closeable {
 	
-	// храним последние 1000 тиков
-	// CircularFifoQueue<String> knownTicks = new CircularFifoQueue<>(1000);
-	
 	SubscribeTicks subscribeTicks = new SubscribeTicks();
 	ArrayBlockingQueue<List<TickTrade>> queue = new ArrayBlockingQueue<>(300);
 	
@@ -139,7 +136,6 @@ public class TQTickTradeService implements ITQTickTradeService, Closeable {
 
 	@Override
 	public List<Tick> getCurrentDayTickData(TQSymbol symbol) {
-		// System.out.println("Ticks size = " + ticks.values());
 		return new ArrayList<>(null);
 	}
 

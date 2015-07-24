@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.event.InstrumentMassObserver;
 import ru.eclipsetrader.transaq.core.event.InstrumentObserver;
 import ru.eclipsetrader.transaq.core.model.Quote;
@@ -26,18 +25,6 @@ public class TQInstrumentService implements ITQInstrumentService {
 	
 	Map<TQSymbol, Instrument> instruments = new HashMap<>();
 
-	public Instrument createInstrument(TQSymbol symbol) {
-		if (instruments.containsKey(symbol)) {
-			throw new RuntimeException("Already created");
-		} else {
-			Instrument result = new Instrument(symbol, new CandleType[0]);
-			instruments.put(symbol, result);
-			//TQTickTradeService.getInstance().subscribeAllTrades(symbol);
-			//TQQuoteService.getInstance().subscribe(symbol);
-			return result;
-		}
-	}
-	
 	public Instrument getInstrument(TQSymbol symbol) {
 		return instruments.get(symbol);
 	}

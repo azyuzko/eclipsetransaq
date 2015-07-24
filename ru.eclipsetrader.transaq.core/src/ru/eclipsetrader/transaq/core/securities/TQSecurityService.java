@@ -9,7 +9,6 @@ import ru.eclipsetrader.transaq.core.Constants;
 import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.event.Observer;
 import ru.eclipsetrader.transaq.core.interfaces.IPersistable;
-import ru.eclipsetrader.transaq.core.interfaces.ITQSymbol;
 import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
 import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.MarketType;
@@ -22,7 +21,7 @@ import ru.eclipsetrader.transaq.core.services.ITQSecurityService;
 
 public class TQSecurityService implements ITQSecurityService, IPersistable {
 
-	Map<String, Security> objects = new LinkedHashMap<>();
+	Map<TQSymbol, Security> objects = new LinkedHashMap<>();
 	
 	static TQSecurityService instance;
 	public static TQSecurityService getInstance() {
@@ -72,11 +71,7 @@ public class TQSecurityService implements ITQSecurityService, IPersistable {
 	}
 	
 	public void put(Security security) {
-		put(security.getKey(), security);
-	}
-	
-	public void put(String id, Security security) {
-		objects.put(id, security);
+		objects.put(security.getSymbol(), security);
 	}
 
 	public void putList(List<Security> objects) {
@@ -85,8 +80,8 @@ public class TQSecurityService implements ITQSecurityService, IPersistable {
 		}
 	}
 	
-	public Security get(String id) {
-		return objects.get(id);
+	public Security get(TQSymbol symbol) {
+		return objects.get(symbol);
 	}
 
 	public List<Security> getAll() {
@@ -127,13 +122,8 @@ public class TQSecurityService implements ITQSecurityService, IPersistable {
 	}
 
 	@Override
-	public Security getSecurity(BoardType board, String seccode) {
-		return get((new TQSymbol(board, seccode)).getKey());
-	}
-
-	@Override
-	public Security getSecurity(ITQSymbol symbol) {
-		return get(TQSymbol.symbolKey(symbol));
+	public Security getSecurity(TQSymbol symbol) {
+		return get(symbol);
 	}
 	
 	public void callGetSecurities() {

@@ -4,6 +4,8 @@ import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.sun.jna.platform.unix.X11.XClientMessageEvent.Data;
+
 import ru.eclipsetrader.transaq.core.Constants;
 import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.event.Observer;
@@ -30,7 +32,6 @@ public class TQPositionService implements ITQPositionService, Observer<Holder<Po
 	public static TQPositionService getInstance() {
 		if (instance == null) {
 			instance = new TQPositionService(Constants.DEFAULT_SERVER_ID);
-			instance.load(Constants.DEFAULT_SERVER_ID);
 		}
 		return instance;
 	}
@@ -147,6 +148,10 @@ public class TQPositionService implements ITQPositionService, Observer<Holder<Po
 
 	@Override
 	public void persist() {
+		DataManager.removeList(DataManager.getList(FortsMoneyPosition.class));
+		DataManager.removeList(DataManager.getList(FortsPosition.class));
+		DataManager.removeList(DataManager.getList(MoneyPosition.class));
+		DataManager.removeList(DataManager.getList(SecurityPosition.class));
 		DataManager.mergeList(fortsMoneyPosition.values());
 		DataManager.mergeList(fortsPosition.values());
 		DataManager.mergeList(securityPosition.values());
@@ -187,6 +192,8 @@ public class TQPositionService implements ITQPositionService, Observer<Holder<Po
 	@Override
 	public void update(Holder<PositionType, Map<String, String>> gap) {
 		applyPositionGap(serverId, gap);
+		persist() ;
 	}
 
 }
+

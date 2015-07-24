@@ -45,8 +45,8 @@ public class TQBoardService implements ITQBoardService, Observer<List<Board>> {
 	}
 
 	@Override
-	public void put(String id, Board object) {
-		objects.put(id, object);
+	public void put(Board object) {
+		objects.put(object.getId(), object);
 	}
 
 	@Override
@@ -54,10 +54,6 @@ public class TQBoardService implements ITQBoardService, Observer<List<Board>> {
 		for (Board board : objects) {
 			put(board);
 		}
-	}
-
-	void put(Board board) {
-		objects.put(board.getId(), board);
 	}
 
 	@Override

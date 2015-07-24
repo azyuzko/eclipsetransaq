@@ -21,8 +21,8 @@ import ru.eclipsetrader.transaq.core.model.internal.ServerObject;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 
-@Entity
-@EntityListeners(DefaultJPAListener.class)
+//@Entity
+//@EntityListeners(DefaultJPAListener.class)
 public class SecuritySignal extends ServerObject {
 
 	@Id

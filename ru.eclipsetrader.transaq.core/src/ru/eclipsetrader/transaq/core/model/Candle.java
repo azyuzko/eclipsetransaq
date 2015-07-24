@@ -2,10 +2,6 @@ package ru.eclipsetrader.transaq.core.model;
 
 import java.util.Date;
 
-import javax.persistence.Embeddable;
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
-
 import ru.eclipsetrader.transaq.core.exception.UnimplementedException;
 import ru.eclipsetrader.transaq.core.util.Utils;
 

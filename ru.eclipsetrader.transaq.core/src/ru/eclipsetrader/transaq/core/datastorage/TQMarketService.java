@@ -35,7 +35,7 @@ public class TQMarketService implements ITQMarketService, IPersistable, Observer
 	public void load(String serverId) {
 		clear();
 		for (Market m : DataManager.getServerObjectList(Market.class, serverId)) {
-			put(m.getId(), m);
+			put(m);
 		}
 	}
 
@@ -44,11 +44,6 @@ public class TQMarketService implements ITQMarketService, IPersistable, Observer
 		objects.clear();
 	}
 
-	@Override
-	public void put(Integer id, Market object) {
-		objects.put(id, object);
-	}
-	
 	@Override
 	public void put(Market object) {
 		objects.put(object.getId(), object);

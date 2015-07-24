@@ -1,6 +1,7 @@
 package ru.eclipsetrader.transaq.core.xml.handler;
 
 import java.util.ArrayList;
+import java.util.Date;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
@@ -27,7 +28,7 @@ public class QuotesHandler extends BaseXMLProcessor<SymbolGapMap> {
 			break;
 		
 		case quote:
-			SymbolGapMap map = new SymbolGapMap();
+			SymbolGapMap map = new SymbolGapMap(new Date());
 			objectStack.push(map);
 			break;
 

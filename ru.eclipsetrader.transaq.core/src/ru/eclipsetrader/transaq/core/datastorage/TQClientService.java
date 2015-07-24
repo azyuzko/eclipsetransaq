@@ -34,11 +34,6 @@ public class TQClientService implements ITQClientService, IPersistable, Observer
 	}
 
 	@Override
-	public void put(String id, Client object) {
-		clients.put(id, object);
-	}
-
-	@Override
 	public Client get(String id) {
 		return clients.get(id);
 	}

@@ -1,16 +1,15 @@
-package ru.eclipsetrader.transaq.core.datastorage;
+package ru.eclipsetrader.transaq.core.candle;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import ru.eclipsetrader.transaq.core.Constants;
-import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.event.Observer;
-import ru.eclipsetrader.transaq.core.interfaces.ITQSymbol;
 import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
 import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
@@ -109,21 +108,21 @@ public class TQCandleService implements ITQCandleService {
 		throw new IllegalArgumentException("CandleType for periodId = " + periodId + " not found!");
 	}
 	
-	public List<Candle> getHistoryData(ITQSymbol security, CandleType candleType, int count) {
+	public List<Candle> getHistoryData(TQSymbol security, CandleType candleType, int count) {
 		return getHistoryData(security, candleType, count, true);
 	}
 	
 	// получим свечи
-	public List<Candle> getHistoryData(ITQSymbol security, CandleType candleType, int count, boolean reset) {		
-		System.out.println("Calling getHistoryData for <" + TQSymbol.symbolKey(security) + ">");
+	public List<Candle> getHistoryData(TQSymbol symbol, CandleType candleType, int count, boolean reset) {		
+		System.out.println("Calling getHistoryData for <" + symbol + ">");
 		GetHistoryDataCommand getHistoryDataCommand = new GetHistoryDataCommand();
-		getHistoryDataCommand.setBoard(security.getBoard());
-		getHistoryDataCommand.setSeccode(security.getSeccode());
+		getHistoryDataCommand.setBoard(symbol.getBoard());
+		getHistoryDataCommand.setSeccode(symbol.getSeccode());
 		getHistoryDataCommand.setPeriodId(getCandleKindByType(candleType).getId());
 		getHistoryDataCommand.setCandleCount(count);
 		getHistoryDataCommand.setReset(reset);
 		TransaqLibrary.SendCommand(getHistoryDataCommand.createConnectCommand());
-		// опчистим буфер
+		// очистим буфер
 		candleBuffer.clear();
 		
 		synchronized (candlesWait) {
@@ -140,6 +139,12 @@ public class TQCandleService implements ITQCandleService {
 	public void persist(TQSymbol symbol, CandleType candleType,
 			List<Candle> candles) {
 		DataManager.batchCandles(symbol, candleType, candles);		
+	}
+
+	@Override
+	public List<Candle> getSavedCandles(TQSymbol symbol,
+			CandleType candleType, Date fromDate, Date toDate) {
+		return DataManager.getCandles(symbol, candleType, fromDate, toDate);
 	}
 
 }

@@ -7,10 +7,9 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 
 import ru.eclipsetrader.transaq.core.interfaces.ITQKey;
-import ru.eclipsetrader.transaq.core.interfaces.ITQSymbol;
 
 @Embeddable
-public class TQSymbol implements ITQSymbol, ITQKey, Serializable {
+public class TQSymbol implements ITQKey, Serializable {
 
 	public static final char DELIMITER_MARKET = '$';
 	public static final char DELIMITER_BOARD = '#';
@@ -35,17 +34,15 @@ public class TQSymbol implements ITQSymbol, ITQKey, Serializable {
 		this.seccode = seccode;
 	}
 	
-	public TQSymbol(ITQSymbol symbol) {
+	public TQSymbol(TQSymbol symbol) {
 		this.seccode = symbol.getSeccode();
 		this.board = symbol.getBoard();
 	}
 
-	@Override
 	public String getSeccode() {
 		return seccode;
 	}
 
-	@Override
 	public BoardType getBoard() {
 		return board;
 	}
@@ -62,9 +59,6 @@ public class TQSymbol implements ITQSymbol, ITQKey, Serializable {
 		if (object instanceof TQSymbol) {
 			TQSymbol pk = (TQSymbol) object;
 			return (seccode.equals(pk.seccode) && board.equals(pk.board));
-		} else if (object instanceof ITQSymbol) {
-			ITQSymbol pk = (ITQSymbol) object;
-			return (seccode.equals(pk.getSeccode()) && board.equals(pk.getBoard()));
 		} else {
 			return false;
 		}
@@ -89,37 +83,7 @@ public class TQSymbol implements ITQSymbol, ITQKey, Serializable {
 		return toString();
 	}
 	
-	public static String symbolKey(ITQSymbol symbol) {
-		return (new TQSymbol(symbol)).getKey();
-	}
-	
 	public static void main(String[] args) {
-		TQSymbol s1 = new TQSymbol(BoardType.FUT, "BRN5");
-		TQSymbol s2 = new TQSymbol("FUT", new String("BRN5"));
-		ITQSymbol s = new ITQSymbol() {
-			
-			@Override
-			public String getSeccode() {
-				return new String("BRN5");
-			}
-			
-			@Override
-			public BoardType getBoard() {
-				return BoardType.FUT;
-			}
-		};
-		TQSymbol s3 = new TQSymbol(s);
-		
-		System.out.println(s1.equals(s2));
-		System.out.println(s2.equals(s3));
-		System.out.println(s3.equals(s1));
-		System.out.println(s3.equals(s2));
-		System.out.println(s.equals(s1));
-		System.out.println(s1.equals(s));
-		
-		System.out.println(s1.hashCode());
-		System.out.println(s2.hashCode());
-		System.out.println(s3.hashCode());
-		System.out.println(s.hashCode());
+
 	}
 }

@@ -1,5 +1,7 @@
 package ru.eclipsetrader.transaq.core.xml.handler;
 
+import java.util.Date;
+
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
@@ -20,7 +22,7 @@ public class QuotationsHandler extends BaseXMLProcessor<SymbolGapMap> {
 		
 		switch (QNAME.valueOf(qName)) {
 		case quotation:
-			SymbolGapMap gapMap = new SymbolGapMap();
+			SymbolGapMap gapMap = new SymbolGapMap(new Date());
 			objectStack.add(gapMap);
 			break;
 		default:

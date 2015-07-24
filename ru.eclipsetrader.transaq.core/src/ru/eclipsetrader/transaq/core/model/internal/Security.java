@@ -52,6 +52,10 @@ public class Security extends ServerObject implements ITQSecurity {
 		this.symbol = new TQSymbol();
 	}
 	
+	public TQSymbol getSymbol() {
+		return symbol;
+	}
+	
 	public String getKey() {
 		return symbol.getKey();
 	}
@@ -185,7 +189,6 @@ public class Security extends ServerObject implements ITQSecurity {
 		return null;
 	}
 
-	@Override
 	public BoardType getBoard() {
 		return symbol.getBoard();
 	}

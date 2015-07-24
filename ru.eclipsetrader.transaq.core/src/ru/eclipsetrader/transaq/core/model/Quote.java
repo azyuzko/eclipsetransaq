@@ -15,8 +15,8 @@ public class Quote {
 	
 	Date time; // time of object construction
 	
-	public Quote(BoardType board, String seccode) {
-		this.time = new Date();
+	public Quote(Date time, BoardType board, String seccode) {
+		this.time = time;
 		this.board = board;
 		this.seccode = seccode;
 	}

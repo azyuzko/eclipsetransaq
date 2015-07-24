@@ -9,12 +9,13 @@ import javax.persistence.Table;
 
 import ru.eclipsetrader.transaq.core.data.DefaultJPAListener;
 import ru.eclipsetrader.transaq.core.interfaces.ITQKey;
+import ru.eclipsetrader.transaq.core.model.BaseFortsMoney;
 
 @Entity
 @Table(name="fortsmoney_position")
 @EntityListeners(DefaultJPAListener.class)
 @IdClass(FortsMoneyPositionId.class)
-public class FortsMoneyPosition extends ServerObject implements ITQKey {
+public class FortsMoneyPosition extends BaseFortsMoney implements ITQKey {
 
 	@Id
 	String client;
@@ -22,10 +23,7 @@ public class FortsMoneyPosition extends ServerObject implements ITQKey {
 	Integer market;
 	String shortname;
 	@Column(name="CURR")
-	double current;
-	double blocked;
-	double free;
-	double varmargin;
+
 	
 	@Override
 	public String getKey() {
@@ -39,38 +37,6 @@ public class FortsMoneyPosition extends ServerObject implements ITQKey {
 
 	public FortsMoneyPosition(String serverId) {
 		super(serverId);
-	}
-
-	public double getCurrent() {
-		return current;
-	}
-
-	public void setCurrent(double current) {
-		this.current = current;
-	}
-
-	public double getBlocked() {
-		return blocked;
-	}
-
-	public void setBlocked(double blocked) {
-		this.blocked = blocked;
-	}
-
-	public double getFree() {
-		return free;
-	}
-
-	public void setFree(double free) {
-		this.free = free;
-	}
-
-	public double getVarmargin() {
-		return varmargin;
-	}
-
-	public void setVarmargin(double varmargin) {
-		this.varmargin = varmargin;
 	}
 
 	public String getClient() {

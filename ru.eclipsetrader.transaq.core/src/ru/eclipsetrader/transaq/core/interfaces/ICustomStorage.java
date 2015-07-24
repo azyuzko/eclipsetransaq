@@ -6,7 +6,7 @@ public interface ICustomStorage<ID, Type> {
 	
 	public void clear();
 	
-	public void put(ID id, Type object);
+	public void put(Type object);
 	
 	public void putList(List<Type> objects);
 	

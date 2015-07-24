@@ -12,7 +12,7 @@ import org.osgi.framework.ServiceReference;
 import org.osgi.service.event.EventAdmin;
 import org.osgi.util.tracker.ServiceTracker;
 
-import ru.eclipsetrader.transaq.core.datastorage.TQCandleService;
+import ru.eclipsetrader.transaq.core.candle.TQCandleService;
 import ru.eclipsetrader.transaq.core.datastorage.TQClientService;
 import ru.eclipsetrader.transaq.core.datastorage.TQMarketService;
 import ru.eclipsetrader.transaq.core.datastorage.TQServerService;

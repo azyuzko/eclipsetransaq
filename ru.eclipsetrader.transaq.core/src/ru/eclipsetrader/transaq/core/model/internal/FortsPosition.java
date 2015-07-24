@@ -8,13 +8,14 @@ import javax.persistence.Table;
 
 import ru.eclipsetrader.transaq.core.data.DefaultJPAListener;
 import ru.eclipsetrader.transaq.core.interfaces.ITQKey;
+import ru.eclipsetrader.transaq.core.model.BaseFortsContract;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 
 @Entity
 @Table(name="forts_position")
 @EntityListeners(DefaultJPAListener.class)
 @IdClass(FortsPositionId.class)
-public class FortsPosition extends ServerObject implements ITQKey {
+public class FortsPosition extends BaseFortsContract implements ITQKey {
 
 	Integer secid;
 	@Id
@@ -24,14 +25,6 @@ public class FortsPosition extends ServerObject implements ITQKey {
 	@Id
 	String client;
 	
-	int startnet;
-	int openbuys;
-	int opensells;
-	int totalnet;
-	int todaybuy;
-	int todaysell;
-	double optmargin;
-	double varmargin;
 	int expirationpos;
 	Double usedsellspotlimit;
 	Double sellspotlimit;
@@ -50,70 +43,6 @@ public class FortsPosition extends ServerObject implements ITQKey {
 
 	public FortsPosition(String serverId) {
 		super(serverId);
-	}
-
-	public int getStartnet() {
-		return startnet;
-	}
-
-	public void setStartnet(int startnet) {
-		this.startnet = startnet;
-	}
-
-	public int getOpenbuys() {
-		return openbuys;
-	}
-
-	public void setOpenbuys(int openbuys) {
-		this.openbuys = openbuys;
-	}
-
-	public int getOpensells() {
-		return opensells;
-	}
-
-	public void setOpensells(int opensells) {
-		this.opensells = opensells;
-	}
-
-	public int getTotalnet() {
-		return totalnet;
-	}
-
-	public void setTotalnet(int totalnet) {
-		this.totalnet = totalnet;
-	}
-
-	public int getTodaybuy() {
-		return todaybuy;
-	}
-
-	public void setTodaybuy(int todaybuy) {
-		this.todaybuy = todaybuy;
-	}
-
-	public int getTodaysell() {
-		return todaysell;
-	}
-
-	public void setTodaysell(int todaysell) {
-		this.todaysell = todaysell;
-	}
-
-	public double getOptmargin() {
-		return optmargin;
-	}
-
-	public void setOptmargin(double optmargin) {
-		this.optmargin = optmargin;
-	}
-
-	public double getVarmargin() {
-		return varmargin;
-	}
-
-	public void setVarmargin(double varmargin) {
-		this.varmargin = varmargin;
 	}
 
 	public int getExpirationpos() {

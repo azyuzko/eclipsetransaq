@@ -5,7 +5,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 import ru.eclipsetrader.transaq.core.data.DataManager;
-import ru.eclipsetrader.transaq.core.interfaces.ITQSymbol;
+import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.trades.TickSubscription;
 
 public class SubscribeTicks {
@@ -27,7 +27,7 @@ public class SubscribeTicks {
 		subscriptions.add(tickSubscription);
 	}
 	
-	public void removeSubscription(ITQSymbol symbol) {
+	public void removeSubscription(TQSymbol symbol) {
 		Iterator<TickSubscription> it = subscriptions.iterator();
 		while(it.hasNext()) {
 			TickSubscription ts = it.next();

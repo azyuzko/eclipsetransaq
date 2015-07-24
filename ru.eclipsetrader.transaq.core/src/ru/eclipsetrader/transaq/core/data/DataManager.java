@@ -231,7 +231,7 @@ public class DataManager {
 		} 
 	}
 	
-	public static List<Quote> getQuoteList(TQSymbol symbol, Date dateFrom, Date dateTo) {
+	public static List<Quote> getQuoteList(Date dateFrom, Date dateTo) {
 		EntityManager em = tlsEm.get();
 		PreparedStatement stmt;
 		OracleConnection oc = null;
@@ -245,8 +245,7 @@ public class DataManager {
 			stmt.setTimestamp(2, new java.sql.Timestamp(dateTo.getTime()));
 			ResultSet rs = stmt.executeQuery();
 			while (rs.next()) {
-				Quote q = new Quote(BoardType.valueOf(rs.getString(2)), rs.getString(3));
-				q.setTime(rs.getTimestamp(1));
+				Quote q = new Quote(rs.getTimestamp(1), BoardType.valueOf(rs.getString(2)), rs.getString(3));
 				q.setPrice(rs.getDouble(4));
 				q.setYield(rs.getInt(5));
 				q.setBuy(rs.getInt(6));
