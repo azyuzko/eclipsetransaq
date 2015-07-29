@@ -1,17 +1,22 @@
 package ru.eclipsetrader.transaq.core.instruments;
 
-import java.util.HashMap;
+import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
-import ru.eclipsetrader.transaq.core.event.InstrumentMassObserver;
-import ru.eclipsetrader.transaq.core.event.InstrumentObserver;
+import ru.eclipsetrader.transaq.core.account.TQAccountService;
+import ru.eclipsetrader.transaq.core.candle.CandleType;
+import ru.eclipsetrader.transaq.core.candle.TQCandleService;
+import ru.eclipsetrader.transaq.core.event.InstrumentEvent;
+import ru.eclipsetrader.transaq.core.interfaces.IAccount;
+import ru.eclipsetrader.transaq.core.model.BoardType;
+import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.Quote;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
-import ru.eclipsetrader.transaq.core.model.internal.TickTrade;
+import ru.eclipsetrader.transaq.core.quotes.TQQuoteService;
 import ru.eclipsetrader.transaq.core.services.ITQInstrumentService;
-import ru.eclipsetrader.transaq.core.util.Utils;
+import ru.eclipsetrader.transaq.core.trades.IDataFeedContext;
+import ru.eclipsetrader.transaq.core.trades.TQTickTradeService;
 
 public class TQInstrumentService implements ITQInstrumentService {
 	
@@ -22,51 +27,58 @@ public class TQInstrumentService implements ITQInstrumentService {
 		}
 		return instance;
 	}
+
+
+	InstrumentEvent<List<Tick>> tickListEvent = new InstrumentEvent<>("TQInstrumentService tick event");
+	InstrumentEvent<List<Quote>> quoteListEvent = new InstrumentEvent<>("TQInstrumentService quote event");
 	
-	Map<TQSymbol, Instrument> instruments = new HashMap<>();
-
-	public Instrument getInstrument(TQSymbol symbol) {
-		return instruments.get(symbol);
+	public InstrumentEvent<List<Tick>> getDefaultTickListEvent() {
+		return tickListEvent;
 	}
-
-	/**
-	 * Ќаблюдатель за котировками бумаги
-	 */
-	InstrumentObserver<List<Quote>> iQuotesObserver = new InstrumentObserver<List<Quote>>() {
-		@Override
-		public void update(TQSymbol symbol, List<Quote> quotes) {
-			if (instruments.containsKey(symbol)) {
-				// обновим стакан
-				instruments.get(symbol).updateQuotes(quotes);
-			} else {
-				// System.out.println("iQuotesObserver: Instrument not found");
+	public InstrumentEvent<List<Quote>> getDefaultQuoteListEvent() {
+		return quoteListEvent;
+	}
+	
+	public IDataFeedContext getDefaultDataFeedContext() {
+		
+		return new IDataFeedContext() {
+			
+			@Override
+			public List<Candle> getCandleList(TQSymbol symbol, CandleType candleType,
+					Date fromDate, int count) {
+				return TQCandleService.getInstance().getHistoryData(symbol, candleType, count);
 			}
-		}
-	};
-	
-	public InstrumentObserver<List<Quote>> getIQuotesObserver() {
-		return iQuotesObserver;
-	}
-	
-	
-	InstrumentMassObserver<TickTrade> iTickObserver = new InstrumentMassObserver<TickTrade>() {
-		@Override
-		public void update(TQSymbol symbol, List<TickTrade> list) {
-			System.out.println("iTickObserver " + list.get(0).getSeccode() + " size = " + list.size() + " " + Utils.formatTime(list.get(0).getTime()) + " -- " + Utils.formatTime(list.get(list.size()-1).getTime()) );
+			
+			@Override
+			public InstrumentEvent<List<Quote>> getQuotesFeeder() {
+				return quoteListEvent;
+			}
+			
+			@Override
+			public InstrumentEvent<List<Tick>> getTicksFeeder() {
+				return tickListEvent;
+			}
 
-			if (instruments.containsKey(symbol)) {
-				for (Tick tick : list) {
-					instruments.get(symbol).processTrade(tick);
+			@Override
+			public void OnStart() {
+				// Ќа старте ищем все инструменты из событий и запускаем на них подписку
+				
+				for (TQSymbol symbol : tickListEvent.getSymbolList()) {
+					TQTickTradeService.getInstance().subscribeAllTrades(symbol);
 				}
-			} else {
-				// System.out.println("iTickObserver: Instrument not found");
+
+				for (TQSymbol symbol : quoteListEvent.getSymbolList()) {
+					TQQuoteService.getInstance().subscribe(symbol);
+				}
+
 			}
 
-		}
-	};
-	
-	public InstrumentMassObserver<TickTrade> getITickObserver() {
-		return iTickObserver;
+			@Override
+			public IAccount getAccount(TQSymbol symbol) {
+				return TQAccountService.getInstance().getAccount(symbol);
+			}
+		};
+		
 	}
 	
 }

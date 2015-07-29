@@ -14,6 +14,31 @@ public class BaseFortsMoney extends ServerObject {
 	double free;
 	double varmargin;
 	
+	@Override
+	public String toString() {
+		return "Current = " + getCurrent() + " Blocked = " + getBlocked() + " Free = " + getFree() + " Varmargin = " + getVarmargin();
+	}
+	
+	/**
+	 * Пересчитывает размер свободных средств
+	 * @param oldGO старый размер ГО
+	 * @param newGO новый размер ГО
+	 */
+	public void recalcGO(double oldGO, double newGO) {
+		double diff = oldGO - newGO;
+		free += diff;
+		blocked -= diff;
+	}
+	
+	/**
+	 * Пересчитывает размер свободных средств
+	 * @param diff разница между старым значением ГО и новым
+	 */
+	public void recalcGO(double diff) {
+		free += diff;
+		blocked -= diff;
+	}
+	
 	public BaseFortsMoney() {
 		this(null);
 	}

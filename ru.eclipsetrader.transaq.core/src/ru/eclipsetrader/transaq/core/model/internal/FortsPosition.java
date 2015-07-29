@@ -25,6 +25,7 @@ public class FortsPosition extends BaseFortsContract implements ITQKey {
 	@Id
 	String client;
 	
+	int totalnet; // взаимозачет
 	int expirationpos;
 	Double usedsellspotlimit;
 	Double sellspotlimit;
@@ -35,7 +36,6 @@ public class FortsPosition extends BaseFortsContract implements ITQKey {
 	public String getKey() {
 		return String.valueOf(market) + TQSymbol.DELIMITER_MARKET + seccode;
 	}
-
 	
 	public FortsPosition() {
 		this(null);
@@ -43,6 +43,14 @@ public class FortsPosition extends BaseFortsContract implements ITQKey {
 
 	public FortsPosition(String serverId) {
 		super(serverId);
+	}
+	
+	public int getTotalnet() {
+		return totalnet;
+	}
+
+	public void setTotalnet(int totalnet) {
+		this.totalnet = totalnet;
 	}
 
 	public int getExpirationpos() {

@@ -115,7 +115,9 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 	}
 	
 	private TQOrderTradeService() {
+		ordersThread.setDaemon(true);
 		ordersThread.start();
+		tradesThread.setDaemon(true);
 		tradesThread.start();
 	}
 	
@@ -128,9 +130,6 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 	public void put(Order order) {
 		if (order.getTransactionid() == null || order.getTransactionid().isEmpty()) {
 			throw new IllegalArgumentException("Cannot put order withour transactionId!");
-		}
-		if (order.getSessionId() == null) {
-			
 		}
 		orders.put(order.getTransactionid(), order);
 	}

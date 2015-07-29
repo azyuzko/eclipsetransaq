@@ -10,6 +10,7 @@ import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.event.Observer;
 import ru.eclipsetrader.transaq.core.interfaces.IPersistable;
 import ru.eclipsetrader.transaq.core.interfaces.ITQSecurity;
+import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Client;
 import ru.eclipsetrader.transaq.core.model.internal.Security;
 import ru.eclipsetrader.transaq.core.services.ITQClientService;
@@ -81,8 +82,9 @@ public class TQClientService implements ITQClientService, IPersistable, Observer
 	}
 
 	@Override
-	public String getSecurityClientId(ITQSecurity security) {
+	public String getSecurityClientId(TQSymbol symbol) {
 		// TODO implement and refactor!
+		System.err.println("IMPLEMENT THIS!");
 		return new ArrayList<Client>(clients.values()).get(0).getId();
 	}
 	

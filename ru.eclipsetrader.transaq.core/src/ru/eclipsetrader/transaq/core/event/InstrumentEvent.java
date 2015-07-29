@@ -1,6 +1,8 @@
 package ru.eclipsetrader.transaq.core.event;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
@@ -8,13 +10,15 @@ import ru.eclipsetrader.transaq.core.model.TQSymbol;
 public class InstrumentEvent<T> {
 
 	Map<TQSymbol, Event<T>> eventMap  = new HashMap<TQSymbol, Event<T>>();
-	
-	ThreadGroup threadGroup;
+
 	String name;
 	
-	public InstrumentEvent(String name, ThreadGroup threadGroup) {
+	public InstrumentEvent(String name) {
 		this.name = name;
-		this.threadGroup = threadGroup;
+	}
+	
+	public List<TQSymbol> getSymbolList() {
+		return new ArrayList<>(eventMap.keySet());
 	}
 	
 	public synchronized void addObserver(TQSymbol symbol, Observer<T> paramObserver) {
@@ -27,7 +31,7 @@ public class InstrumentEvent<T> {
 		if (eventMap.containsKey(symbol)) {
 			event = eventMap.get(symbol);
 		} else {
-			event = new Event<T>(name, threadGroup);
+			event = new Event<T>(name);
 			eventMap.put(symbol, event);
 		}
 		event.addObserver(paramObserver);
@@ -43,9 +47,9 @@ public class InstrumentEvent<T> {
 		}
 	}
 	
-	public void deleteObserver(String instrumentId, Observer<T> paramObserver) {
-		if (eventMap.containsKey(instrumentId)) {
-			Event<T> event = eventMap.get(instrumentId);
+	public void deleteObserver(TQSymbol symbol, Observer<T> paramObserver) {
+		if (eventMap.containsKey(symbol)) {
+			Event<T> event = eventMap.get(symbol);
 			event.deleteObserver(paramObserver);
 		}
 	}

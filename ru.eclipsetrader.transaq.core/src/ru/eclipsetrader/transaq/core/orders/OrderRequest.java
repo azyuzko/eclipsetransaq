@@ -3,15 +3,14 @@ package ru.eclipsetrader.transaq.core.orders;
 import java.util.Date;
 
 import ru.eclipsetrader.transaq.core.datastorage.TQClientService;
-import ru.eclipsetrader.transaq.core.interfaces.ITQSecurity;
 import ru.eclipsetrader.transaq.core.model.BuySell;
+import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.UnfilledType;
-import ru.eclipsetrader.transaq.core.server.command.Command;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
-public class OrderRequest extends Command implements ITQOrderRequest {
+public class OrderRequest {
 
-	ITQSecurity security;
+	TQSymbol symbol;
 	double price;
 	int quantity;
 	int hidden;
@@ -23,52 +22,32 @@ public class OrderRequest extends Command implements ITQOrderRequest {
 	private boolean nosplit;
 	private Date expdate;
 	
-	private OrderRequest(ITQSecurity security, BuySell bs, int quantity) {
-		this.security = security;
+	private OrderRequest(TQSymbol symbol, BuySell bs, int quantity) {
+		this.symbol = symbol;
 		this.quantity = quantity;
 		this.buysell = bs;
 	}
 
-	public static OrderRequest createRequest(ITQSecurity security, BuySell bs, double price, int quantity) {
-		OrderRequest orderRequest = new OrderRequest(security, bs, quantity);
+	public static OrderRequest createRequest(TQSymbol symbol, BuySell bs, double price, int quantity) {
+		OrderRequest orderRequest = new OrderRequest(symbol, bs, quantity);
 		orderRequest.price = price;
 		return orderRequest;
 	}
 	
-	public static OrderRequest createByMarketRequest(ITQSecurity security, BuySell bs, int quantity) {
-		OrderRequest orderRequest = new OrderRequest(security, bs, quantity);
+	public static OrderRequest createByMarketRequest(TQSymbol symbol, BuySell bs, int quantity) {
+		OrderRequest orderRequest = new OrderRequest(symbol, bs, quantity);
 		orderRequest.byMarket = true;
 		return orderRequest;
 	}
 
-	@Override
-	public int getQuantity() {
-		return quantity;
-	}
-	
-	@Override
-	public ITQSecurity getSecurity() {
-		return security;
-	}
-
-	@Override
-	public boolean isCancelled() {
-		return false;
-	}
-
-	@Override
-	public double getPrice() {
-		return price;
-	}
-	
 	public String createNewOrderCommand() {
 		StringBuilder sb = new StringBuilder();
 		sb.append("<command id=\"neworder\">");
 		sb.append("<security>");
-		sb.append("<board>" + security.getBoard() + "</board>");
-		sb.append("<seccode>" + security.getSeccode() + "</seccode>");
+		sb.append("<board>" + symbol.getBoard() + "</board>");
+		sb.append("<seccode>" + symbol.getSeccode() + "</seccode>");
 		sb.append("</security>");
-		sb.append("<client>" + TQClientService.getInstance().getSecurityClientId(security) + "</client>");
+		sb.append("<client>" + TQClientService.getInstance().getSecurityClientId(symbol) + "</client>");
 		if (price != 0) {
 			sb.append("<price>" + price + "</price>");
 		}
@@ -157,10 +136,6 @@ public class OrderRequest extends Command implements ITQOrderRequest {
 
 	public void setExpdate(Date expdate) {
 		this.expdate = expdate;
-	}
-
-	public void setSecurity(ITQSecurity security) {
-		this.security = security;
 	}
 
 	public void setPrice(double price) {

@@ -1,6 +1,5 @@
 package ru.eclipsetrader.transaq.core.trades;
 
-import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -8,7 +7,7 @@ import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 
 import ru.eclipsetrader.transaq.core.data.DataManager;
-import ru.eclipsetrader.transaq.core.event.MassObserver;
+import ru.eclipsetrader.transaq.core.event.ListObserver;
 import ru.eclipsetrader.transaq.core.instruments.TQInstrumentService;
 import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
@@ -18,7 +17,7 @@ import ru.eclipsetrader.transaq.core.server.command.SubscribeCommand;
 import ru.eclipsetrader.transaq.core.server.command.SubscribeTicks;
 import ru.eclipsetrader.transaq.core.services.ITQTickTradeService;
 
-public class TQTickTradeService implements ITQTickTradeService, Closeable {
+public class TQTickTradeService implements ITQTickTradeService {
 	
 	SubscribeTicks subscribeTicks = new SubscribeTicks();
 	ArrayBlockingQueue<List<TickTrade>> queue = new ArrayBlockingQueue<>(300);
@@ -48,13 +47,13 @@ public class TQTickTradeService implements ITQTickTradeService, Closeable {
 	/**
 	 * “иковые данные (в т.ч. дневна€ истори€ тиков)
 	 */
-	MassObserver<TickTrade> ticksObserver = new MassObserver<TickTrade>() {
+	ListObserver<TickTrade> ticksObserver = new ListObserver<TickTrade>() {
 		@Override
 		public void update(List<TickTrade> list) {
 			putInQueue(list);
-			Map<TQSymbol, List<TickTrade>> map = createMap(list);
+			Map<TQSymbol, List<Tick>> map = createMap(list);
 			for (TQSymbol symbol : map.keySet()) {
-				TQInstrumentService.getInstance().getITickObserver().update(symbol, map.get(symbol));
+				TQInstrumentService.getInstance().getDefaultTickListEvent().notifyObservers(symbol, map.get(symbol));
 			}
 		}
 	};
@@ -64,15 +63,15 @@ public class TQTickTradeService implements ITQTickTradeService, Closeable {
 	 *  –аскладывает список тиков по бумагам
 	 * @return
 	 */
-	private Map<TQSymbol, List<TickTrade>> createMap(List<TickTrade> list) {
-		HashMap<TQSymbol, List<TickTrade>> map = new HashMap<>();
+	public static Map<TQSymbol, List<Tick>> createMap(List<TickTrade> list) {
+		HashMap<TQSymbol, List<Tick>> map = new HashMap<>();
 		for (TickTrade temp : list) {
 			TQSymbol symbol = new TQSymbol(temp.getBoard(), temp.getSeccode());
-			List<TickTrade> tempList = null;
+			List<Tick> tempList = null;
 			if (map.containsKey(symbol)) {
 				tempList = map.get(symbol);
 			} else {
-				tempList = new ArrayList<TickTrade>();
+				tempList = new ArrayList<Tick>();
 				map.put(symbol, tempList);
 			}
 			tempList.add(temp);				
@@ -88,17 +87,13 @@ public class TQTickTradeService implements ITQTickTradeService, Closeable {
 		}
 	}
 	
-	public MassObserver<TickTrade> getTickObserver() {
+	public ListObserver<TickTrade> getTickObserver() {
 		return ticksObserver;
 	}
 	
 	public TQTickTradeService() {
+		dbWriteThread.setDaemon(true);
 		dbWriteThread.start();
-	}
-	
-	@Override
-	public void close() {
-		dbWriteThread.interrupt();
 	}
 
 	@Override

@@ -14,13 +14,13 @@ import org.xml.sax.InputSource;
 import ru.eclipsetrader.transaq.core.Constants;
 import ru.eclipsetrader.transaq.core.CoreActivator;
 import ru.eclipsetrader.transaq.core.Settings;
+import ru.eclipsetrader.transaq.core.account.TQAccountService;
 import ru.eclipsetrader.transaq.core.candle.TQCandleService;
 import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.data.DatabaseManager;
 import ru.eclipsetrader.transaq.core.datastorage.TQBoardService;
 import ru.eclipsetrader.transaq.core.datastorage.TQClientService;
 import ru.eclipsetrader.transaq.core.datastorage.TQMarketService;
-import ru.eclipsetrader.transaq.core.datastorage.TQPositionService;
 import ru.eclipsetrader.transaq.core.event.Event;
 import ru.eclipsetrader.transaq.core.event.Observer;
 import ru.eclipsetrader.transaq.core.event.osgi.OSGIServerStatusEvent;
@@ -40,6 +40,8 @@ import ru.eclipsetrader.transaq.core.quotes.TQQuoteService;
 import ru.eclipsetrader.transaq.core.securities.TQSecurityService;
 import ru.eclipsetrader.transaq.core.server.command.ChangePasswordCommand;
 import ru.eclipsetrader.transaq.core.server.command.Command;
+import ru.eclipsetrader.transaq.core.strategy.MACDStrategy;
+import ru.eclipsetrader.transaq.core.strategy.TQStrategyService;
 import ru.eclipsetrader.transaq.core.trades.TQTickTradeService;
 import ru.eclipsetrader.transaq.core.util.Utils;
 import ru.eclipsetrader.transaq.core.xml.handler.XMLHandler;
@@ -62,8 +64,7 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 	
 	private boolean wasInitialized = false;
 
-	ThreadGroup eventThreadGroup = new ThreadGroup("ThreadGroup");
-	final EventHolder eventHolder = new EventHolder(eventThreadGroup);
+	final EventHolder eventHolder = new EventHolder();
 	
 	private static TransaqServer INSTANCE;
 	public static TransaqServer getInstance() {
@@ -73,8 +74,10 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 		INSTANCE = transaqServer;
 	}
 	
-	public final Event<ServerSession> onConnectEstablished = new Event<ServerSession>("TransaqServer.onConnectEstablished", eventThreadGroup);
-	public final Event<String> onDisconnected = new Event<String>("TransaqServer.onDisconnected", eventThreadGroup);
+	MACDStrategy strategy;
+	
+	public static final Event<ServerSession> onConnectEstablished = new Event<ServerSession>("TransaqServer.onConnectEstablished");
+	public static final Event<String> onDisconnected = new Event<String>("TransaqServer.onDisconnected");
 	
 	public TransaqServer(final String serverId) {
 		
@@ -133,7 +136,7 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 		eventHolder.onPitsChange.addObserver(TQSecurityService.getInstance().getPitObserver());
 		eventHolder.onSecInfoUpdate.addObserver(TQSecurityService.getInstance().getSecInfoUpdateObserver());
 		
-		eventHolder.onPositionChange.addObserver(TQPositionService.getInstance());
+		eventHolder.onPositionChange.addObserver(TQAccountService.getInstance());
 		eventHolder.onOrderReceive.addObserver(TQOrderTradeService.getInstance().getOrderObserver());
 		
 		eventHolder.onTradeChange.addObserver(TQOrderTradeService.getInstance().getTradeObserver());
@@ -158,7 +161,7 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 		TQClientService.getInstance().persist();
 		TQMarketService.getInstance().persist();
 		TQSecurityService.getInstance().persist();
-		TQPositionService.getInstance().persist();
+		TQAccountService.getInstance().persist();
 	}
 	
 	public void updateServerStatus(ServerStatus newStatus) {
@@ -301,7 +304,6 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 		if (wasInitialized) {
 			TransaqLibrary.UnInitialize();
 		}
-		eventThreadGroup.interrupt();
 		DatabaseManager.dbThreadGroup.interrupt();
 	}
 	

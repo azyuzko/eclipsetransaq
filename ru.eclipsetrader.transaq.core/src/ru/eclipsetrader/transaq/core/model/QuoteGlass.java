@@ -1,5 +1,6 @@
 package ru.eclipsetrader.transaq.core.model;
 
+import java.util.List;
 import java.util.TreeMap;
 /**
  * Стакан котировок
@@ -12,6 +13,13 @@ public class QuoteGlass {
 	
 	TreeMap<Double, Integer> sellStack = new TreeMap<Double, Integer>(); 
 	TreeMap<Double, Integer> buyStack = new TreeMap<Double, Integer>(); 
+	
+	public void update(List<Quote> quotes) {
+		// обновим стакан
+		for (Quote quote : quotes) {
+			update(quote);
+		}
+	}
 	
 	public void update(Quote quote) {
 		if (quote.getSource() != null) {

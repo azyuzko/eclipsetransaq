@@ -73,6 +73,7 @@ public class CoreActivator implements BundleActivator {
 				TransaqServerManager.getInstance().connect(Constants.DEFAULT_SERVER_ID);
 			}
 		});
+		thread.setDaemon(true);
 		thread.start();
 	}
 

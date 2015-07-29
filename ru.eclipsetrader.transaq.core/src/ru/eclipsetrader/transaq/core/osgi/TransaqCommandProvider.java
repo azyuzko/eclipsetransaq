@@ -3,15 +3,15 @@ package ru.eclipsetrader.transaq.core.osgi;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.persistence.criteria.CriteriaBuilder.In;
+
 import org.eclipse.osgi.framework.console.CommandInterpreter;
 import org.eclipse.osgi.framework.console.CommandProvider;
 
 import ru.eclipsetrader.transaq.core.CoreActivator;
 import ru.eclipsetrader.transaq.core.Settings;
-import ru.eclipsetrader.transaq.core.candle.CandleStorage;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.candle.TQCandleService;
-import ru.eclipsetrader.transaq.core.instruments.Instrument;
 import ru.eclipsetrader.transaq.core.instruments.TQInstrumentService;
 import ru.eclipsetrader.transaq.core.interfaces.ITransaqServer;
 import ru.eclipsetrader.transaq.core.model.BoardType;
@@ -26,6 +26,7 @@ import ru.eclipsetrader.transaq.core.quotes.TQQuotationService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuoteService;
 import ru.eclipsetrader.transaq.core.securities.TQSecurityService;
 import ru.eclipsetrader.transaq.core.services.ITransaqServerManager;
+import ru.eclipsetrader.transaq.core.strategy.MACDStrategy;
 import ru.eclipsetrader.transaq.core.trades.TQTickTradeService;
 
 public class TransaqCommandProvider implements CommandProvider {
@@ -156,7 +157,7 @@ public class TransaqCommandProvider implements CommandProvider {
 				break;
 			}
 			
-			case "inst": {
+			case "quoteglass": {
 				String board = ci.nextArgument();
 				String seccode = ci.nextArgument();
 				
@@ -164,12 +165,6 @@ public class TransaqCommandProvider implements CommandProvider {
 					ci.println("Argument required");
 					return;
 				}
-				
-				Instrument i = TQInstrumentService.getInstance().getInstrument(new TQSymbol(board, seccode));
-				ci.println( i.getQuoteGlass().toString() );
-				
-				CandleStorage cs = i.getCandleStorage();
-				ci.println(cs.toString());
 				
 				break;
 			}
@@ -180,57 +175,40 @@ public class TransaqCommandProvider implements CommandProvider {
 			break;
 		}
 		
-		case "loadfull": {
-			List<TQSymbol> symbolList = new ArrayList<>();
-			for (Security security : TQSecurityService.getInstance().getBoardSecurities(BoardType.FUT)) {
-				if (security.getShortName().indexOf("-9.15") > 0) {
-					symbolList.add(new TQSymbol(security.getBoard(), security.getSeccode()));
-				}
-			}
-			TQTickTradeService.getInstance().subscribeTicks(symbolList);
-			TQQuoteService.getInstance().subscribe(symbolList);
+		case "subscribeall": {
+			TQTickTradeService.getInstance().subscribeTicks(TQSymbol.workingSymbolSet());
+			TQQuoteService.getInstance().subscribe(TQSymbol.workingSymbolSet());
 			break;
 		}
 		
-		case "load": {
-			
-			String board = ci.nextArgument();
-			String seccode = ci.nextArgument();
-			if (board == null && seccode == null) {
-				ci.println("Argument required");
+		case "loadcandlesall": {
+			String timespan = ci.nextArgument();
+			if (timespan == null) {
+				ci.println("Timespan required");
 				return;
 			}
-			
-			TQSymbol symbol = new TQSymbol(board, seccode);
-			TQTickTradeService.getInstance().subscribeTicks(symbol);	
-			TQQuoteService.getInstance().subscribe(symbol);			
-			break;
-		}
-		
-		case "loadcandles": {
-			String board = ci.nextArgument();
-			String seccode = ci.nextArgument();
 			String count = ci.nextArgument();
 			String reset = ci.nextArgument();
-			if (board == null && seccode == null || count == null) {
-				ci.println("Argument required");
-				return;
-			}
-						
-			TQSymbol symbol = new TQSymbol(board, seccode);
-			for (CandleType candleType : TQCandleService.getInstance().getCandleTypes()) {
-				System.out.println("get candles " + candleType);
-				List<Candle> candles = TQCandleService.getInstance().getHistoryData(symbol, candleType, Integer.valueOf(count), reset == null ? true : Boolean.valueOf(reset));
-				System.out.println("start persist");
+			
+			CandleType candleType = CandleType.valueOf(("CANDLE_" + timespan).toUpperCase());
+			for (TQSymbol symbol : TQSymbol.workingSymbolSet()) {
+				System.out.println("get candles for " + symbol + " " + candleType);
+				List<Candle> candles = TQCandleService.getInstance().getHistoryData(symbol, candleType, 
+						count == null ? 86400 / candleType.getSeconds() : Integer.valueOf(count), // по умолчанию за день
+						reset == null ? true : Boolean.valueOf(reset));
 				TQCandleService.getInstance().persist(symbol, candleType, candles);
-				System.out.println("end persist");
 			}
 			break;
 		}
 		
-		case "test": {
-			ci.execute("transaq show trace on");
-			TQSymbol symbol = new TQSymbol(BoardType.FUT, "SiU5");
+		case "start": {
+			strategy = new MACDStrategy(TQInstrumentService.getInstance().getDefaultDataFeedContext());
+			strategy.start();
+			break;
+		}
+	
+		case "showglass": {
+			System.out.println(strategy.BRQ5.getQuoteGlass().toString());
 			break;
 		}
 
@@ -239,6 +217,8 @@ public class TransaqCommandProvider implements CommandProvider {
 		}
 
 	}
+
+	MACDStrategy strategy;
 
 	public String getHelp() {
 		StringBuffer buffer = new StringBuffer();

@@ -8,13 +8,25 @@ import java.util.TreeMap;
 
 import org.apache.commons.lang3.time.DateUtils;
 
-import ru.eclipsetrader.transaq.core.interfaces.ITQTickTrade;
 import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.PriceType;
+import ru.eclipsetrader.transaq.core.model.internal.Tick;
+import ru.eclipsetrader.transaq.core.util.Holder;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
+/**
+ * График свечей
+ * @author Zyuzko-AA
+ *
+ */
 public class CandleList {
 
+	public static interface ICandleProcessContext {
+		void onCandleClose(Candle candle);
+		void onCandleOpen(Candle candle);
+		void onCandleChange(Candle candle);
+	}
+	
 	TreeMap<Date,Candle> map = new TreeMap<Date, Candle>();
 
 	private CandleType candleType;
@@ -87,9 +99,11 @@ public class CandleList {
 	}
 	
 	public void appendCandles(Collection<Candle> candles) {
-		// System.out.println("appendCandles size = " + candles.size() + " to " + candleType);
-		for (Candle candle : candles) {
-			map.put(candle.getDate(), candle);
+		if (candles != null) {
+			// System.out.println("appendCandles size = " + candles.size() + " to " + candleType);
+			for (Candle candle : candles) {
+				map.put(candle.getDate(), candle);
+			}
 		}
 	}
 	
@@ -120,14 +134,9 @@ public class CandleList {
 		
 		return DateUtils.addMilliseconds(toDate, -mod);
 	}
+
 	
-	/**
-	 * Кладет тик в свечу
-	 * @param trade
-	 * @return
-	 */
-	public Candle processTradeInCandle(ITQTickTrade trade) {
-		
+	public void processTickInCandle(Tick tick, ICandleProcessContext candleProcessContext) {
 		Candle topCandle = getLastCandle(); // если свечей нет, вернет null
 		
 		Date newTime = new Date(0); // minimal date
@@ -135,40 +144,47 @@ public class CandleList {
 		if (topCandle != null) {
 			newTime = new Date(topCandle.getDate().getTime() + (candleType.getSeconds()) * 1000 ); // перешагнули за размер свечи
 			
-			if (trade.getTime() == null) {
+			if (tick.getTime() == null) {
 				throw new RuntimeException("trade.getTime() is null");
 			}
 		}
 		
-		if (trade.getTime().after(newTime)) {
+		if (tick.getTime().after(newTime)) {
 			
-			newTime = closestCandleStartTime(trade.getTime(), candleType);
+			newTime = CandleList.closestCandleStartTime(tick.getTime(), candleType);
+			
+			if (topCandle != null) {
+				candleProcessContext.onCandleClose(topCandle);
+			}
 			
 			// System.out.println("New candle starting from " + Utils.formatDate(newTime));
 			topCandle = new Candle();
 			topCandle.setDate(newTime);
-			map.put(trade.getTime(), topCandle);
+			putCandle(topCandle);
+			candleProcessContext.onCandleOpen(topCandle);
 		}
 		
-		double tradePrice =  trade.getPrice();
-		if (tradePrice > topCandle.getHigh()) {
-			topCandle.setHigh(tradePrice);
+		double tickPrice =  tick.getPrice();
+		if (tickPrice > topCandle.getHigh()) {
+			topCandle.setHigh(tickPrice);
 		}
-		if (tradePrice < topCandle.getLow()) {
-			topCandle.setLow(tradePrice);
+		if (tickPrice < topCandle.getLow()) {
+			topCandle.setLow(tickPrice);
 		}
 		if (topCandle.getOpen() == 0) {
-			topCandle.setOpen(tradePrice);
+			topCandle.setOpen(tickPrice);
 		}
-		topCandle.setClose(tradePrice);
-		topCandle.setVolume(topCandle.getVolume() + trade.getQuantity());
+		if (topCandle.getClose() != tickPrice) {
+			topCandle.setClose(tickPrice);
+		}
 		
-		//TODO refactor onCandleListChange.notifyObservers(this);
+		topCandle.setVolume(topCandle.getVolume() + tick.getQuantity());
 		
-		// System.out.println(topCandle.toString() );
-		return topCandle;
+		topCandle.getData().add(new Holder<Double, Integer>(tick.getPrice(), tick.getQuantity()));
+		
+		candleProcessContext.onCandleChange(topCandle);
+		
 	}
-	
 	
 	@Override
 	public String toString() {

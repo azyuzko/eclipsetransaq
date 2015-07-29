@@ -4,18 +4,20 @@ import java.util.Date;
 import java.util.Set;
 import java.util.TreeMap;
 
-import ru.eclipsetrader.transaq.core.interfaces.ITQTickTrade;
+import ru.eclipsetrader.transaq.core.instruments.Instrument;
+import ru.eclipsetrader.transaq.core.interfaces.IProcessingContext;
 import ru.eclipsetrader.transaq.core.model.Candle;
-import ru.eclipsetrader.transaq.core.model.TQSymbol;
+import ru.eclipsetrader.transaq.core.model.internal.Tick;
 
 public class CandleStorage  {
 	
-	TQSymbol symbol;
-	
+	IProcessingContext context;
+	Instrument instrument;
 	private TreeMap<CandleType, CandleList> storage = new TreeMap<>(CandleType.comparator);
 
-	public CandleStorage(TQSymbol symbol) {
-		this.symbol = symbol;
+	public CandleStorage(Instrument instrument, IProcessingContext context) {
+		this.instrument = instrument;
+		this.context = context;
 	}
 	
 	public CandleStorage(CandleType[] candleTypes) {
@@ -82,9 +84,22 @@ public class CandleStorage  {
 		return storage.get(candleType);
 	}
 	
-	public void processTrade(ITQTickTrade trade) {
-		for (CandleList candleList : storage.values()) {
-			Candle lastCandle = candleList.processTradeInCandle(trade);
+	public void processTrade(Tick tick) {
+		for (final CandleList candleList : storage.values()) {
+			candleList.processTickInCandle(tick, new CandleList.ICandleProcessContext() {
+				@Override
+				public void onCandleOpen(Candle candle) {
+					context.onCandleOpen(instrument, candleList, candle);
+				}
+				@Override
+				public void onCandleClose(Candle candle) {
+					context.onCandleClose(instrument, candleList, candle);
+				}
+				@Override
+				public void onCandleChange(Candle candle) {
+					context.onCandleChange(instrument, candleList, candle);
+				}
+			});			
 		}
 	}
 

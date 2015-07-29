@@ -25,9 +25,11 @@ import org.apache.logging.log4j.Logger;
 
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.model.BoardType;
+import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.Quote;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
+import ru.eclipsetrader.transaq.core.model.TradePeriod;
 import ru.eclipsetrader.transaq.core.model.internal.ServerObject;
 import ru.eclipsetrader.transaq.core.model.internal.SessionObject;
 import ru.eclipsetrader.transaq.core.model.internal.TickTrade;
@@ -55,6 +57,8 @@ public class DataManager {
 			+ "on (t1.board = t2.board and t1.seccode = t2.seccode and t1.time = t2.time and t1.tradeno = t2.tradeno) "
 			+ " when not matched then insert (session_id, server, board, seccode, tradeno, time, buysell, price, quantity, period, openinterest)"
 			+ " values (?, ?, t2.board, t2.seccode, t2.tradeno, t2.time, ?, ?, ?, ?, ? )";
+	final static String TICK_SELECT_SQL = "select t.tradeno, t.time, t.board, t.seccode, t.buysell, t.price, t.quantity, t.period, t.openinterest"
+			+ " from ticks t where t.time between ? and ? order by t.time, t.tradeno";
 	
 	final static String QUOTE_INSERT_SQL = "insert into quotes (id, time, board, seccode, price, yield, buy, sell) values (quote_seq.nextval, ?, ?, ?, ?, ?, ?, ?)";
 	final static String QUOTE_SELECT_SQL = "select time, board, seccode, price, yield, buy, sell from quotes where time between ? and ? order by time, id";
@@ -202,6 +206,46 @@ public class DataManager {
 			e.printStackTrace();
 		} 
 	}
+	
+	public static List<TickTrade> getTickList(Date dateFrom, Date dateTo) {
+		EntityManager em = tlsEm.get();
+		PreparedStatement stmt;
+		OracleConnection oc = null;
+		List<TickTrade> result = new ArrayList<TickTrade>();
+		try {
+			em.getTransaction().begin();
+			oc = (OracleConnection)em.unwrap(Connection.class);
+			oc.setAutoCommit(false);
+			stmt = (PreparedStatement) oc.prepareStatement(TICK_SELECT_SQL);
+			stmt.setTimestamp(1, new java.sql.Timestamp(dateFrom.getTime()));
+			stmt.setTimestamp(2, new java.sql.Timestamp(dateTo.getTime()));
+			ResultSet rs = stmt.executeQuery();
+			while (rs.next()) {
+				TickTrade t = new TickTrade();
+				t.setTradeno(rs.getString(1));
+				t.setTime(rs.getTimestamp(2));
+				t.setBoard(BoardType.valueOf(rs.getString(3)));
+				t.setSeccode(rs.getString(4));
+				t.setBuysell(BuySell.valueOf(rs.getString(5)));
+				t.setPrice(rs.getDouble(6));
+				t.setQuantity(rs.getInt(7));
+				String tradePeriod = rs.getString(8);
+				if (tradePeriod != null) {
+					t.setPeriod(TradePeriod.valueOf(tradePeriod));
+				}
+				t.setOpeninterest(rs.getInt(9));
+				result.add(t);
+			}
+			rs.close();
+			stmt.close();
+			em.getTransaction().commit();
+		} catch (SQLException e) {
+			em.getTransaction().rollback();
+			e.printStackTrace();
+		} 
+		return result;
+	}
+
 	
 	public static void batchQuoteList(List<Quote> list) {
 		EntityManager em = tlsEm.get();

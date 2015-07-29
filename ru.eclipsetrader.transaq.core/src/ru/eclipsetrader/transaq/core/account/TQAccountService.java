@@ -1,25 +1,31 @@
-package ru.eclipsetrader.transaq.core.datastorage;
+package ru.eclipsetrader.transaq.core.account;
 
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.sun.jna.platform.unix.X11.XClientMessageEvent.Data;
-
 import ru.eclipsetrader.transaq.core.Constants;
 import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.event.Observer;
+import ru.eclipsetrader.transaq.core.exception.UnimplementedException;
+import ru.eclipsetrader.transaq.core.interfaces.IAccount;
 import ru.eclipsetrader.transaq.core.interfaces.ITQPosition;
 import ru.eclipsetrader.transaq.core.interfaces.ITQSecurity;
+import ru.eclipsetrader.transaq.core.model.BoardType;
+import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.PositionType;
+import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.FortsMoneyPosition;
 import ru.eclipsetrader.transaq.core.model.internal.FortsPosition;
 import ru.eclipsetrader.transaq.core.model.internal.MoneyPosition;
+import ru.eclipsetrader.transaq.core.model.internal.Order;
 import ru.eclipsetrader.transaq.core.model.internal.SecurityPosition;
-import ru.eclipsetrader.transaq.core.services.ITQPositionService;
+import ru.eclipsetrader.transaq.core.orders.OrderRequest;
+import ru.eclipsetrader.transaq.core.orders.TQOrderTradeService;
+import ru.eclipsetrader.transaq.core.services.ITQAccountService;
 import ru.eclipsetrader.transaq.core.util.Holder;
 
-public class TQPositionService implements ITQPositionService, Observer<Holder<PositionType,Map<String,String>>> {
+public class TQAccountService implements ITQAccountService, Observer<Holder<PositionType,Map<String,String>>> {
 	
 	Map<String, SecurityPosition> securityPosition = new HashMap<String, SecurityPosition>();
 	Map<String, MoneyPosition> moneyPosition = new HashMap<String, MoneyPosition>();
@@ -28,16 +34,53 @@ public class TQPositionService implements ITQPositionService, Observer<Holder<Po
 
 	String serverId;
 	
-	static TQPositionService instance; 
-	public static TQPositionService getInstance() {
+	static TQAccountService instance; 
+	public static TQAccountService getInstance() {
 		if (instance == null) {
-			instance = new TQPositionService(Constants.DEFAULT_SERVER_ID);
+			instance = new TQAccountService(Constants.DEFAULT_SERVER_ID);
 		}
 		return instance;
 	}
 	
-	public TQPositionService(String serverId) {
+	public TQAccountService(String serverId) {
 		this.serverId = serverId;
+	}
+	
+	
+	IAccount fortsAccount = new IAccount() {
+		
+		@Override
+		public void sell(TQSymbol symbol, int quantity) {
+			OrderRequest orderRequest = OrderRequest.createByMarketRequest(symbol, BuySell.S, quantity);
+			Order order = TQOrderTradeService.getInstance().callNewOrder(orderRequest);
+		}
+		
+		@Override
+		public void closePosition(TQSymbol symbol) {
+			// TODO Auto-generated method stub
+			
+		}
+		
+		@Override
+		public void cancelOpenOrders(TQSymbol symbol) {
+			// TODO Auto-generated method stub
+			
+		}
+		
+		@Override
+		public void buy(TQSymbol symbol, int quantity) {
+			OrderRequest orderRequest = OrderRequest.createByMarketRequest(symbol, BuySell.B, quantity);
+			Order order = TQOrderTradeService.getInstance().callNewOrder(orderRequest);
+			
+		}
+	};
+	
+	public IAccount getAccount(TQSymbol symbol) {
+		if (symbol.getBoard() == BoardType.FUT) {
+			return fortsAccount;
+		} else {
+			throw new UnimplementedException();
+		}
 	}
 	
 	public void applyPositionGap(String serverId, Holder<PositionType, Map<String, String>> gapHolder) {
@@ -175,7 +218,6 @@ public class TQPositionService implements ITQPositionService, Observer<Holder<Po
 		}
 	}
 
-	@Override
 	public void clear() {
 		fortsMoneyPosition.clear();
 		fortsPosition.clear();

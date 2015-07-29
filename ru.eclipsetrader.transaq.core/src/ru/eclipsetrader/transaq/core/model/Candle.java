@@ -1,8 +1,11 @@
 package ru.eclipsetrader.transaq.core.model;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import ru.eclipsetrader.transaq.core.exception.UnimplementedException;
+import ru.eclipsetrader.transaq.core.util.Holder;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class Candle {
@@ -14,10 +17,18 @@ public class Candle {
 	double close;
 	int volume;
 	int oi; // open interest (for futures and options only) 
+	
+	// все операции лежат в этой структуре
+	// используется для расчета других типов цен
+	List<Holder<Double, Integer>> data = new ArrayList<Holder<Double, Integer>>();
+	
+	public List<Holder<Double, Integer>> getData() {
+		return data;
+	}
 
 	@Override
 	public String toString() {
-		return "Date = " + Utils.formatDate(date) + ",   open = " + open + ",   high = " + high + ",   low = " + low + ",   close = " + close + ",   volume = " + volume;
+		return "date = " + Utils.formatDate(date) + ",   open = " + open + ",   high = " + high + ",   low = " + low + ",   close = " + close + ",   volume = " + volume;
 	}
 	
 	public Candle() {

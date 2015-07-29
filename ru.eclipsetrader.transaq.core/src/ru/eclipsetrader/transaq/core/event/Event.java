@@ -17,7 +17,9 @@ public class Event<T> implements Runnable {
 	
 	String name;
 
-	public Event(String name, ThreadGroup eventThreadGroup) {
+	public static ThreadGroup eventThreadGroup = new ThreadGroup("Event threads");
+	
+	public Event(String name) {
 		this.name = name;
 		this.logger = LogManager.getFormatterLogger("Event."+name);
 		this.thread = new Thread(eventThreadGroup, this);
@@ -98,6 +100,7 @@ public class Event<T> implements Runnable {
 				if (logger.isDebugEnabled()) {
 					logger.debug("starting event thread");
 				}
+				thread.setDaemon(true);
 				thread.start();
 			}
 		}

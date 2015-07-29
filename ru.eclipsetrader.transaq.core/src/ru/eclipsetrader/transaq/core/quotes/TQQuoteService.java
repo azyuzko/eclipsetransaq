@@ -44,6 +44,7 @@ public class TQQuoteService implements ITQQuoteService, Closeable {
 	}
 	
 	private TQQuoteService() {
+		dbWriteThread.setDaemon(true);
 		dbWriteThread.start();
 	}
 	
@@ -59,13 +60,27 @@ public class TQQuoteService implements ITQQuoteService, Closeable {
 			for (TQSymbol symbol : quoteMap.keySet()) {
 				List<Quote> quotesList = quoteMap.get(symbol);
 				quoteQueue.add(quotesList);
-				TQInstrumentService.getInstance().getIQuotesObserver().update(symbol, quotesList);
+				TQInstrumentService.getInstance().getDefaultQuoteListEvent().notifyObservers(symbol, quotesList);
 			}
 		}
 	};
 	
 	public Observer<List<SymbolGapMap>> getQuoteGapObserver() {
 		return quoteGapObserver;
+	}
+	
+	public static Map<TQSymbol, List<Quote>> createMap(List<Quote> quoteList) {
+		Map<TQSymbol, List<Quote>> result = new HashMap<TQSymbol, List<Quote>>();
+		for (Quote quote : quoteList) {
+			TQSymbol symbol = new TQSymbol(quote.getBoard(), quote.getSeccode());
+			List<Quote> list = result.get(symbol);
+			if (list == null) {
+				list = new ArrayList<Quote>();
+				result.put(symbol, list);
+			}
+			list.add(quote);
+		}
+		return result;
 	}
 	
 	public static Map<TQSymbol, List<Quote>> applyQuoteGap(List<SymbolGapMap> quoteGapList) {

@@ -1,5 +1,7 @@
 package ru.eclipsetrader.transaq.core.server;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Map;
 
 import ru.eclipsetrader.transaq.core.event.Event;
@@ -22,7 +24,7 @@ import ru.eclipsetrader.transaq.core.model.internal.TickTrade;
 import ru.eclipsetrader.transaq.core.model.internal.Trade;
 import ru.eclipsetrader.transaq.core.util.Holder;
 
-public final class EventHolder {
+public final class EventHolder implements Closeable {
 
 	public final Event<String> onErrorReceive;
 	public final Event<Message> onMessageReceive;
@@ -45,27 +47,52 @@ public final class EventHolder {
 	public final Event<Order> onOrderReceive;
 	public final Event<StopOrder> onStopOrderReceive;
 	
-	public EventHolder(ThreadGroup threadGroup) {
-		onErrorReceive = new Event<String>("EventHolder.onErrorReceive", threadGroup);
-		onMessageReceive = new Event<Message>("EventHolder.onMessageReceive", threadGroup);
-		onServerStatusChange = new Event<ServerStatus>("EventHolder.onServerStatusChange", threadGroup);
-		onOvernightChange = new Event<Boolean>("EventHolder.onOvernightChange", threadGroup);
-		onMarketsChange = new ListEvent<Market>("EventHolder.onMarketsChange", threadGroup);
-		onCandleKindChange = new ListEvent<CandleKind>("EventHolder.onCandleKindChange", threadGroup);
-		onBoardsChange = new ListEvent<Board>("EventHolder.onBoardsChange", threadGroup);
-		onClientReceive = new Event<Client>("EventHolder.onClientReceive", threadGroup);
-		onPitsChange = new ListEvent<Pit>("EventHolder.onPitsChange", threadGroup);
-		onSecuritiesChange = new ListEvent<Security>("EventHolder.onSecuritiesChange", threadGroup);
-		onPositionChange = new Event<Holder<PositionType,Map<String,String>>>("EventHolder.onPositionChange", threadGroup);
-		onAllTradeChange = new ListEvent<TickTrade>("EventHolder.onAllTradeChange", threadGroup);
-		onQuotationsChange = new Event<SymbolGapMap>("EventHolder.onQuotationsChange", threadGroup);
-		onQuotesChange = new ListEvent<SymbolGapMap>("EventHolder.onQuotesChange", threadGroup);
-		onTickTradeChange = new ListEvent<TickTrade>("EventHolder.onTickTradeChange", threadGroup);
-		onCandleGraphReceive = new Event<CandleGraph>("EventHolder.onCandleGraphReceive", threadGroup);
-		onSecInfoUpdate = new Event<SecInfoUpdate>("EventHolder.onSecInfoUpdate", threadGroup);
-		onTradeChange = new Event<Trade>("EventHolder.onTradeChange", threadGroup);
-		onOrderReceive = new Event<Order>("EventHolder.onOrderReceive", threadGroup);
-		onStopOrderReceive = new Event<StopOrder>("EventHolder.onStopOrderReceive", threadGroup);
+	public EventHolder() {
+		onErrorReceive = new Event<String>("EventHolder.onErrorReceive");
+		onMessageReceive = new Event<Message>("EventHolder.onMessageReceive");
+		onServerStatusChange = new Event<ServerStatus>("EventHolder.onServerStatusChange");
+		onOvernightChange = new Event<Boolean>("EventHolder.onOvernightChange");
+		onMarketsChange = new ListEvent<Market>("EventHolder.onMarketsChange");
+		onCandleKindChange = new ListEvent<CandleKind>("EventHolder.onCandleKindChange");
+		onBoardsChange = new ListEvent<Board>("EventHolder.onBoardsChange");
+		onClientReceive = new Event<Client>("EventHolder.onClientReceive");
+		onPitsChange = new ListEvent<Pit>("EventHolder.onPitsChange");
+		onSecuritiesChange = new ListEvent<Security>("EventHolder.onSecuritiesChange");
+		onPositionChange = new Event<Holder<PositionType,Map<String,String>>>("EventHolder.onPositionChange");
+		onAllTradeChange = new ListEvent<TickTrade>("EventHolder.onAllTradeChange");
+		onQuotationsChange = new Event<SymbolGapMap>("EventHolder.onQuotationsChange");
+		onQuotesChange = new ListEvent<SymbolGapMap>("EventHolder.onQuotesChange");
+		onTickTradeChange = new ListEvent<TickTrade>("EventHolder.onTickTradeChange");
+		onCandleGraphReceive = new Event<CandleGraph>("EventHolder.onCandleGraphReceive");
+		onSecInfoUpdate = new Event<SecInfoUpdate>("EventHolder.onSecInfoUpdate");
+		onTradeChange = new Event<Trade>("EventHolder.onTradeChange");
+		onOrderReceive = new Event<Order>("EventHolder.onOrderReceive");
+		onStopOrderReceive = new Event<StopOrder>("EventHolder.onStopOrderReceive");
+	}
+
+	@Override
+	public void close() throws IOException {
+		onErrorReceive.deleteObservers();
+		onMessageReceive.deleteObservers();
+		onServerStatusChange.deleteObservers();
+		onOvernightChange.deleteObservers();
+		onMarketsChange.deleteObservers();
+		onCandleKindChange.deleteObservers();
+		onBoardsChange.deleteObservers();
+		onClientReceive.deleteObservers();
+		onPitsChange.deleteObservers();
+		onSecuritiesChange.deleteObservers();
+		onPositionChange.deleteObservers();
+		onAllTradeChange.deleteObservers();
+		onQuotationsChange.deleteObservers();
+		onQuotesChange.deleteObservers();
+		onTickTradeChange.deleteObservers();
+		onCandleGraphReceive.deleteObservers();
+		onSecInfoUpdate.deleteObservers();
+		onTradeChange.deleteObservers();
+		onOrderReceive.deleteObservers();
+		onStopOrderReceive.deleteObservers();
+		
 	}
 	
 }
