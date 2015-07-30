@@ -169,7 +169,6 @@ public class BaseFortsContract extends ServerObject implements Cloneable {
 		newObject.setOptmargin(optmargin);
 		newObject.setPrice(price);
 		newObject.setServer(getServer());
-		newObject.setSessionId(getSessionId());
 		newObject.setStartnet(startnet);
 		newObject.setTodaybuy(todaybuy);
 		newObject.setTodaysell(todaysell);

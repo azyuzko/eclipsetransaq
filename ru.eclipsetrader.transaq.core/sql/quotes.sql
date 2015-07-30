@@ -1,5 +1,8 @@
+
+create sequence quote_seq start with 10000 increment by 10 cache 100 nocycle;
+
 create table quotes (
-  id number,
+  id number not null,
   time timestamp,
   board varchar2(20),
   seccode varchar2(20),
@@ -10,3 +13,5 @@ create table quotes (
 );
 
 create index quotes_IX1 on quotes(board, seccode, time);
+
+create index quotes_IX2 on quotes(time);

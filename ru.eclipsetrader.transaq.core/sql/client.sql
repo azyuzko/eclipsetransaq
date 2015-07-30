@@ -1,6 +1,5 @@
 create table client
 (id varchar2(50) primary key,
-  session_id char(36),
   server varchar2(20),
 	remove number(1),
 	currency varchar2(20),

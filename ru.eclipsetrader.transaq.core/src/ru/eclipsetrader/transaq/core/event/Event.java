@@ -10,9 +10,11 @@ import org.apache.logging.log4j.Logger;
 
 public class Event<T> implements Runnable {
 
+	public static int QUEUE_SIZE = 3000;
+	
 	Logger logger;
 	Vector<Observer<T>> obs = new Vector<Observer<T>>();
-	BlockingQueue<T> notifyObjectQueue = new ArrayBlockingQueue<T>(3000);
+	BlockingQueue<T> notifyObjectQueue = new ArrayBlockingQueue<T>(QUEUE_SIZE);
 	Thread thread;
 	
 	String name;
@@ -35,7 +37,11 @@ public class Event<T> implements Runnable {
 				T obj = notifyObjectQueue.take();
 				
 				if (logger.isDebugEnabled()) {
-					logger.debug("received object %s from queue", obj.getClass().getSimpleName());
+					logger.debug("Queue <" + name  + "> received object %s from queue", obj.getClass().getSimpleName());
+				}
+				
+				if (notifyObjectQueue.size() > (QUEUE_SIZE/3))  {
+					logger.warn("Queue <" + name  + "> size = " + notifyObjectQueue.size() + ". Maximum size = " + QUEUE_SIZE);
 				}
 
 				Object[] arrayOfObservers;
@@ -45,22 +51,18 @@ public class Event<T> implements Runnable {
 				for (int i = arrayOfObservers.length - 1; i >= 0; --i) {
 					Observer<T> observer = ((Observer<T>) arrayOfObservers[i]);
 					if (logger.isDebugEnabled()) {
-						logger.debug("start update observer %d: class = %s", i, observer.getClass().getName());
+						logger.debug("Queue <" + name  + "> start update observer %d: class = %s", i, observer.getClass().getName());
 					}
 					observer.update(obj);
 					if (logger.isDebugEnabled()) {
-						logger.debug("end update observer %d: class = %s", i, observer.getClass().getName());
+						logger.debug("Queue <" + name  + "> end update observer %d: class = %s", i, observer.getClass().getName());
 					}
 				}
 
 			}
 		} catch (InterruptedException e) {
 			notifyObjectQueue.clear();
-			/*if (TransaqServer.getInstance() != null && TransaqServer.getInstance().getStatus() != ConnectionStatus.DISCONNECTED
-					&& TransaqServer.getInstance().getStatus() != ConnectionStatus.DISCONNECTING) {
-				logger.error("Thread %s was interrupted. Object queue flushed", this.getClass().getSimpleName());
-			}*/
-			logger.error("Thread %s was interrupted. Object queue flushed", this.getClass().getSimpleName());
+			logger.error("Queue <%s> Thread was interrupted. Object queue flushed", name);
 		}
 		logger.exit();
 	}
@@ -76,17 +78,17 @@ public class Event<T> implements Runnable {
 	}
 
 	public synchronized void deleteObserver(Observer<T> paramObserver) {
+		if (logger.isDebugEnabled()) {
+			logger.debug("Queue <" + name  + "> deleteObserver = " + paramObserver);
+		}
 		obs.removeElement(paramObserver);
 	}
 
 	public void notifyObservers() {
-		logger.entry("notifyObservers");
 		notifyObservers(null);
-		logger.exit();
 	}
 
 	public void notifyObservers(T paramObject) {
-		logger.entry("notifyObservers");
 		synchronized (obs) {
 			if (obs.size() == 0) {
 				logger.debug("No observers");
@@ -107,10 +109,8 @@ public class Event<T> implements Runnable {
 
 		try {
 			if (notifyObjectQueue.remainingCapacity() == 0) {
-				String error = String.format("Event queue is full! obs.size = %d, notifyObjectQueue.size = %d, eventThreadGroup.activeCount() = %d, paramObject.class = %s "
+				String error = String.format("Queue <" + name  + "> is full! obs.size = %d, notifyObjectQueue.size = %d, eventThreadGroup.activeCount() = %d, paramObject.class = %s "
 						, obs.size(), notifyObjectQueue.size(), thread.getThreadGroup().activeCount(), paramObject.getClass().getName());
-				/*logger.error(error);
-				logger.exit();*/
 				throw new RuntimeException(error);
 			}
 
@@ -118,11 +118,11 @@ public class Event<T> implements Runnable {
 		} catch (InterruptedException e) {
 			logger.throwing(e);
 		}
-		logger.exit();
 
 	}
 
 	public synchronized void deleteObservers() {
+		logger.debug("Queue <" + name  + "> deleteObservers");
 		obs.removeAllElements();
 	}
 

@@ -13,6 +13,7 @@ import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.PriceType;
 import ru.eclipsetrader.transaq.core.model.QuoteGlass;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
+import ru.eclipsetrader.transaq.core.model.internal.Quotation;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
 import ru.eclipsetrader.transaq.core.trades.IDataFeedContext;
 import ru.eclipsetrader.transaq.core.util.Utils;
@@ -31,8 +32,8 @@ public class MACDStrategy implements IProcessingContext, IStrategy {
 		this.dataFeedContext = dataFeedContext;
 		macd = new MACD(12, 26, 9);
 		BRQ5 = new Instrument(TQSymbol.BRQ5, this, dataFeedContext);
-		SiU5 = new Instrument(TQSymbol.SiU5, this, dataFeedContext);
-		RIU5 = new Instrument(TQSymbol.RIU5, this, dataFeedContext);
+		//SiU5 = new Instrument(TQSymbol.SiU5, this, dataFeedContext);
+		//RIU5 = new Instrument(TQSymbol.RIU5, this, dataFeedContext);
 	}
 
 	public MACD getMacd() {
@@ -131,6 +132,12 @@ public class MACDStrategy implements IProcessingContext, IStrategy {
 //		System.out.println("onCandleChange: " + instrument.getSymbol() + " " + candle.toString());
 		tick(instrument, candleList);
 	}
+	
+
+	@Override
+	public void onQuotationsChange(Instrument instrument, Quotation quotation) {
+		System.out.println("Quotations changed");
+	}
 
 	@Override
 	public CandleType[] getCandleTypes() {
@@ -146,5 +153,6 @@ public class MACDStrategy implements IProcessingContext, IStrategy {
 	public IProcessingContext getProcessingContext() {
 		return this;
 	}
+
 	
 }

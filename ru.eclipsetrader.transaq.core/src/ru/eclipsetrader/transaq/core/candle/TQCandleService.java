@@ -9,6 +9,9 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import ru.eclipsetrader.transaq.core.Constants;
 import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.event.Observer;
@@ -20,11 +23,15 @@ import ru.eclipsetrader.transaq.core.model.internal.CandleKind;
 import ru.eclipsetrader.transaq.core.model.internal.CandleStatus;
 import ru.eclipsetrader.transaq.core.server.command.GetHistoryDataCommand;
 import ru.eclipsetrader.transaq.core.services.ITQCandleService;
+import ru.eclipsetrader.transaq.core.util.Holder;
 
 public class TQCandleService implements ITQCandleService {
 	
-	Set<CandleKind> candleKinds = new HashSet<CandleKind>();
+	Logger logger = LogManager.getLogger(TQCandleService.class);
 	
+	HashSet<CandleKind> candleKinds = new HashSet<CandleKind>();
+	
+	WeakHashMap<Holder<TQSymbol, CandleType>, List<Candle>> buffer = new WeakHashMap<>();
 	ArrayBlockingQueue<CandleGraph> dbWriteQueue = new ArrayBlockingQueue<>(300);
 	
 	Thread dbWriteThread = new Thread(new Runnable() {
@@ -57,27 +64,28 @@ public class TQCandleService implements ITQCandleService {
 	Observer<List<CandleKind>> candleKindObserver = new Observer<List<CandleKind>>() {
 		@Override
 		public void update(List<CandleKind> candleKindList) {
+			candleKindList.clear();
 			candleKinds.addAll(candleKindList);
+			persist();
 		}
 	}; 
-	
-	
-	//Object candlesWait = new Object();
-	// List<Candle> candleBuffer = Collections.synchronizedList(new ArrayList<Candle>());
-	
-	WeakHashMap<TQSymbol, List<Candle>> buffer = new WeakHashMap<>();
-	
+		
 	Observer<CandleGraph> candleGraphObserver = new Observer<CandleGraph>() {
 		@Override
 		public void update(CandleGraph candleGraph) {
 			TQSymbol symbol = new TQSymbol(candleGraph.getBoard(), candleGraph.getSeccode());
-			if (buffer.containsKey(symbol)) {
-				List<Candle> candleBuffer = buffer.get(symbol);
+			CandleType candleType = getCandleTypeFromPeriodId(candleGraph.getPeriod());
+			Holder<TQSymbol, CandleType> key = new Holder<TQSymbol, CandleType>(symbol, candleType);
+			if (buffer.containsKey(key)) {
+				List<Candle> candleBuffer = buffer.get(key);
 				candleBuffer.addAll(candleGraph.getCandles());
-				System.out.println("candleGraph.getCandles().size = " + candleGraph.getCandles().size() + " status = " + candleGraph.getStatus());
+				
+				if (logger.isDebugEnabled()) {
+					logger.debug(symbol + "  " + candleType + " candleGraph.getCandles().size = " + candleGraph.getCandles().size() + " status = " + candleGraph.getStatus());
+				}
 				if (candleGraph.getStatus() == CandleStatus.NO_MORE || candleGraph.getStatus() == CandleStatus.FULL_PROVIDED) {
 					synchronized (candleBuffer) {
-						System.out.println("Notify waiters");
+						logger.debug(symbol + "  " + candleType + " notify waiters");
 						candleBuffer.notify();	
 					}				
 				}
@@ -143,7 +151,12 @@ public class TQCandleService implements ITQCandleService {
 	
 	// получим свечи
 	public List<Candle> getHistoryData(TQSymbol symbol, CandleType candleType, int count, boolean reset) {		
-		System.out.println("Calling getHistoryData for <" + symbol + ">");
+		Holder<TQSymbol, CandleType> key = new Holder<TQSymbol, CandleType>(symbol, candleType);
+		logger.debug("Calling getHistoryData for <" + key + ">");
+		if (buffer.containsKey(key)) {
+			throw new RuntimeException("Already waiting for history data for " + key);
+		}
+
 		GetHistoryDataCommand getHistoryDataCommand = new GetHistoryDataCommand();
 		getHistoryDataCommand.setBoard(symbol.getBoard());
 		getHistoryDataCommand.setSeccode(symbol.getSeccode());
@@ -151,14 +164,10 @@ public class TQCandleService implements ITQCandleService {
 		getHistoryDataCommand.setCandleCount(count);
 		getHistoryDataCommand.setReset(reset);
 		TransaqLibrary.SendCommand(getHistoryDataCommand.createConnectCommand());
-		
-		if (buffer.containsKey(symbol)) {
-			throw new RuntimeException("Already waiting for history data for " + symbol);
-		}
-		
+
 		// создадим буфер
 		List<Candle> candleBuffer = Collections.synchronizedList(new ArrayList<Candle>());
-		buffer.put(symbol, candleBuffer);
+		buffer.put(key, candleBuffer);
 		
 		synchronized (candleBuffer) {
 			try {
@@ -167,7 +176,7 @@ public class TQCandleService implements ITQCandleService {
 				throw new RuntimeException("Candles hasn't been received within 100 seconds", e);
 			} finally {
 				// освободим буфер
-				buffer.remove(symbol);
+				buffer.remove(key);
 			}
 			return candleBuffer;
 		}

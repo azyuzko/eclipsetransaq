@@ -1,16 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="INFO" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <Appenders>
-    <Console name="Console" target="SYSTEM_OUT">
-      <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-    </Console>
-    <Console name="ConsoleErr" target="SYSTEM_ERR">
-      <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-    </Console>    
-  </Appenders>
-  <Loggers>
-    <Root level="info">
-      <AppenderRef ref="Console"/>
-    </Root>
-  </Loggers>
+<Configuration status="INFO"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<Appenders>
+		<Console name="Console" target="SYSTEM_OUT">
+			<PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n" />
+		</Console>
+		<Console name="ConsoleErr" target="SYSTEM_ERR">
+			<PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n" />
+		</Console>
+	</Appenders>
+	<Loggers>
+		<logger name="ru.eclipsetrader.transaq.core.candle.TQCandleService"
+			level="warn" />
+		<logger name="ru.eclipsetrader.transaq.core.schedule.LoadCandlesSchedule"
+			level="warn" />
+		<logger name="ru.eclipsetrader.transaq.core.library.TransaqLibrary"
+			level="info" />
+		<logger name="ru.eclipsetrader.transaq.core.orders.TQOrderTradeService"
+			level="info" />
+		<logger name="ru.eclipsetrader.transaq.core.instruments.Instrument"
+			level="info" />
+		<Root level="info">
+			<AppenderRef ref="Console" />
+		</Root>
+	</Loggers>
 </Configuration>

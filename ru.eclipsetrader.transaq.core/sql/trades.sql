@@ -1,6 +1,5 @@
 create table trades(
 tradeno varchar2(36)  primary key,
-session_id char(36),
 secid integer,
 server varchar2(20),
 orderno varchar2(36),

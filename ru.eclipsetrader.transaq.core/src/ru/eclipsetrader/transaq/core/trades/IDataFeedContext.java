@@ -1,7 +1,7 @@
 package ru.eclipsetrader.transaq.core.trades;
 
 
-public interface IDataFeedContext extends ITickFeeder, IQuoteFeeder, IHistoryFeeder, IAccountSupplier {
+public interface IDataFeedContext extends ITickFeeder, IQuoteFeeder, IQuotationFeeder, IHistoryFeeder, IAccountSupplier {
 
 	void OnStart();
 	

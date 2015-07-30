@@ -52,26 +52,37 @@ public class TQAccountService implements ITQAccountService, Observer<Holder<Posi
 		@Override
 		public void sell(TQSymbol symbol, int quantity) {
 			OrderRequest orderRequest = OrderRequest.createByMarketRequest(symbol, BuySell.S, quantity);
-			Order order = TQOrderTradeService.getInstance().callNewOrder(orderRequest);
+			Order order = TQOrderTradeService.getInstance().createOrder(orderRequest);
 		}
 		
 		@Override
 		public void closePosition(TQSymbol symbol) {
-			// TODO Auto-generated method stub
 			
 		}
 		
 		@Override
 		public void cancelOpenOrders(TQSymbol symbol) {
-			// TODO Auto-generated method stub
-			
+			for (Order order : TQOrderTradeService.getInstance().getActiveOrders()) {
+				TQOrderTradeService.getInstance().cancelOrder(order.getTransactionid());
+			}
 		}
 		
 		@Override
 		public void buy(TQSymbol symbol, int quantity) {
 			OrderRequest orderRequest = OrderRequest.createByMarketRequest(symbol, BuySell.B, quantity);
-			Order order = TQOrderTradeService.getInstance().callNewOrder(orderRequest);
+			Order order = TQOrderTradeService.getInstance().createOrder(orderRequest);
 			
+		}
+
+		@Override
+		public int availableToBuy(TQSymbol symbol) {
+			return 0;
+		}
+
+		@Override
+		public int availableToSell(TQSymbol symbol) {
+			// TODO Auto-generated method stub
+			return 0;
 		}
 	};
 	

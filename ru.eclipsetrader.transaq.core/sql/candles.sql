@@ -12,4 +12,4 @@ create table candles
   oi number(10)
 );
 
-create index candles_IX1 on candles(board, seccode, candletype, startDate);
+create unique index candles_IX1 on candles(board, seccode, candletype, startDate);

@@ -5,29 +5,29 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import ru.eclipsetrader.transaq.core.Constants;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.event.Observer;
-import ru.eclipsetrader.transaq.core.interfaces.IPersistable;
-import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
 import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.MarketType;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Pit;
 import ru.eclipsetrader.transaq.core.model.internal.SecInfoUpdate;
 import ru.eclipsetrader.transaq.core.model.internal.Security;
-import ru.eclipsetrader.transaq.core.server.command.Command;
 import ru.eclipsetrader.transaq.core.services.ITQSecurityService;
 
-public class TQSecurityService implements ITQSecurityService, IPersistable {
+public class TQSecurityService implements ITQSecurityService {
+	
+	Logger logger = LogManager.getLogger(TQSecurityService.class);
 
-	Map<TQSymbol, Security> objects = new LinkedHashMap<>();
+	Map<TQSymbol, Security> securities = new LinkedHashMap<>();
 	
 	static TQSecurityService instance;
 	public static TQSecurityService getInstance() {
 		if (instance == null) {
 			instance = new TQSecurityService();
-			instance.load(Constants.DEFAULT_SERVER_ID);
 		}
 		return instance;
 	}
@@ -43,7 +43,10 @@ public class TQSecurityService implements ITQSecurityService, IPersistable {
 		
 		@Override
 		public void update(List<Pit> pits) {
-			
+			// TODO надо думать
+			for (Pit pit : pits) {
+				// assingPit(pit);
+			}
 		}
 	}; 
 	
@@ -53,6 +56,19 @@ public class TQSecurityService implements ITQSecurityService, IPersistable {
 			// System.out.println(secInfoUpdate.getKey());
 		}
 	};
+	
+	public void assingPit(Pit pit) {
+		Security security = securities.get(pit.getSymbol());
+		if (security == null) {
+			logger.info(securities.keySet());
+			logger.error("Security not found! + " + pit);
+			System.exit(1);
+		}
+		security.setMinStep(pit.getMinStep());
+		security.setLotSize(pit.getLotSize());
+		security.setDecimals(pit.getDecimals());
+		security.setPoint_cost(pit.getPoint_cost());
+	}
 	
 	public Observer<SecInfoUpdate> getSecInfoUpdateObserver() {
 		return secInfoUpdateObserver;
@@ -67,11 +83,11 @@ public class TQSecurityService implements ITQSecurityService, IPersistable {
 	}
 
 	public void clear() {
-		objects.clear();
+		securities.clear();
 	}
 	
 	public void put(Security security) {
-		objects.put(security.getSymbol(), security);
+		securities.put(security.getSymbol(), security);
 	}
 
 	public void putList(List<Security> objects) {
@@ -81,11 +97,11 @@ public class TQSecurityService implements ITQSecurityService, IPersistable {
 	}
 	
 	public Security get(TQSymbol symbol) {
-		return objects.get(symbol);
+		return securities.get(symbol);
 	}
 
 	public List<Security> getAll() {
-		return new ArrayList<Security>(objects.values());
+		return new ArrayList<Security>(securities.values());
 	}
 
 
@@ -126,22 +142,14 @@ public class TQSecurityService implements ITQSecurityService, IPersistable {
 		return get(symbol);
 	}
 	
-	public void callGetSecurities() {
+	/*public void callGetSecurities() {
 		TransaqLibrary.SendCommand(Command.GET_SECURITIES);
-	}
+	}*/
 
-	@Override
 	public void persist() {
 		DataManager.mergeList(getAll());
 	}
 
-	@Override
-	public void load(String serverId) {
-		clear();
-		for (Security s : DataManager.getServerObjectList(Security.class, serverId)) {
-			put(s);
-		}
-	}
 
 
 }

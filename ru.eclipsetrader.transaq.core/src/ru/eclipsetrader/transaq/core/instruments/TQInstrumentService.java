@@ -8,11 +8,12 @@ import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.candle.TQCandleService;
 import ru.eclipsetrader.transaq.core.event.InstrumentEvent;
 import ru.eclipsetrader.transaq.core.interfaces.IAccount;
-import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.Quote;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
+import ru.eclipsetrader.transaq.core.model.internal.SymbolGapMap;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
+import ru.eclipsetrader.transaq.core.quotes.TQQuotationService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuoteService;
 import ru.eclipsetrader.transaq.core.services.ITQInstrumentService;
 import ru.eclipsetrader.transaq.core.trades.IDataFeedContext;
@@ -28,15 +29,18 @@ public class TQInstrumentService implements ITQInstrumentService {
 		return instance;
 	}
 
-
 	InstrumentEvent<List<Tick>> tickListEvent = new InstrumentEvent<>("TQInstrumentService tick event");
 	InstrumentEvent<List<Quote>> quoteListEvent = new InstrumentEvent<>("TQInstrumentService quote event");
+	InstrumentEvent<List<SymbolGapMap>> quotationGapListEvent = new InstrumentEvent<>("TQInstrumentService quotation gap event");
 	
 	public InstrumentEvent<List<Tick>> getDefaultTickListEvent() {
 		return tickListEvent;
 	}
 	public InstrumentEvent<List<Quote>> getDefaultQuoteListEvent() {
 		return quoteListEvent;
+	}
+	public InstrumentEvent<List<SymbolGapMap>> getQuotationGapListEvent() {
+		return quotationGapListEvent;
 	}
 	
 	public IDataFeedContext getDefaultDataFeedContext() {
@@ -58,25 +62,25 @@ public class TQInstrumentService implements ITQInstrumentService {
 			public InstrumentEvent<List<Tick>> getTicksFeeder() {
 				return tickListEvent;
 			}
+			
+			@Override
+			public InstrumentEvent<List<SymbolGapMap>> getQuotationGapsFeeder() {
+				return quotationGapListEvent;
+			}
 
 			@Override
 			public void OnStart() {
 				// На старте ищем все инструменты из событий и запускаем на них подписку
-				
-				for (TQSymbol symbol : tickListEvent.getSymbolList()) {
-					TQTickTradeService.getInstance().subscribeAllTrades(symbol);
-				}
-
-				for (TQSymbol symbol : quoteListEvent.getSymbolList()) {
-					TQQuoteService.getInstance().subscribe(symbol);
-				}
-
+				TQTickTradeService.getInstance().subscribeAllTrades(tickListEvent.getSymbolList());
+				TQQuoteService.getInstance().subscribe(quoteListEvent.getSymbolList());
+				TQQuotationService.getInstance().subscribe(quoteListEvent.getSymbolList());
 			}
 
 			@Override
 			public IAccount getAccount(TQSymbol symbol) {
 				return TQAccountService.getInstance().getAccount(symbol);
 			}
+
 		};
 		
 	}

@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -31,7 +32,7 @@ import ru.eclipsetrader.transaq.core.model.Quote;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.TradePeriod;
 import ru.eclipsetrader.transaq.core.model.internal.ServerObject;
-import ru.eclipsetrader.transaq.core.model.internal.SessionObject;
+import ru.eclipsetrader.transaq.core.model.internal.SymbolGapMap;
 import ru.eclipsetrader.transaq.core.model.internal.TickTrade;
 import ru.eclipsetrader.transaq.core.server.TransaqServer;
 import ru.eclipsetrader.transaq.core.util.Holder;
@@ -55,8 +56,8 @@ public class DataManager {
 	
 	final static String TICK_INSERT_SQL = "merge /*+ index (t1 ticks_IX1) */ into ticks t1 using (select ? board, ? seccode, ? tradeno, ? time from dual) t2 "
 			+ "on (t1.board = t2.board and t1.seccode = t2.seccode and t1.time = t2.time and t1.tradeno = t2.tradeno) "
-			+ " when not matched then insert (session_id, server, board, seccode, tradeno, time, buysell, price, quantity, period, openinterest)"
-			+ " values (?, ?, t2.board, t2.seccode, t2.tradeno, t2.time, ?, ?, ?, ?, ? )";
+			+ " when not matched then insert (server, board, seccode, tradeno, time, buysell, price, quantity, period, openinterest)"
+			+ " values (?, t2.board, t2.seccode, t2.tradeno, t2.time, ?, ?, ?, ?, ? )";
 	final static String TICK_SELECT_SQL = "select t.tradeno, t.time, t.board, t.seccode, t.buysell, t.price, t.quantity, t.period, t.openinterest"
 			+ " from ticks t where t.time between ? and ? order by t.time, t.tradeno";
 	
@@ -70,6 +71,9 @@ public class DataManager {
 			+ " values (c2.board, c2.seccode, c2.candletype, c2.startDate, c2.open, c2.high, c2.low, c2.close, c2.volume, c2.oi)";
 	final static String CANDLES_SELECT_SQL = "select startDate, open, high, low, close, volume, oi from candles c where c.board = ? and c.seccode = ? and c.candletype = ?"
 			+ " and c.startDate between ? and ?";
+	
+	final static String QUOTATION_GAP_INSERT = "insert into quotation_gap (board, seccode, time, hashmap) values (?, ?, ?, ?)";
+	final static String QUOTATION_GAP_SELECT = "select time, board, seccode, hashmap from quotation_gap where time between ? and ?";
 	
 	final static String MAX_TICK_SQL = "select max(t.tradeno) from ticks t where t.board = ? and t.seccode = ? and t.time between ? and ?";
 	
@@ -185,17 +189,20 @@ public class DataManager {
 				stmt.setString(2, tt.getSeccode());
 				stmt.setString(3, tt.getTradeno());
 				stmt.setTimestamp(4, ts);
-				stmt.setString(5, TransaqServer.getInstance().getSessionId());
-				stmt.setString(6, TransaqServer.getInstance().getId());
-				stmt.setString(7, tt.getBuysell().toString());
-				stmt.setDouble(8, tt.getPrice());
-				stmt.setInt(9, tt.getQuantity());
-				if (tt.getPeriod() != null) {
-					stmt.setString(10, tt.getPeriod().toString());
+				stmt.setString(5, TransaqServer.getInstance().getId());
+				if (tt.getBuysell() != null) {
+					stmt.setString(6, tt.getBuysell().toString());
 				} else {
-					stmt.setNull(10, Types.VARCHAR);
+					stmt.setNull(6, Types.VARCHAR);
 				}
-				stmt.setInt(11, tt.getOpeninterest());
+				stmt.setDouble(7, tt.getPrice());
+				stmt.setInt(8, tt.getQuantity());
+				if (tt.getPeriod() != null) {
+					stmt.setString(9, tt.getPeriod().toString());
+				} else {
+					stmt.setNull(9, Types.VARCHAR);
+				}
+				stmt.setInt(10, tt.getOpeninterest());
 				stmt.addBatch();
 			}
 			stmt.executeBatch();
@@ -226,7 +233,10 @@ public class DataManager {
 				t.setTime(rs.getTimestamp(2));
 				t.setBoard(BoardType.valueOf(rs.getString(3)));
 				t.setSeccode(rs.getString(4));
-				t.setBuysell(BuySell.valueOf(rs.getString(5)));
+				String buySell = rs.getString(5);
+				if (buySell != null) {
+					t.setBuysell(BuySell.valueOf(buySell));
+				}
 				t.setPrice(rs.getDouble(6));
 				t.setQuantity(rs.getInt(7));
 				String tradePeriod = rs.getString(8);
@@ -305,6 +315,65 @@ public class DataManager {
 		} 
 		return result;
 	}
+	
+	public static void batchQuotationGapList(List<SymbolGapMap> list) {
+		EntityManager em = tlsEm.get();
+		PreparedStatement stmt;
+		OracleConnection oc = null;
+		try {
+			em.getTransaction().begin();
+			oc = (OracleConnection)em.unwrap(Connection.class);
+			oc.setAutoCommit(false);
+			stmt = oc.prepareCall(QUOTATION_GAP_INSERT);
+			for (SymbolGapMap gap : list) {
+				stmt.setString(1, gap.getBoard().toString());
+				stmt.setString(2, gap.getSeccode());
+				stmt.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
+				stmt.setString(4, SymbolGapMap.mapToString(gap.getGaps()));
+				stmt.addBatch();
+			}
+			stmt.executeBatch();
+			stmt.close();
+			em.getTransaction().commit();
+		} catch (SQLException e) {
+			em.getTransaction().rollback();
+			e.printStackTrace();
+		} 
+	}
+	
+	public static List<SymbolGapMap> getQuotationGapList(Date dateFrom, Date dateTo) {
+		EntityManager em = tlsEm.get();
+		PreparedStatement stmt;
+		OracleConnection oc = null;
+		List<SymbolGapMap> result = new ArrayList<SymbolGapMap>();
+		try {
+			em.getTransaction().begin();
+			oc = (OracleConnection)em.unwrap(Connection.class);
+			oc.setAutoCommit(false);
+			stmt = (PreparedStatement) oc.prepareStatement(QUOTATION_GAP_SELECT);
+			stmt.setTimestamp(1, new java.sql.Timestamp(dateFrom.getTime()));
+			stmt.setTimestamp(2, new java.sql.Timestamp(dateTo.getTime()));
+			ResultSet rs = stmt.executeQuery();
+			while (rs.next()) {
+				SymbolGapMap s = new SymbolGapMap(rs.getTimestamp(1));
+				s.setBoard(BoardType.valueOf(rs.getString(2)));
+				s.setSeccode(rs.getString(3));
+				Map<String, String> map = SymbolGapMap.stringToMap(rs.getString(4));
+				for (String key : map.keySet()) {
+					s.getGaps().put(key, map.get(key));
+				}
+				result.add(s);
+			}
+			rs.close();
+			stmt.close();
+			em.getTransaction().commit();
+		} catch (SQLException e) {
+			em.getTransaction().rollback();
+			e.printStackTrace();
+		} 
+		return result;
+	}
+	
 
 	public static <T> void persist(T t) {
 		EntityManager em = tlsEm.get();
@@ -318,15 +387,11 @@ public class DataManager {
 		}
 	}
 	
-	public static <T extends SessionObject> void mergeList(Collection<T> tList) {
+	public static <T> void mergeList(Collection<T> tList) {
 		EntityManager em = tlsEm.get();
 		try {
 			em.getTransaction().begin();
-			TransaqServer inst = TransaqServer.getInstance();
 			for (T t : tList) {
-				if (inst != null) {
-					setSessionId(t, inst.getSessionId());
-				}
 				t = em.merge(t);
 			}
 			em.flush();
@@ -344,9 +409,6 @@ public class DataManager {
 		EntityManager em = tlsEm.get();
 		try {
 			em.getTransaction().begin();
-			if (TransaqServer.getInstance() != null) {
-				setSessionId(t, TransaqServer.getInstance().getSessionId());
-			}
 			t = em.merge(t);
 			em.flush();
 			em.getTransaction().commit();
@@ -436,18 +498,6 @@ public class DataManager {
 	
 	public static <T extends ServerObject> void removeServerObjects(String serverId, Class<T> class_) {
 		removeList(getServerObjectList(class_, serverId));
-	}
-	
-	public static <T> void setSessionId(T object, String sessionId) {
-		if (object instanceof SessionObject) {
-			((SessionObject)object).setSessionId(sessionId);
-		}
-	}
-	
-	public static <T extends SessionObject> void setSessionId(List<T> objectList, String sessionId) {
-		for (T t : objectList) {
-			t.setSessionId(sessionId);
-		}
 	}
 	
 	public static void main(String[] args) {

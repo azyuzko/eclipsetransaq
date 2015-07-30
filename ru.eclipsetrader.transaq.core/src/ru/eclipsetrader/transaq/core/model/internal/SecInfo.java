@@ -2,7 +2,7 @@ package ru.eclipsetrader.transaq.core.model.internal;
 
 import java.util.Date;
 
-public class SecInfo extends BaseObject {
+public class SecInfo  {
 
 	String sec_id;
 	String secname;
@@ -26,9 +26,4 @@ public class SecInfo extends BaseObject {
 	String opt_type;
 	int lot_volume;
 	
-	@Override
-	public String getKey() {
-		return seccode;
-	}	
-
 }

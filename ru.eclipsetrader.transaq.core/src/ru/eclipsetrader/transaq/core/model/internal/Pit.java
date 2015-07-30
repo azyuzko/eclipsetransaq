@@ -1,21 +1,35 @@
 package ru.eclipsetrader.transaq.core.model.internal;
 
+import ru.eclipsetrader.transaq.core.model.BoardType;
+import ru.eclipsetrader.transaq.core.model.TQSymbol;
+import ru.eclipsetrader.transaq.core.util.Utils;
 
-public class Pit extends BaseObject {
+
+public class Pit {
 
 	String secCode;
 
-	String board;
+	BoardType board;
 	Integer market;
+	
 	int decimals;
 	double minStep;
 	int lotSize;
 	double point_cost;
 
-	public String getKey() {
-		return board+"_"+secCode;
+	TQSymbol symbol = null;
+	public TQSymbol getSymbol() {
+		if (symbol == null) {
+			symbol = new TQSymbol(board, secCode);
+		}
+		return symbol;
 	}
 	
+	@Override
+	public String toString() {
+		return Utils.toString(this);
+	}
+
 	public String getSecCode() {
 		return secCode;
 	}
@@ -24,11 +38,11 @@ public class Pit extends BaseObject {
 		this.secCode = secCode;
 	}
 
-	public String getBoard() {
+	public BoardType getBoard() {
 		return board;
 	}
 
-	public void setBoard(String board) {
+	public void setBoard(BoardType board) {
 		this.board = board;
 	}
 

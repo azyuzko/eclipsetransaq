@@ -2,11 +2,12 @@ package ru.eclipsetrader.transaq.core.xml.handler;
 
 import java.util.Stack;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.event.Event;
 import ru.eclipsetrader.transaq.core.exception.UnimplementedException;
 import ru.eclipsetrader.transaq.core.model.BoardType;
@@ -16,9 +17,12 @@ import ru.eclipsetrader.transaq.core.model.internal.Order;
 import ru.eclipsetrader.transaq.core.model.internal.StopLoss;
 import ru.eclipsetrader.transaq.core.model.internal.StopOrder;
 import ru.eclipsetrader.transaq.core.model.internal.TakeProfit;
+import ru.eclipsetrader.transaq.core.orders.TQOrderTradeService;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class OrderHandler extends DefaultHandler {
+	
+	Logger logger = LogManager.getLogger(OrderHandler.class);
 
 	enum ProcessingType {
 		ORDER, STOP_ORDER, STOP_LOSS, TAKE_PROFIT;
@@ -46,9 +50,10 @@ public class OrderHandler extends DefaultHandler {
 		case order:
 			processingType = ProcessingType.ORDER;
 			transactionId = attributes.getValue("transactionid");
-			//currentOrder = DataManager.getOrder(transactionId);
+			currentOrder = TQOrderTradeService.getInstance().getOrderById(transactionId);
 			if (currentOrder == null) {
-				currentOrder = DataManager.merge(new Order(transactionId));
+				logger.warn("Order with transactionId = " + transactionId + " not found. Creating new one..");
+				currentOrder = new Order(transactionId);
 			}
 			break;
 			
@@ -83,7 +88,6 @@ public class OrderHandler extends DefaultHandler {
 		elementStack.pop();
 		switch (QNAME.valueOf(qName)) {
 		case order:
-			currentOrder = DataManager.merge(currentOrder);
 			if (notifyOrder != null) {
 				notifyOrder.notifyObservers(currentOrder);
 			}
@@ -118,7 +122,7 @@ public class OrderHandler extends DefaultHandler {
 			case ORDER :
 				switch (QNAME.valueOf(element)) {
 				case secid: currentOrder.setSecid(Integer.valueOf(value)); break;
-				case orderno: currentOrder.setOrderno(Long.valueOf(value)); break;
+				case orderno: currentOrder.setOrderno(value); break;
 				case board: 	currentOrder.setBoard(BoardType.valueOf(value)); break;
 				case seccode:	currentOrder.setSeccode(value); break;
 				case client:	currentOrder.setClient(value); break;

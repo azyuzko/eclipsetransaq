@@ -67,11 +67,6 @@ public class FortsAccountSimulator implements IAccount {
 		return money.getVarmargin();
 	}
 	
-	/**
-	 * Доступно к покупке
-	 * @param symbol
-	 * @return
-	 */
 	public int availableToBuy(TQSymbol symbol) {
 		BaseFortsContract position = positions.get(symbol);
 		if (position != null) {
@@ -86,11 +81,7 @@ public class FortsAccountSimulator implements IAccount {
 		}
 	}
 	
-	/**
-	 * Доступно к продаже
-	 * @param symbol
-	 * @return
-	 */
+
 	public int availableToSell(TQSymbol symbol) {
 		BaseFortsContract position = positions.get(symbol);
 		if (position != null) {

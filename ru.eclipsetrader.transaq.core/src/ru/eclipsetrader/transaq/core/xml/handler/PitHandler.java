@@ -6,6 +6,7 @@ import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
 import ru.eclipsetrader.transaq.core.event.ListEvent;
+import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.internal.Pit;
 
 public class PitHandler extends BaseXMLProcessor<Pit> {
@@ -27,7 +28,7 @@ public class PitHandler extends BaseXMLProcessor<Pit> {
 				case pit:
 					Pit pit = new Pit();
 					pit.setSecCode(attributes.getValue("seccode"));
-					pit.setBoard(attributes.getValue("board"));
+					pit.setBoard(BoardType.valueOf(attributes.getValue("board")));
 					objectStack.push(pit);
 
 					break;

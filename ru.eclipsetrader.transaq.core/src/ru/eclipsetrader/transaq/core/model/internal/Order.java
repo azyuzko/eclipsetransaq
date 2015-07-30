@@ -2,7 +2,6 @@ package ru.eclipsetrader.transaq.core.model.internal;
 import java.util.Date;
 
 import javax.persistence.Entity;
-import javax.persistence.EntityListeners;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Id;
@@ -10,7 +9,6 @@ import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
-import ru.eclipsetrader.transaq.core.data.DefaultJPAListener;
 import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.OrderConditionType;
@@ -20,12 +18,11 @@ import ru.eclipsetrader.transaq.core.util.Utils;
 
 @Table(name="orders")
 @Entity
-@EntityListeners(DefaultJPAListener.class)
-public class Order extends BaseObject {
+public class Order extends ServerObject {
 	
 	@Id
 	String transactionid;
-	Long orderno;
+	String orderno;
 	Integer secid;
 	@Enumerated(EnumType.STRING)
 	BoardType board;
@@ -74,16 +71,16 @@ public class Order extends BaseObject {
 	OrderConditionType cond_type;
 	Double cond_value;
 	
-	public Order(Security security) {
-		this.board = security.getBoard();
-		this.seccode = security.getSeccode();
-	}
-	
 	public Order() {
-
+		this(null);
 	}
 	
-	public Order(String transactionId) {
+	public Order(String serverId) {
+		this(null, serverId);
+	}
+	
+	public Order(String transactionId, String serverId) {
+		super(serverId);
 		this.transactionid = transactionId;
 	}
 	
@@ -134,11 +131,11 @@ public class Order extends BaseObject {
 		this.transactionid = transactionid;
 	}
 
-	public Long getOrderno() {
+	public String getOrderno() {
 		return orderno;
 	}
 
-	public void setOrderno(Long orderno) {
+	public void setOrderno(String orderno) {
 		this.orderno = orderno;
 	}
 
@@ -380,11 +377,6 @@ public class Order extends BaseObject {
 
 	public void setUnfilled(UnfilledType unfilled) {
 		this.unfilled = unfilled;
-	}
-
-	@Override
-	public String getKey() {
-		return board + "_" + seccode;
 	}
 
 	

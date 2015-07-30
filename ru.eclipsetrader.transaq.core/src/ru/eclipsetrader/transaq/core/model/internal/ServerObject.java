@@ -10,7 +10,7 @@ import javax.persistence.MappedSuperclass;
  *
  */
 @MappedSuperclass
-public abstract class ServerObject extends SessionObject {
+public abstract class ServerObject {
 		
 	@Column(name="SERVER")
 	String server;

@@ -1,6 +1,5 @@
 create table FORTS_POSITION
 (
-  session_id        CHAR(36),
   server            VARCHAR2(20),
   secid             NUMBER,
   seccode           VARCHAR2(50),

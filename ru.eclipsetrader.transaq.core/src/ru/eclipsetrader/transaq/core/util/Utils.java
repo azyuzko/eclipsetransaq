@@ -47,7 +47,11 @@ public class Utils {
 	
 	public static Date parseDate(String value) {
 		try {
-			return sdfDateTime.parse(value);
+			if (value != null) {
+				return sdfDateTime.parse(value);
+			} else {
+				return null;
+			}
 		} catch (ParseException e) {
 			logger.error("Cannot parse <%s> date", value);
 			return null;

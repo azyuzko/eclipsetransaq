@@ -50,5 +50,5 @@ public class CandleKind extends ServerObject {
 	public void setName(String name) {
 		this.name = name;
 	}
-
+	
 }

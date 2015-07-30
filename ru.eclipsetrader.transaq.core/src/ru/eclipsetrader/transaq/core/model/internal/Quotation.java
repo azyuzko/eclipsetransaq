@@ -9,7 +9,6 @@ import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class Quotation {
 
-	String secid;
 	BoardType board; //Идентификатор режима торгов по умолчанию
 	String seccode; //Код инструмента
 	double point_cost; //Стоимость пункта цены
@@ -50,16 +49,13 @@ public class Quotation {
 	double volatility; // Волатильность 
 	double theoreticalprice; // Теоретическая цена
 	
-	public String getKey() {
-		return board+"_"+seccode;
+	public Quotation(){
+		
 	}
 	
-	public String getSecid() {
-		return secid;
-	}
-
-	public void setSecid(String secid) {
-		this.secid = secid;
+	public Quotation(BoardType boardType, String seccode) {
+		this.board = boardType;
+		this.seccode = seccode;
 	}
 
 	public BoardType getBoard() {

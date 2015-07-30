@@ -37,11 +37,11 @@ import ru.eclipsetrader.transaq.core.model.internal.ServerStatus;
 import ru.eclipsetrader.transaq.core.orders.TQOrderTradeService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuotationService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuoteService;
+import ru.eclipsetrader.transaq.core.schedule.LoadCandlesSchedule;
 import ru.eclipsetrader.transaq.core.securities.TQSecurityService;
 import ru.eclipsetrader.transaq.core.server.command.ChangePasswordCommand;
 import ru.eclipsetrader.transaq.core.server.command.Command;
 import ru.eclipsetrader.transaq.core.strategy.MACDStrategy;
-import ru.eclipsetrader.transaq.core.strategy.TQStrategyService;
 import ru.eclipsetrader.transaq.core.trades.TQTickTradeService;
 import ru.eclipsetrader.transaq.core.util.Utils;
 import ru.eclipsetrader.transaq.core.xml.handler.XMLHandler;
@@ -53,7 +53,6 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 	private static final Logger logger = LogManager.getFormatterLogger(TransaqServer.class);
 	
 	protected String serverId;
-	protected String sessionId;
 	
 	private SAXParser parser;
 	
@@ -74,10 +73,8 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 		INSTANCE = transaqServer;
 	}
 	
-	MACDStrategy strategy;
-	
-	public static final Event<ServerSession> onConnectEstablished = new Event<ServerSession>("TransaqServer.onConnectEstablished");
-	public static final Event<String> onDisconnected = new Event<String>("TransaqServer.onDisconnected");
+	public static final Event<TransaqServer> onConnectEstablished = new Event<TransaqServer>("TransaqServer.onConnectEstablished");
+	public static final Event<TransaqServer> onDisconnected = new Event<TransaqServer>("TransaqServer.onDisconnected");
 	
 	public TransaqServer(final String serverId) {
 		
@@ -174,7 +171,7 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 				session.setDisconnected(null);
 				session.setError(null);
 				DataManager.merge(session);
-				onConnectEstablished.notifyObservers(session);
+				onConnectEstablished.notifyObservers(this);
 			} else if (session.getStatus() == ConnectionStatus.DISCONNECTED) {
 				if (newStatus.getError() != null) {
 					System.err.println(newStatus.getError());
@@ -183,7 +180,7 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 				session.setDisconnected(new Date());
 				session.setStatus(ConnectionStatus.DISCONNECTED);
 				DataManager.merge(session);
-				onDisconnected.notifyObservers(newStatus.getError());
+				onDisconnected.notifyObservers(this);
 			}
 			
 			CoreActivator.getEventAdmin().postEvent(OSGIServerStatusEvent.getEvent(serverId, newStatus));
@@ -198,8 +195,8 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 		String data = pData.getString(0);	
 		TransaqLibrary.FreeMemory(pData);
 		
-		if ( Settings.SHOW_CONSOLE_TRACE) {
-			System.out.println(data);
+		if ( Settings.SHOW_CONSOLE_TRACE || logger.isDebugEnabled()) {
+			logger.warn(data);
 		}
 		
 		// DatabaseManager.writeInputEvent(sessionId, data);
@@ -229,8 +226,7 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 	}
 	
 	private void initNewSession() {
-		sessionId = UUID.randomUUID().toString();
-		session.setSessionId(sessionId);		
+		session.setSessionId(UUID.randomUUID().toString());		
 		session.setStatus(ConnectionStatus.CONNECTING);
 	}
 	
@@ -315,10 +311,20 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 	public String getId() {
 		return serverId;
 	}
+
+	public void onConnect() {
+		persistState();
+		LoadCandlesSchedule.scheduleLoadCandles();
+	}
 	
-	@Override
-	public String getSessionId() {
-		return sessionId;
+	static {
+		onConnectEstablished.addObserver(new Observer<TransaqServer>() {
+			
+			@Override
+			public void update(TransaqServer transaqServer) {
+				transaqServer.onConnect();
+			}
+		});
 	}
 
 }

@@ -1,5 +1,4 @@
 create table ticks (
-session_id char(36),
 server varchar2(20),
 tradeno varchar2(36),
 time timestamp,
@@ -15,3 +14,5 @@ openinterest number(10)
 create index ticks_IX1 on ticks(board, seccode, time);
 
 create index ticks_IX2 on ticks(board, seccode, tradeno);
+
+

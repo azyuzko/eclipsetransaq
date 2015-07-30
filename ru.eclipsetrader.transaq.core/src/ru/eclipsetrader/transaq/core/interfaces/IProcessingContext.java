@@ -5,6 +5,7 @@ import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.instruments.Instrument;
 import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.QuoteGlass;
+import ru.eclipsetrader.transaq.core.model.internal.Quotation;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
 
 public interface IProcessingContext {
@@ -13,6 +14,7 @@ public interface IProcessingContext {
 	void onCandleClose(Instrument instrument, CandleList candleList, Candle closedCandle);
 	void onCandleOpen(Instrument instrument, CandleList candleList, Candle openedCandle);
 	void onCandleChange(Instrument instrument, CandleList candleList, Candle changedCandle);
+	void onQuotationsChange(Instrument instrument, Quotation quotation);
 	CandleType[] getCandleTypes();
 	
 }

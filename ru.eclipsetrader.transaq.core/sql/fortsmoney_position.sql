@@ -1,6 +1,5 @@
 create table FORTSMONEY_POSITION
 (
-  session_id CHAR(36),
   server     VARCHAR2(20),
   client     VARCHAR2(50),
   market     NUMBER,

@@ -1,8 +1,7 @@
 create table security(
   id number,
-  session_id char(36)not null,
   server varchar2(20),
-  secCode varchar2(20),
+  seccode varchar2(20),
 	board varchar2(20),
 	market varchar2(20),
 	decimals number(10),
@@ -17,9 +16,17 @@ create table security(
 	byMarket number(1),
 	noSplit number(1),
 	immorCancel number(1),
-	cancelBalance number(1)
+	cancelBalance number(1),
+  
+  minprice number(20,6), 
+	maxprice number(20,6),
+	buy_deposit number(20,6),
+	sell_deposit number(20,6),
+	bgo_c number(20,6),
+	bgo_nc number(20,6),
+	bgo_buy number(20,6)
 );
 
-alter table security add constraint uq_security_1 unique (secCode, board);
+alter table security add constraint uq_security_1 unique (seccode, board);
 
 

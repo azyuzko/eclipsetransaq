@@ -38,7 +38,7 @@ public final class EventHolder implements Closeable {
 	public final ListEvent<Security> onSecuritiesChange;
 	public final Event<Holder<PositionType, Map<String, String>>> onPositionChange;
 	public final ListEvent<TickTrade> onAllTradeChange;
-	public final Event<SymbolGapMap> onQuotationsChange;
+	public final ListEvent<SymbolGapMap> onQuotationsChange;
 	public final ListEvent<SymbolGapMap> onQuotesChange;
 	public final ListEvent<TickTrade> onTickTradeChange;
 	public final Event<CandleGraph> onCandleGraphReceive;
@@ -60,7 +60,7 @@ public final class EventHolder implements Closeable {
 		onSecuritiesChange = new ListEvent<Security>("EventHolder.onSecuritiesChange");
 		onPositionChange = new Event<Holder<PositionType,Map<String,String>>>("EventHolder.onPositionChange");
 		onAllTradeChange = new ListEvent<TickTrade>("EventHolder.onAllTradeChange");
-		onQuotationsChange = new Event<SymbolGapMap>("EventHolder.onQuotationsChange");
+		onQuotationsChange = new ListEvent<SymbolGapMap>("EventHolder.onQuotationsChange");
 		onQuotesChange = new ListEvent<SymbolGapMap>("EventHolder.onQuotesChange");
 		onTickTradeChange = new ListEvent<TickTrade>("EventHolder.onTickTradeChange");
 		onCandleGraphReceive = new Event<CandleGraph>("EventHolder.onCandleGraphReceive");

@@ -1,6 +1,6 @@
 package ru.eclipsetrader.transaq.core.model.internal;
 
-public class SecInfoUpdate extends BaseObject {
+public class SecInfoUpdate {
 
 	/*
 	 * <sec_info_upd> <secid>идентификатор бумаги</secid> <market>Внутренний код
@@ -25,11 +25,6 @@ public class SecInfoUpdate extends BaseObject {
 	double bgo_nc;
 	double bgo_buy;
 	double point_cost;
-
-	@Override
-	public String getKey() {
-		return seccode;
-	}
 
 	public Integer getSecid() {
 		return secid;

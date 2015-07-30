@@ -102,6 +102,14 @@ public class TQTickTradeService implements ITQTickTradeService {
 		cmd.subscribeAllTrades(symbol);
 		TransaqLibrary.SendCommand(cmd.createConnectCommand());
 	}
+	
+	public void subscribeAllTrades(List<TQSymbol> symbols) {
+		SubscribeCommand cmd = new SubscribeCommand();
+		for (TQSymbol symbol : symbols) {
+			cmd.subscribeAllTrades(symbol);
+		}
+		TransaqLibrary.SendCommand(cmd.createConnectCommand());
+	}
 
 	@Override
 	public void unsubscribeAllTrades(TQSymbol symbol) {

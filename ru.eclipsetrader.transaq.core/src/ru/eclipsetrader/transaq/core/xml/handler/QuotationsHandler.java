@@ -1,17 +1,18 @@
 package ru.eclipsetrader.transaq.core.xml.handler;
 
+import java.util.ArrayList;
 import java.util.Date;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
-import ru.eclipsetrader.transaq.core.event.Event;
+import ru.eclipsetrader.transaq.core.event.ListEvent;
 import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.internal.SymbolGapMap;
 
 public class QuotationsHandler extends BaseXMLProcessor<SymbolGapMap> {
 
-	public QuotationsHandler(Event<SymbolGapMap> notifier) {
+	public QuotationsHandler(ListEvent<SymbolGapMap> notifier) {
 		super(notifier);
 	}
 
@@ -20,8 +21,11 @@ public class QuotationsHandler extends BaseXMLProcessor<SymbolGapMap> {
 		
 		elementStack.push(qName);
 		
-		switch (QNAME.valueOf(qName)) {
-		case quotation:
+		switch (qName) {
+		case "quotations" :
+			tempList = new ArrayList<SymbolGapMap>();
+			break;
+		case "quotation":
 			SymbolGapMap gapMap = new SymbolGapMap(new Date());
 			objectStack.add(gapMap);
 			break;
@@ -36,9 +40,12 @@ public class QuotationsHandler extends BaseXMLProcessor<SymbolGapMap> {
 		
 		elementStack.pop();
 		
-		switch (QNAME.valueOf(qName)) {
-		case quotation:
-			notifyCompleteElement(objectStack.pop());
+		switch (qName) {
+		case "quotation":
+			tempList.add(objectStack.pop());
+			break;
+		case "quotations":
+			notifyCompleteProcess();
 			break;
 		default:
 			break;
@@ -47,18 +54,18 @@ public class QuotationsHandler extends BaseXMLProcessor<SymbolGapMap> {
 
 	@Override
 	void characters(String value) throws SAXException {
-		switch (QNAME.valueOf(currentElement())) {
+		switch (currentElement()) {
 		
 		// do nothing
-		case quotations:
-		case quotation:
+		case "quotations":
+		case "quotation":
 			break;
 			
-		case board:
+		case "board":
 			objectStack.peek().setBoard(BoardType.valueOf(value));
 			break;
 			
-		case seccode:
+		case "seccode":
 			objectStack.peek().setSeccode(value);
 			break;
 

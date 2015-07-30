@@ -9,12 +9,14 @@ import ru.eclipsetrader.transaq.core.orders.OrderRequest;
 public interface ITQOrderTradeService {
 
 	List<Order> getOrders();
+	List<Order> getActiveOrders();
 	Order getOrderById(String transactionId);
-	Order getOrderByServerNo(Long orderNum);
-	Order callNewOrder(OrderRequest orderRequest);
+	Order getOrderByServerNo(String orderno);
+	Order createOrder(OrderRequest orderRequest);
+	String cancelOrder(String transactionId);
 	
 	List<Trade> getTrades();
 	Trade 		getTrade(String trandeNo);
 	
-	String callCancelOrder(String transactionId);
+	
 }

@@ -60,7 +60,6 @@ public class TransaqServerManager implements ITransaqServerManager {
 		try {
 			instance.connect(serverId);
 			TransaqServer.setTransaqServer(instance);
-			instance.persistState(); // TODO refactoring
 			return instance;
 		} catch (ConnectionException e) {
 			throw new RuntimeException(e.getMessage());

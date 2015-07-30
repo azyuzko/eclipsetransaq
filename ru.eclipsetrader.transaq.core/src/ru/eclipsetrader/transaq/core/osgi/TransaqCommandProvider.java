@@ -10,9 +10,11 @@ import org.eclipse.osgi.framework.console.CommandProvider;
 
 import ru.eclipsetrader.transaq.core.CoreActivator;
 import ru.eclipsetrader.transaq.core.Settings;
+import ru.eclipsetrader.transaq.core.account.TQAccountService;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.candle.TQCandleService;
 import ru.eclipsetrader.transaq.core.instruments.TQInstrumentService;
+import ru.eclipsetrader.transaq.core.interfaces.IAccount;
 import ru.eclipsetrader.transaq.core.interfaces.ITransaqServer;
 import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.Candle;
@@ -157,6 +159,13 @@ public class TransaqCommandProvider implements CommandProvider {
 				break;
 			}
 			
+			case "candlekinds": {
+				for (CandleType candleType : TQCandleService.getInstance().getCandleTypes()) {
+					ci.println(candleType);
+				}
+				break;
+			}
+			
 			case "quoteglass": {
 				String board = ci.nextArgument();
 				String seccode = ci.nextArgument();
@@ -176,8 +185,10 @@ public class TransaqCommandProvider implements CommandProvider {
 		}
 		
 		case "subscribeall": {
+			ci.execute("transaq show trace on"); 
 			TQTickTradeService.getInstance().subscribeTicks(TQSymbol.workingSymbolSet());
 			TQQuoteService.getInstance().subscribe(TQSymbol.workingSymbolSet());
+			TQQuotationService.getInstance().subscribe(TQSymbol.workingSymbolSet());
 			break;
 		}
 		
@@ -209,6 +220,12 @@ public class TransaqCommandProvider implements CommandProvider {
 	
 		case "showglass": {
 			System.out.println(strategy.BRQ5.getQuoteGlass().toString());
+			break;
+		}
+		
+		case "test": {
+			IAccount account = TQAccountService.getInstance().getAccount(TQSymbol.BRQ5);
+			account.cancelOpenOrders(TQSymbol.BRQ5);
 			break;
 		}
 

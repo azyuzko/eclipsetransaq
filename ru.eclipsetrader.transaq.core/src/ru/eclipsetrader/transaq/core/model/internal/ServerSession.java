@@ -2,8 +2,7 @@ package ru.eclipsetrader.transaq.core.model.internal;
 
 import java.util.Date;
 
-import javax.persistence.Access;
-import javax.persistence.AccessType;
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -16,10 +15,14 @@ import ru.eclipsetrader.transaq.core.model.ConnectionStatus;
 
 @Entity
 @Table(name = "server_session")
-@Access(AccessType.PROPERTY)
-public class ServerSession extends SessionObject {
+public class ServerSession {
 
+	@Id
+	@Column(name="SESSION_ID")
+	String sessionId;
+	@Temporal(TemporalType.TIMESTAMP)
 	Date connected;
+	@Temporal(TemporalType.TIMESTAMP)
 	Date disconnected;
 	String serverId;
 	String timezone;
@@ -46,8 +49,7 @@ public class ServerSession extends SessionObject {
 		this.sessionId = sessionId;
 	}
 
-	@Temporal(TemporalType.TIMESTAMP)
-	@Access(AccessType.FIELD)
+
 	public Date getConnected() {
 		return connected;
 	}
@@ -56,8 +58,6 @@ public class ServerSession extends SessionObject {
 		this.connected = connected;
 	}
 
-	@Temporal(TemporalType.TIMESTAMP)
-	@Access(AccessType.FIELD)
 	public Date getDisconnected() {
 		return disconnected;
 	}

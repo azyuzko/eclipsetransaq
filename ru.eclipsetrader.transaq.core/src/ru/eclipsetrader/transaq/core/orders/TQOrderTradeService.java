@@ -5,96 +5,69 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.event.Observer;
 import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
+import ru.eclipsetrader.transaq.core.model.OrderStatus;
 import ru.eclipsetrader.transaq.core.model.internal.CommandResult;
 import ru.eclipsetrader.transaq.core.model.internal.Order;
 import ru.eclipsetrader.transaq.core.model.internal.Trade;
 import ru.eclipsetrader.transaq.core.services.ITQOrderTradeService;
+import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class TQOrderTradeService implements ITQOrderTradeService {
 
+	Logger logger = LogManager.getLogger(TQOrderTradeService.class);
+	
 	private static long TIMEOUT = 1000 * 30;
 
 	// список отправленных НА БИРЖУ запросов
+	// ключ - transactionId
 	Map<String, OrderRequest> requests = Collections.synchronizedMap(new HashMap<String, OrderRequest>());
-	// очередь для обработки принятых запросов
-	BlockingQueue<Order> receivedOrders = new ArrayBlockingQueue<Order>(300);
-	// очередь для обработки принятых сделок	
-	BlockingQueue<Trade> receivedTrades = new ArrayBlockingQueue<Trade>(300);
 	
+	// ключ - orderno
 	private Map<String, Order> orders = Collections.synchronizedMap(new HashMap<String, Order>());
+	
+	// ключ - tradeno
 	private Map<String, Trade> trades = Collections.synchronizedMap(new HashMap<String, Trade>());
-	
-	Thread ordersThread = new Thread(new OrderThreadProcessor());
-	
-	class OrderThreadProcessor implements Runnable {
-		/**
-		 * Implements order receive logic 
-		 */
-		@Override
-		public void run() {
-			while (!Thread.interrupted()) {
-				try {
-					// получим новый ордер из очереди
-					Order order = receivedOrders.take();
-					
-					// положим его в map
-					put(order);
-	
-					// найдем его запрос
-					OrderRequest orderRequest = requests.get(order.getTransactionid());
-					
-					if (orderRequest != null) {
-						// оповестим, что пришел запрос
-						orderRequest.notifyAll();
-						// удалм запрос
-						requests.remove(order.getTransactionid());
-					} else {
-						System.err.println("Order request for " + order.getTransactionid() + " NOT FOUND!");
-					}
-				} catch (InterruptedException ex) {
-					ex.printStackTrace();
-				}
-			}
-		}
-		
-	}
-	
-	Thread tradesThread = new Thread(new ThreadReceiveProcessor());
-	
-	class ThreadReceiveProcessor implements Runnable {
-
-		@Override
-		public void run() {
-			while (!Thread.interrupted()) {
-				Trade trade;
-				try {
-					trade = receivedTrades.take();
-					put(trade);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		}
-		
-	}
 	
 	Observer<Order> orderObserver = new Observer<Order>() {
 		@Override
 		public void update(Order order) {
-			receivedOrders.add(order);
+			logger.info("Received order " + order.getOrderno() + " transactionId = " + order.getTransactionid());
+
+			if (logger.isDebugEnabled()) {
+				logger.debug(Utils.toString(order));
+			}
+			
+			if (order.getTransactionid() != null) {
+				// найдем его запрос
+					OrderRequest orderRequest = requests.get(order.getTransactionid());
+				if (orderRequest != null) {
+					// оповестим, что пришел запрос
+					orderRequest.notifyAll();
+					// удалим запрос
+					requests.remove(order.getTransactionid());
+				} else {
+					logger.info("Order request for " + order.getTransactionid() + " not found. May be request from previous session");
+				}
+			} else {
+				logger.info("Order " + order.getOrderno()  + " has no transactionId. May be order came from another Transaq server");
+			}
+			// положим запрос в map
+			put(order);				
 		}
 	};
 	
 	Observer<Trade> tradeObserver = new Observer<Trade>() {
 		@Override
 		public void update(Trade trade) {
-			receivedTrades.add(trade);
+			logger.info("New trade " + trade);
+			put(trade);	
 		}
 	};
 
@@ -114,13 +87,6 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 		return instance;
 	}
 	
-	private TQOrderTradeService() {
-		ordersThread.setDaemon(true);
-		ordersThread.start();
-		tradesThread.setDaemon(true);
-		tradesThread.start();
-	}
-	
 	public void putOrderList(List<Order> orderList) {
 		for (Order order : orderList) {
 			put(order);
@@ -128,10 +94,12 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 	}
 	
 	public void put(Order order) {
-		if (order.getTransactionid() == null || order.getTransactionid().isEmpty()) {
-			throw new IllegalArgumentException("Cannot put order withour transactionId!");
+		if (order.getTransactionid() == null) {
+			// dont push orders without transactionId
+			return;
 		}
-		orders.put(order.getTransactionid(), order);
+		orders.put(order.getOrderno(), order);
+		DataManager.merge(order);
 	}
 	
 	public void putTradeList(List<Trade> tradeList){
@@ -145,11 +113,23 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 			throw new IllegalArgumentException("Cannot put trade without tradeno!");
 		}
 		trades.put(trade.getTradeno(), trade);
+		DataManager.merge(trade);
 	}
 
 	@Override
 	public List<Order> getOrders() {
 		return new ArrayList<>(orders.values());
+	}
+	
+	@Override
+	public List<Order> getActiveOrders() {
+		List<Order> result = new ArrayList<Order>();
+		for (Order order : orders.values()) {
+			if (order.getStatus() == OrderStatus.active) {
+				result.add(order);
+			}
+		}
+		return result;
 	}
 
 	@Override
@@ -158,9 +138,9 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 	}
 	
 	@Override
-	public Order getOrderByServerNo(Long orderNum) {
+	public Order getOrderByServerNo(String orderno) {
 		for (Order order : orders.values()) {
-			if (order.getOrderno() == orderNum) {
+			if (order.getOrderno().equals(orderno)) {
 				return order;
 			}
 		}
@@ -177,9 +157,9 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 		return trades.get(trandeNo);
 	}
 
-
 	@Override
-	public Order callNewOrder(OrderRequest orderRequest) {
+	public Order createOrder(OrderRequest orderRequest) {
+		logger.warn("Create new order:\n" + orderRequest);
 		String command = orderRequest.createNewOrderCommand();
 		CommandResult result = TransaqLibrary.SendCommand(command);
 		if (result.getTransactionId() == null || result.getTransactionId().isEmpty()) {
@@ -196,8 +176,8 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 	}
 
 	@Override
-	public String callCancelOrder(String transactionId) {
-		System.out.println("Calling CancelOrder:\n" + transactionId);
+	public String cancelOrder(String transactionId) {
+		logger.warn("Perform order cancelling:" + transactionId);
 		String command = "<command id=\"cancelorder\"><transactionid>" + transactionId +"</transactionid></command>";
 		CommandResult result = TransaqLibrary.SendCommand(command);
 		if (result.isSuccess()) {

@@ -5,7 +5,7 @@ import java.util.Date;
 import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.OrderStatus;
 
-public class StopOrder extends BaseObject {
+public class StopOrder  {
 
 	String transactionid;
 	String activeorderno;
@@ -25,11 +25,6 @@ public class StopOrder extends BaseObject {
 
 	StopLoss stopLoss;
 	TakeProfit takeProfit;
-
-	@Override
-	public String getKey() {
-		return board + "_" + seccode;
-	}
 
 	public String getTransactionid() {
 		return transactionid;
