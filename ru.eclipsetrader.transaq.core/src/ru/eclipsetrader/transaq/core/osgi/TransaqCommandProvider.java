@@ -1,9 +1,6 @@
 package ru.eclipsetrader.transaq.core.osgi;
 
-import java.util.ArrayList;
 import java.util.List;
-
-import javax.persistence.criteria.CriteriaBuilder.In;
 
 import org.eclipse.osgi.framework.console.CommandInterpreter;
 import org.eclipse.osgi.framework.console.CommandProvider;
@@ -16,7 +13,6 @@ import ru.eclipsetrader.transaq.core.candle.TQCandleService;
 import ru.eclipsetrader.transaq.core.instruments.TQInstrumentService;
 import ru.eclipsetrader.transaq.core.interfaces.IAccount;
 import ru.eclipsetrader.transaq.core.interfaces.ITransaqServer;
-import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Order;
@@ -28,8 +24,9 @@ import ru.eclipsetrader.transaq.core.quotes.TQQuotationService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuoteService;
 import ru.eclipsetrader.transaq.core.securities.TQSecurityService;
 import ru.eclipsetrader.transaq.core.services.ITransaqServerManager;
-import ru.eclipsetrader.transaq.core.strategy.MACDStrategy;
+import ru.eclipsetrader.transaq.core.strategy.Strategy;
 import ru.eclipsetrader.transaq.core.trades.TQTickTradeService;
+import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class TransaqCommandProvider implements CommandProvider {
 
@@ -142,10 +139,7 @@ public class TransaqCommandProvider implements CommandProvider {
 				break;
 			}
 			case "quotations" : {
-				TQQuotationService qs = TQQuotationService.getInstance();
-				for (Quotation q : qs.getQuotations()) {
-					ci.println(q.toString());
-				}
+				ci.println("unimplemented");
 				break;
 			}			
 			case "trace": {
@@ -156,6 +150,10 @@ public class TransaqCommandProvider implements CommandProvider {
 				}
 				Settings.SHOW_CONSOLE_TRACE = OnState.valueOf(onOff.toUpperCase()).getBoolean();
 				ci.println("Show console trace has set <" + Settings.SHOW_CONSOLE_TRACE + ">");
+				break;
+			}
+			case "memory": {
+				ci.println( Utils.getMemoryDetails() );
 				break;
 			}
 			
@@ -185,7 +183,6 @@ public class TransaqCommandProvider implements CommandProvider {
 		}
 		
 		case "subscribeall": {
-			ci.execute("transaq show trace on"); 
 			TQTickTradeService.getInstance().subscribeTicks(TQSymbol.workingSymbolSet());
 			TQQuoteService.getInstance().subscribe(TQSymbol.workingSymbolSet());
 			TQQuotationService.getInstance().subscribe(TQSymbol.workingSymbolSet());
@@ -213,8 +210,7 @@ public class TransaqCommandProvider implements CommandProvider {
 		}
 		
 		case "start": {
-			strategy = new MACDStrategy(TQInstrumentService.getInstance().getDefaultDataFeedContext());
-			strategy.start();
+			
 			break;
 		}
 	
@@ -225,7 +221,7 @@ public class TransaqCommandProvider implements CommandProvider {
 		
 		case "test": {
 			IAccount account = TQAccountService.getInstance().getAccount(TQSymbol.BRQ5);
-			account.cancelOpenOrders(TQSymbol.BRQ5);
+			
 			break;
 		}
 
@@ -235,7 +231,7 @@ public class TransaqCommandProvider implements CommandProvider {
 
 	}
 
-	MACDStrategy strategy;
+	Strategy strategy;
 
 	public String getHelp() {
 		StringBuffer buffer = new StringBuffer();

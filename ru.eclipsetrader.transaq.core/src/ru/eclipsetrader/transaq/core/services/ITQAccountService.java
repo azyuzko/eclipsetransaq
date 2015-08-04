@@ -10,6 +10,7 @@ import ru.eclipsetrader.transaq.core.model.TQSymbol;
 public interface ITQAccountService extends IPersistable {
 
 	public ITQPosition getPosition(ITQSecurity security);
-
+	
 	IAccount getAccount(TQSymbol symbol);
+
 }

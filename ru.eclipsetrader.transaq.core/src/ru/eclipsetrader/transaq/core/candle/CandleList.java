@@ -4,7 +4,7 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.TreeMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.commons.lang3.time.DateUtils;
 
@@ -27,7 +27,8 @@ public class CandleList {
 		void onCandleChange(Candle candle);
 	}
 	
-	TreeMap<Date,Candle> map = new TreeMap<Date, Candle>();
+	// TreeMap<Date,Candle> map = new TreeMap<Date, Candle>(); // ConcurrentSkipListMap
+	ConcurrentSkipListMap<Date,Candle> map = new ConcurrentSkipListMap<Date, Candle>();
 
 	private CandleType candleType;
 	
@@ -44,18 +45,25 @@ public class CandleList {
 		appendCandles(candles);
 	}
 	
-	public Date[] dates() {
-		return map.keySet().toArray(new Date[map.size()]);
+	public Holder<Date[], double[]> values(PriceType priceType) {
+		return values(priceType, map.size());
 	}
 	
-	public double[] values(PriceType priceType) {
-		double[] values = new double[map.size()];
-		int i = 0;
-		for (Date date : map.keySet()) {
-			values[i] = map.get(date).getPriceValueByType(priceType); 
-			i++;
+	public Holder<Date[], double[]> values(PriceType priceType, int count) {
+		synchronized (map) {
+			count = Math.min(count, map.size());
+			double[] values = new double[count];
+			int i = 1;
+			for (Date date : map.descendingKeySet()) {
+				values[count-i] = map.get(date).getPriceValueByType(priceType);
+				i++;
+				if (i > count) {
+					break;
+				}
+			}
+			Date[] dates = map.keySet().toArray(new Date[count]);
+			return new Holder<Date[], double[]>(dates, values);
 		}
-		return values;
 	}
 	
 	/**
@@ -137,52 +145,55 @@ public class CandleList {
 
 	
 	public void processTickInCandle(Tick tick, ICandleProcessContext candleProcessContext) {
-		Candle topCandle = getLastCandle(); // если свечей нет, вернет null
-		
-		Date newTime = new Date(0); // minimal date
-		
-		if (topCandle != null) {
-			newTime = new Date(topCandle.getDate().getTime() + (candleType.getSeconds()) * 1000 ); // перешагнули за размер свечи
+		synchronized (this) {
+			Candle topCandle = getLastCandle(); // если свечей нет, вернет null
 			
-			if (tick.getTime() == null) {
-				throw new RuntimeException("trade.getTime() is null");
-			}
-		}
-		
-		if (tick.getTime().after(newTime)) {
-			
-			newTime = CandleList.closestCandleStartTime(tick.getTime(), candleType);
+			Date newTime = new Date(0); // minimal date
 			
 			if (topCandle != null) {
-				candleProcessContext.onCandleClose(topCandle);
+				newTime = new Date(topCandle.getDate().getTime() + (candleType.getSeconds()) * 1000 ); // перешагнули за размер свечи
+				
+				if (tick.getTime() == null) {
+					throw new RuntimeException("trade.getTime() is null");
+				}
 			}
 			
-			// System.out.println("New candle starting from " + Utils.formatDate(newTime));
-			topCandle = new Candle();
-			topCandle.setDate(newTime);
-			putCandle(topCandle);
-			candleProcessContext.onCandleOpen(topCandle);
+			if (tick.getTime().after(newTime)) {
+				
+				newTime = CandleList.closestCandleStartTime(tick.getTime(), candleType);
+				
+				if (topCandle != null) {
+					candleProcessContext.onCandleClose(topCandle);
+				}
+				
+				// System.out.println("New candle starting from " + Utils.formatDate(newTime));
+				topCandle = new Candle();
+				topCandle.setDate(newTime);
+				putCandle(topCandle);
+				candleProcessContext.onCandleOpen(topCandle);
+			}
+			
+			double tickPrice =  tick.getPrice();
+			if (tickPrice > topCandle.getHigh()) {
+				topCandle.setHigh(tickPrice);
+			}
+			if (tickPrice < topCandle.getLow()) {
+				topCandle.setLow(tickPrice);
+			}
+			if (topCandle.getOpen() == 0) {
+				topCandle.setOpen(tickPrice);
+			}
+			if (topCandle.getClose() != tickPrice) {
+				topCandle.setClose(tickPrice);
+			}
+			
+			topCandle.setVolume(topCandle.getVolume() + tick.getQuantity());
+			
+			topCandle.getData().add(new Holder<Double, Integer>(tick.getPrice(), tick.getQuantity()));
+			
+			candleProcessContext.onCandleChange(topCandle);
+			
 		}
-		
-		double tickPrice =  tick.getPrice();
-		if (tickPrice > topCandle.getHigh()) {
-			topCandle.setHigh(tickPrice);
-		}
-		if (tickPrice < topCandle.getLow()) {
-			topCandle.setLow(tickPrice);
-		}
-		if (topCandle.getOpen() == 0) {
-			topCandle.setOpen(tickPrice);
-		}
-		if (topCandle.getClose() != tickPrice) {
-			topCandle.setClose(tickPrice);
-		}
-		
-		topCandle.setVolume(topCandle.getVolume() + tick.getQuantity());
-		
-		topCandle.getData().add(new Holder<Double, Integer>(tick.getPrice(), tick.getQuantity()));
-		
-		candleProcessContext.onCandleChange(topCandle);
 		
 	}
 	

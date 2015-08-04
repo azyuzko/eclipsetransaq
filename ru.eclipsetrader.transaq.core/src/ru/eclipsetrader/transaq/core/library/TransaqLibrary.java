@@ -8,8 +8,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.xml.sax.InputSource;
 
+import ru.eclipsetrader.transaq.core.data.DatabaseManager;
 import ru.eclipsetrader.transaq.core.exception.CommandException;
 import ru.eclipsetrader.transaq.core.model.internal.CommandResult;
+import ru.eclipsetrader.transaq.core.server.TransaqServer;
 import ru.eclipsetrader.transaq.core.util.Utils;
 import ru.eclipsetrader.transaq.core.xml.handler.ResultHandler;
 
@@ -19,7 +21,8 @@ import com.sun.jna.Pointer;
 
 public class TransaqLibrary {
 	
-	private static final Logger logger = LogManager.getLogger(TransaqLibrary.class);
+	static Logger logger = LogManager.getLogger(TransaqLibrary.class);
+	static Logger xmlLogger = LogManager.getLogger("XMLTrace");
 
 	static ITransaqLibrary library = (ITransaqLibrary)Native.loadLibrary(
 			"x86".equals(System.getProperty("os.arch")) ? "txmlconnector" :  "txmlconnector64", 
@@ -44,14 +47,17 @@ public class TransaqLibrary {
 
 	public static CommandResult SendCommand(String data) {
 		
-		//TODO refactoring if (TransaqServer.INSTANCE.getServer().isDbLogging()) {
-		//	DatabaseManager.writeOutputEvent(data);
-		// }
-		logger.debug("Send " + data);
+		DatabaseManager.writeOutputEvent(data);
+		
+		if (xmlLogger.isDebugEnabled()) {
+			xmlLogger.debug("Send " + data);
+		}
 		synchronized (library) {
 			Pointer pResult = library.SendCommand(data);
 			String result = pResult.getString(0);
-			// System.out.println("SendCommand result = " + result);
+			if (xmlLogger.isDebugEnabled()) {
+				xmlLogger.debug("SendCommand result = " + result.replace("\n", ""));
+			}
 			library.FreeMemory(pResult);
 			ResultHandler handler = new ResultHandler();
 			try {
@@ -64,7 +70,6 @@ public class TransaqLibrary {
 			if (!commandResult.isSuccess()) { 
 				throw new CommandException(commandResult);
 			}
-			logger.debug(commandResult);
 			return commandResult;
 		}
 	}

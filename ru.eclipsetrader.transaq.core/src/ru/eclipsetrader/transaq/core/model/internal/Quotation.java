@@ -1,6 +1,8 @@
 package ru.eclipsetrader.transaq.core.model.internal;
 
+import java.lang.reflect.Field;
 import java.util.Date;
+import java.util.List;
 
 import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.QuotationStatus;
@@ -58,6 +60,90 @@ public class Quotation {
 		this.seccode = seccode;
 	}
 
+	
+	public void applyQuotationGap(List<SymbolGapMap> quotationGapList) {
+		synchronized (this) {
+			
+			for (SymbolGapMap gapMap : quotationGapList) {
+	
+				@SuppressWarnings("rawtypes")
+				Class quotationclass = getClass();
+				
+				for (String attr : gapMap.keySet()) {
+					Object value = null;
+					String stringValue = gapMap.get(attr);
+					
+					
+					if ("point_cost".equals(attr)||
+					"open".equals(attr)||
+					"waprice".equals(attr)||
+					"bid".equals(attr)||
+					"offer".equals(attr)||
+					"last".equals(attr)||
+					"change".equals(attr)||
+					"priceminusprevwaprice".equals(attr)||
+					"valtoday".equals(attr)||
+					"yield".equals(attr)||
+					"yieldatwaprice".equals(attr)||
+					"marketpricetoday".equals(attr)||
+					"highbid".equals(attr)||
+					"lowoffer".equals(attr)||
+					"high".equals(attr)||
+					"low".equals(attr)||
+					"closeprice".equals(attr)||
+					"closeyield".equals(attr)||
+					"buydeposit".equals(attr)||
+					"selldeposit".equals(attr)||
+					"volatility".equals(attr)||
+					"theoreticalprice".equals(attr)) value = Double.valueOf(stringValue);
+						
+					else if ("accruedintvalue".equals(attr)||
+					"biddepth".equals(attr)||
+					"numbids".equals(attr)||
+					"offerdepth".equals(attr)||
+					"offerdeptht".equals(attr)||
+					"numoffers".equals(attr)||				
+					"numtrades".equals(attr)||				
+					"voltoday".equals(attr)||				
+					"openpositions".equals(attr)||				
+					"deltapositions".equals(attr)||				
+					"quantity".equals(attr)) value = Integer.valueOf(stringValue);
+						
+					else if ("time".equals(attr) && stringValue != null && !stringValue.isEmpty())  {
+						if (stringValue.length() > 12) { // определяем дату или время
+							value = Utils.parseDate(stringValue);
+						} else {
+							value = Utils.parseTime(stringValue);
+						}
+					}
+						
+					else if ("status".equals(attr))	value = QuotationStatus.valueOf(stringValue);
+		
+					else if ("tradingstatus".equals(attr)) {
+						switch (stringValue.toCharArray()[0]) {
+						case '0': case '1': case '2': case '3': case '4': stringValue = "_" + stringValue;
+						}
+						value = TradingStatus.valueOf(stringValue);
+					}
+					
+					else 
+						continue;
+		
+					try {
+						Field f = quotationclass.getDeclaredField(attr);
+						if (!f.isAccessible()) {
+							f.setAccessible(true);
+						}
+						f.set(this, value);
+					} catch (Exception e) {
+						e.printStackTrace();
+						return;
+					}
+				}
+			}
+		}
+	}
+	
 	public BoardType getBoard() {
 		return board;
 	}

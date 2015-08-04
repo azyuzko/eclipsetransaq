@@ -3,6 +3,9 @@ package ru.eclipsetrader.transaq.core.strategy;
 import java.util.Date;
 import java.util.HashMap;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import ru.eclipsetrader.transaq.core.candle.CandleList;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.indicators.MACD;
@@ -16,10 +19,13 @@ import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Quotation;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
 import ru.eclipsetrader.transaq.core.trades.IDataFeedContext;
+import ru.eclipsetrader.transaq.core.util.Holder;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
-public class MACDStrategy implements IProcessingContext, IStrategy {
+public class Strategy implements IProcessingContext, IStrategy {
 
+	Logger logger = LogManager.getLogger("MACDStrategy");
+	
 	private MACD macd;
 
 	public Instrument BRQ5;
@@ -28,22 +34,32 @@ public class MACDStrategy implements IProcessingContext, IStrategy {
 	
 	IDataFeedContext dataFeedContext;
 	
-	public MACDStrategy(IDataFeedContext dataFeedContext) {
+	public Strategy(IDataFeedContext dataFeedContext, int fast, int slow, int signal) {
 		this.dataFeedContext = dataFeedContext;
-		macd = new MACD(12, 26, 9);
+		macd = new MACD(fast, slow, signal);
 		BRQ5 = new Instrument(TQSymbol.BRQ5, this, dataFeedContext);
-		//SiU5 = new Instrument(TQSymbol.SiU5, this, dataFeedContext);
-		//RIU5 = new Instrument(TQSymbol.RIU5, this, dataFeedContext);
+		SiU5 = new Instrument(TQSymbol.SiU5, this, dataFeedContext);
+		RIU5 = new Instrument(TQSymbol.RIU5, this, dataFeedContext);		
+	}
+	
+	public void reset() {
+		BRQ5.reset();
+		SiU5.reset();
+		RIU5.reset();
 	}
 
 	public MACD getMacd() {
 		return macd;
 	}
 
+	public void setMacd(MACD macd) {
+		this.macd = macd;
+	}
 
-	public void tick(Instrument i, CandleList candleList) {
-		double[] inReal = candleList.values(PriceType.CLOSE);
-		Date[] dates = candleList.dates();
+	public void tick(Instrument i) {
+		Holder<Date[], double[]> values = i.getCandleStorage().getCandleList(CandleType.CANDLE_1M).values(PriceType.CLOSE);
+		Date[] dates = values.getFirst();
+		double[] inReal = values.getSecond();
 		macd.evaluate(inReal, dates);
 		
 		double[] m = macd.getOutMACD();
@@ -51,10 +67,14 @@ public class MACDStrategy implements IProcessingContext, IStrategy {
 		double[] hist = macd.getOutMACDHist();
 		if (hist.length > macd.getLookback()) {
 			if (Math.signum(hist[hist.length-1]) != Math.signum(hist[hist.length-2])) {
+				BuySell bs;
 				if (Math.signum(hist[hist.length-1]) == -1) {
-					signal(i, dates[dates.length-1], BuySell.B);
+					bs = BuySell.B;
 				} else {
-					signal(i, dates[dates.length-1], BuySell.S);
+					bs = BuySell.S;
+				}
+				if (i == RIU5) {
+					signal(SiU5, bs);
 				}
 			}
 		}
@@ -76,20 +96,27 @@ public class MACDStrategy implements IProcessingContext, IStrategy {
 		
 	}
 
-	private void createSignal(Instrument i, Date date, BuySell buySell) {
-		System.out.println(i.getSymbol() +" signal " + date + " " + buySell);
-		signals.put(i.getSymbol(), new Signal(i.getSymbol(), date, buySell, 0));
+	private void createSignal(Instrument i, BuySell buySell) {
+		signals.put(i.getSymbol(), new Signal(i.getSymbol(), dataFeedContext.currentDate(), buySell, 0));
+		int quantity = 100;
+		if (buySell == BuySell.B) {
+			quantity = i.buy(quantity).getQuantity();
+		} else {
+			quantity = i.sell(quantity).getQuantity();
+		}
+		// System.out.println(i.getSymbol() +" signal " + Utils.formatDate(date) + " " + buySell + " = " + quantity);
+		
 	}
 	
 	HashMap<TQSymbol, Signal> signals = new HashMap<>();
 	
-	public void signal(Instrument i, Date date, BuySell buySell) {
+	public void signal(Instrument i, BuySell buySell) {
 		
 		if (signals.size() == 0) {
-			createSignal(i, date, buySell);
+			createSignal(i, buySell);
 		} else {
 			if (signals.get(i.getSymbol()) != null && signals.get(i.getSymbol()).getBuySell() != buySell) {
-				createSignal(i, date, buySell);
+				createSignal(i, buySell);
 			}
 		}
 		
@@ -98,6 +125,7 @@ public class MACDStrategy implements IProcessingContext, IStrategy {
 
 	@Override
 	public void start() {
+		reset();
 		dataFeedContext.OnStart();
 	}
 
@@ -110,6 +138,7 @@ public class MACDStrategy implements IProcessingContext, IStrategy {
 	@Override
 	public void onTick(Instrument instrument, Tick tick) {
 //		System.out.println(tick);
+		tick(instrument);
 	}
 
 	@Override
@@ -119,30 +148,37 @@ public class MACDStrategy implements IProcessingContext, IStrategy {
 
 	@Override
 	public void onCandleClose(Instrument instrument, CandleList candleList, Candle candle) {
-//		System.out.println("onCandleClose: " + instrument.getSymbol() + " " + candle.toString());
+		//System.out.println("onCandleClose: " + instrument.getSymbol() + " " + candle.toString());
 	}
 
 	@Override
 	public void onCandleOpen(Instrument instrument, CandleList candleList, Candle candle) {
 //		System.out.println("onCandleOpen: " + instrument.getSymbol() + " " + candle.toString());
+		
 	}
 
 	@Override
 	public void onCandleChange(Instrument instrument, CandleList candleList, Candle candle) {
 //		System.out.println("onCandleChange: " + instrument.getSymbol() + " " + candle.toString());
-		tick(instrument, candleList);
 	}
 	
 
 	@Override
 	public void onQuotationsChange(Instrument instrument, Quotation quotation) {
-		System.out.println("Quotations changed");
+		// System.out.println("Quotations changed");
 	}
 
 	@Override
 	public CandleType[] getCandleTypes() {
 		return new CandleType[] { CandleType.CANDLE_1M };
 	}
+	
+
+	@Override
+	public TQSymbol[] getSymbols() {
+		return new TQSymbol[] {SiU5.getSymbol(), BRQ5.getSymbol(), RIU5.getSymbol()} ;
+	}
+
 
 	@Override
 	public IDataFeedContext getDataFeedContext() {
@@ -152,6 +188,23 @@ public class MACDStrategy implements IProcessingContext, IStrategy {
 	@Override
 	public IProcessingContext getProcessingContext() {
 		return this;
+	}
+
+	@Override
+	public Instrument getInstrument(TQSymbol symbol) {
+		if (symbol.equals(TQSymbol.SiU5)) {
+			return SiU5;
+		} else if (symbol.equals(TQSymbol.BRQ5)) {
+			return BRQ5;
+		} else if (symbol.equals(TQSymbol.RIU5)) {
+			return RIU5;
+		}
+		return null;
+	}
+
+	@Override
+	public String getName() {
+		return "MACD strategy fast = " + macd.getOptInFastPeriod() + ", slow = " + macd.getOptInSlowPeriod() + ", signal = " + macd.getOptInSignalPeriod();
 	}
 
 	

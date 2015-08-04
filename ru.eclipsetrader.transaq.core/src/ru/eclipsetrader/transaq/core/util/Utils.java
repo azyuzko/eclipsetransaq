@@ -35,6 +35,31 @@ public class Utils {
 	private static SimpleDateFormat sdfTime = new SimpleDateFormat("HH:mm:ss");
 	private static SAXParserFactory fb = SAXParserFactory.newInstance();
 	
+	public static String getMemoryDetails() {
+		StringBuilder sb = new StringBuilder();
+		int mb = 1024*1024;
+        
+        //Getting the runtime reference from system
+        Runtime runtime = Runtime.getRuntime();
+         
+        sb.append("##### Heap utilization statistics [MB] #####\n");
+         
+        //Print used memory
+        sb.append("Used Memory:"
+            + ((runtime.totalMemory() - runtime.freeMemory()) / mb) + " Mb\n");
+ 
+        //Print free memory
+        sb.append("Free Memory:"
+            + (runtime.freeMemory() / mb) + " Mb\n");
+         
+        //Print total available memory
+        sb.append("Total Memory:" + (runtime.totalMemory() / mb) + " Mb\n");
+ 
+        //Print Maximum available memory
+        sb.append("Max Memory:" + (runtime.maxMemory() / mb) + " Mb\n");
+        return sb.toString();
+	}
+	
 	public static Date truncDate(Date date) {
 		Calendar c = Calendar.getInstance();
 		c.setTime(date);
@@ -48,12 +73,14 @@ public class Utils {
 	public static Date parseDate(String value) {
 		try {
 			if (value != null) {
-				return sdfDateTime.parse(value);
+				synchronized (sdfDateTime) {
+					return sdfDateTime.parse(value);	
+				}
 			} else {
 				return null;
 			}
-		} catch (ParseException e) {
-			logger.error("Cannot parse <%s> date", value);
+		} catch (Exception e) {
+			logger.error("Cannot parse <%s> date", value, e);
 			return null;
 		}
 	}
@@ -100,15 +127,20 @@ public class Utils {
 			c.set(Calendar.MINUTE, 0);
 			c.set(Calendar.SECOND, 0);
 			c.set(Calendar.MILLISECOND, 0);
-			return new Date( c.getTimeInMillis() +  sdfTime.parse(value).getTime());
-		} catch (ParseException e) {
-			throw new RuntimeException(e);
+			synchronized (sdfTime) {
+				return new Date( c.getTimeInMillis() +  sdfTime.parse(value).getTime());	
+			}
+		} catch (Exception e) {
+			logger.error("Cannot parse <%s> time", value);
+			return null;
 		}
 	}
 	
 	public static String formatDate(Date date) {
 		if (date != null) {
-			return sdfDateTime.format(date);
+			synchronized (sdfDateTime) { // SimpleDateFormat is not thread-safe
+				return sdfDateTime.format(date);	
+			}
 		} else {
 			return null;
 		}
@@ -238,6 +270,6 @@ public class Utils {
 	public static void main(String[] args) {
 		/*Order o = new Order();
 		System.out.println(generateStub(o));*/
-		System.out.println(truncDate(new Date()));
+		System.out.println(Utils.parseDate("31.07.2015 23:49:57.000"));
 	}
 }

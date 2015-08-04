@@ -8,11 +8,9 @@ buysell char(1),
 price number(20,6),
 quantity number(10),
 period varchar2(20),
-openinterest number(10)
-);
-
-create index ticks_IX1 on ticks(board, seccode, time);
-
-create index ticks_IX2 on ticks(board, seccode, tradeno);
+openinterest number(10),
+constraint pk_ticks primary key (board, seccode, time, tradeno)
+)
+organization index;
 
 

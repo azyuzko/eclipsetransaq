@@ -1,13 +1,9 @@
 package ru.eclipsetrader.transaq.core.model.internal;
 
 import javax.persistence.Entity;
-import javax.persistence.EntityListeners;
 import javax.persistence.Id;
 
-import ru.eclipsetrader.transaq.core.data.DefaultJPAListener;
-
 @Entity
-@EntityListeners(DefaultJPAListener.class)
 public class CandleKind extends ServerObject {
 	
 	public CandleKind(){

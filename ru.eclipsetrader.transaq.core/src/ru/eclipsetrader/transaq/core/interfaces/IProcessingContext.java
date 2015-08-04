@@ -5,6 +5,7 @@ import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.instruments.Instrument;
 import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.QuoteGlass;
+import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Quotation;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
 
@@ -16,5 +17,7 @@ public interface IProcessingContext {
 	void onCandleChange(Instrument instrument, CandleList candleList, Candle changedCandle);
 	void onQuotationsChange(Instrument instrument, Quotation quotation);
 	CandleType[] getCandleTypes();
-	
+	TQSymbol[] getSymbols();
+	Instrument getInstrument(TQSymbol symbol);
+	String getName();
 }

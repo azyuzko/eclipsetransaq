@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import javax.persistence.Entity;
-import javax.persistence.EntityListeners;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Id;
@@ -12,12 +11,10 @@ import javax.persistence.JoinColumn;
 import javax.persistence.MapKey;
 import javax.persistence.OneToMany;
 
-import ru.eclipsetrader.transaq.core.data.DefaultJPAListener;
 import ru.eclipsetrader.transaq.core.model.ClientType;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 @Entity
-@EntityListeners(DefaultJPAListener.class)
 public class Client extends ServerObject {
 
 	public Client(){

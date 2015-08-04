@@ -1,14 +1,11 @@
 package ru.eclipsetrader.transaq.core.model.internal;
 
 import javax.persistence.Entity;
-import javax.persistence.EntityListeners;
 import javax.persistence.Id;
 
-import ru.eclipsetrader.transaq.core.data.DefaultJPAListener;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 @Entity
-@EntityListeners(DefaultJPAListener.class)
 public class Board  extends ServerObject {
 
 	@Id

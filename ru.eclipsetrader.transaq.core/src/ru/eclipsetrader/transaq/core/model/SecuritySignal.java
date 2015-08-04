@@ -4,8 +4,6 @@ import java.util.Date;
 
 import javax.persistence.Column;
 import javax.persistence.Convert;
-import javax.persistence.Entity;
-import javax.persistence.EntityListeners;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
@@ -16,13 +14,11 @@ import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
 import ru.eclipsetrader.transaq.core.data.BooleanConverter;
-import ru.eclipsetrader.transaq.core.data.DefaultJPAListener;
 import ru.eclipsetrader.transaq.core.model.internal.ServerObject;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 
 //@Entity
-//@EntityListeners(DefaultJPAListener.class)
 public class SecuritySignal extends ServerObject {
 
 	@Id

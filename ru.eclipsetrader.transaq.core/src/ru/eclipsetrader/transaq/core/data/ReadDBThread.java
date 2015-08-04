@@ -9,7 +9,8 @@ import java.sql.SQLException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-import ru.eclipsetrader.transaq.core.data.XMLDataEvent.Direction;
+import ru.eclipsetrader.transaq.core.model.XMLDataEvent;
+import ru.eclipsetrader.transaq.core.model.XMLDataEvent.Direction;
 import ru.eclipsetrader.transaq.core.xml.handler.XMLProcessType;
 
 public class ReadDBThread extends Thread  {

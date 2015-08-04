@@ -77,8 +77,14 @@ public class TQInstrumentService implements ITQInstrumentService {
 			}
 
 			@Override
-			public IAccount getAccount(TQSymbol symbol) {
-				return TQAccountService.getInstance().getAccount(symbol);
+			public IAccount getAccount() {
+				return TQAccountService.getInstance().getAccount(null);
+			}
+
+			@Override
+			public Date currentDate() {
+				// TODO diff with server time!
+				return new Date();
 			}
 
 		};

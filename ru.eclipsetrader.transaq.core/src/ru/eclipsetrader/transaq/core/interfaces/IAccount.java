@@ -1,38 +1,69 @@
 package ru.eclipsetrader.transaq.core.interfaces;
 
+import java.util.Map;
+
+import ru.eclipsetrader.transaq.core.account.QuantityCost;
+import ru.eclipsetrader.transaq.core.model.QuoteGlass;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 
 public interface IAccount {
+	
+	/**
+	 * Свободные средства
+	 * @return
+	 */
+	double getFree();
+	
+	/**
+	 * Сбросить состояние счета на первоначальное
+	 */
+	void reset();
+	
+	/**
+	 * Вернуть позиции по счету
+	 * @return
+	 */
+	Map<TQSymbol, QuantityCost> getPositions();
 
 	/**
-	 * Buy by markey
+	 * Купить контракты
 	 * @param symbol
 	 * @param quantity
+	 * @return  кол-во и сумма реально купленных
 	 */
-	void buy(TQSymbol symbol, int quantity);
-	
+	QuantityCost buy(TQSymbol symbol, int quantity, double price);
+
 	/**
-	 * Sell by market
+	 * Купить из стакана
 	 * @param symbol
 	 * @param quantity
+	 * @param quoteGlass
+	 * @return кол-во и сумма реально купленных
 	 */
-	void sell(TQSymbol symbol, int quantity);
+	QuantityCost buy(TQSymbol symbol, int quantity, QuoteGlass quoteGlass);
 	
 	/**
-	 * Доступно к покупке
+	 * Продать контракты
+	 * @param symbol
+	 * @param quantity
+	 * @return кол-во и сумма реально проданных
+	 */
+	QuantityCost sell(TQSymbol symbol, int quantity, double price);
+	
+	/**
+	 * Продать из стакана
+	 * @param symbol
+	 * @param quantity
+	 * @param quoteGlass
+	 * @return кол-во и сумма реально проданных
+	 */
+	QuantityCost sell(TQSymbol symbol, int quantity, QuoteGlass quoteGlass);
+	
+	/**
+	 * Закрыть позицию
 	 * @param symbol
 	 * @return
 	 */
-	int availableToBuy(TQSymbol symbol);
-	
-	/**
-	 * Доступно к продаже
-	 * @param symbol
-	 * @return
-	 */
-	int availableToSell(TQSymbol symbol);
-	
-	void cancelOpenOrders(TQSymbol symbol);
-	void closePosition(TQSymbol symbol);
+	QuantityCost close(TQSymbol symbol, double price);
 	
 }

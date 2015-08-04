@@ -5,13 +5,15 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
+import ru.eclipsetrader.transaq.core.exception.UnimplementedException;
 import ru.eclipsetrader.transaq.core.interfaces.IAccount;
 import ru.eclipsetrader.transaq.core.interfaces.IFortsQuotesSupplier;
 import ru.eclipsetrader.transaq.core.model.BaseFortsContract;
 import ru.eclipsetrader.transaq.core.model.BaseFortsMoney;
-import ru.eclipsetrader.transaq.core.model.BoardType;
+import ru.eclipsetrader.transaq.core.model.BuySell;
+import ru.eclipsetrader.transaq.core.model.QuoteGlass;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
-import ru.eclipsetrader.transaq.core.util.Utils;
+import ru.eclipsetrader.transaq.core.model.internal.Order;
 
 public class FortsAccountSimulator implements IAccount {
 
@@ -23,7 +25,7 @@ public class FortsAccountSimulator implements IAccount {
 	double comission = 0;
 	
 	Map<TQSymbol, BaseFortsContract> positions = new HashMap<>();
-	
+
 	IFortsQuotesSupplier quotesSupplier;
 	
 	public FortsAccountSimulator(IFortsQuotesSupplier quotesSupplier, double current) {
@@ -105,9 +107,10 @@ public class FortsAccountSimulator implements IAccount {
 		BaseFortsContract position = positions.get(symbol);
 		if (position == null) {
 			position = new BaseFortsContract();
-			position.setPrice(quotesSupplier.getPrice(symbol));
 			positions.put(symbol, position);
 		}
+		
+		position.setPrice(quotesSupplier.getSellPrice(symbol));
 		
 		double diffGO = position.calcBuy(quantity);
 		
@@ -136,9 +139,10 @@ public class FortsAccountSimulator implements IAccount {
 		
 		if (position == null) {
 			position = new BaseFortsContract();
-			position.setPrice(quotesSupplier.getPrice(symbol));
 			positions.put(symbol, position);
 		}
+		
+		position.setPrice(quotesSupplier.getBuyPrice(symbol));
 		
 		double diffGO = position.calcSell(quantity);
 		
@@ -161,7 +165,7 @@ public class FortsAccountSimulator implements IAccount {
 	 * @param quantity
 	 * @return
 	 */
-	public void buyLocked(TQSymbol symbol, int quantity) {
+	public QuantityCost buyLocked(TQSymbol symbol, int quantity) {
 		BaseFortsContract position = positions.get(symbol);
 		
 		if (position == null || position.getOpenbuys() < quantity) {
@@ -171,7 +175,8 @@ public class FortsAccountSimulator implements IAccount {
 		position.setOpenbuys(position.getOpenbuys() - quantity);
 		position.setTodaybuy(position.getTodaybuy() + quantity);
 		double newGO = position.getGO();
-		money.recalcGO(oldGO, newGO);
+		double diff = money.recalcGO(oldGO, newGO);
+		return new QuantityCost(quantity, diff);
 	}
 	
 	/**
@@ -179,7 +184,7 @@ public class FortsAccountSimulator implements IAccount {
 	 * @param symbol
 	 * @param quantity
 	 */
-	public void sellLocked(TQSymbol symbol, int quantity) {
+	public QuantityCost sellLocked(TQSymbol symbol, int quantity) {
 		BaseFortsContract position = positions.get(symbol);
 		
 		if (position == null || position.getOpensells() < quantity) {
@@ -190,7 +195,8 @@ public class FortsAccountSimulator implements IAccount {
 		position.setOpensells(position.getOpensells() - quantity);
 		position.setTodaysell(position.getTodaysell() + quantity);
 		double newGO = position.getGO();
-		money.recalcGO(oldGO, newGO);		
+		double diff = money.recalcGO(oldGO, newGO);
+		return new QuantityCost(quantity, diff); 
 	}
 	
 	/**
@@ -198,16 +204,16 @@ public class FortsAccountSimulator implements IAccount {
 	 * @param symbol
 	 * @param quantity
 	 */
-	public void buy(TQSymbol symbol, int quantity) {
+	public QuantityCost buy(TQSymbol symbol, int quantity, double price) {
 		log("Buy: " + symbol + " quantity:" + quantity);
 		lockBuy(symbol, quantity);
-		buyLocked(symbol, quantity);
+		return buyLocked(symbol, quantity);
 	}
 	
-	public void sell(TQSymbol symbol, int quantity) {
+	public QuantityCost sell(TQSymbol symbol, int quantity, double price) {
 		log("Sell: " + symbol + " quantity:" + quantity);
 		lockSell(symbol, quantity);
-		sellLocked(symbol, quantity);
+		return sellLocked(symbol, quantity);
 	}
 	
 	/**
@@ -224,28 +230,24 @@ public class FortsAccountSimulator implements IAccount {
 		}
 	}
 	
-	/**
-	 * Закрыть все открытые позиции.
-	 * @param symbol
-	 * @param buyPrice
-	 * @param sellPrice
-	 */
-	public void closePosition(TQSymbol symbol) {
+	public QuantityCost close(TQSymbol symbol, double price) {
 		BaseFortsContract position = positions.get(symbol);
 		if (position != null) {
+			recalc(symbol, price);
 			if (position.getTotalnet() == 0) {
 				// нет открытых контрактов
-				return;
+				return new QuantityCost(0, 0);
 			} else if (position.getTotalnet() < 0) { // контракты на продажу
 				int quantity = -position.getTotalnet();
 				lockBuy(symbol, quantity);
-				buyLocked(symbol, quantity);
+				return buyLocked(symbol, quantity);
 			} else {// контракты на покупку
 				int quantity = position.getTotalnet();
 				lockSell(symbol, quantity);
-				sellLocked(symbol, quantity);				
+				return sellLocked(symbol, quantity);				
 			}
 		}
+		return new QuantityCost(0, 0);
 	}
 	
 	/**
@@ -262,8 +264,29 @@ public class FortsAccountSimulator implements IAccount {
 		}
 	}
 	
+	public void putOrder(TQSymbol symbol, BuySell buySell, int quantity, double price) {
+		Order order = new Order();
+		order.setTime(new Date());
+		order.setBoard(symbol.getBoard());
+		order.setSeccode(symbol.getSeccode());
+		order.setQuantity(quantity);
+		order.setPrice(price);
+		order.setBuysell(buySell);
+		lockBuy(symbol, quantity);
+
+	}
+
+	public void putBuyOrder(TQSymbol symbol, int quantity, double price) {
+		putOrder(symbol, BuySell.B, quantity, price);
+	}
+	
+
+	public void putSellOrder(TQSymbol symbol, int quantity, double price) {
+		putOrder(symbol, BuySell.S, quantity, price);
+	}
+	
 	public static void main(String[] args) {
-		FortsAccountSimulator a = new FortsAccountSimulator(new IFortsQuotesSupplier() {
+		/*FortsAccountSimulator a = new FortsAccountSimulator(new IFortsQuotesSupplier() {
 			
 			@Override
 			public double getSellPrice(TQSymbol symbol) {
@@ -276,7 +299,7 @@ public class FortsAccountSimulator implements IAccount {
 			}
 			
 			@Override
-			public double getPrice(TQSymbol symbol) {
+			public double getAvgPrice(TQSymbol symbol) {
 				return 50.0;
 			}
 			
@@ -307,8 +330,29 @@ public class FortsAccountSimulator implements IAccount {
 		a.cancelOpenOrders(symbol);
 		
 		System.out.println("-");
-		System.out.println(a);
+		System.out.println(a);*/
 		
 	}
+
+	@Override
+	public QuantityCost buy(TQSymbol symbol, int quantity, QuoteGlass quoteGlass) {
+		throw new UnimplementedException();
+	}
+
+	@Override
+	public QuantityCost sell(TQSymbol symbol, int quantity, QuoteGlass quoteGlass) {
+		throw new UnimplementedException();
+	}
+
+	@Override
+	public Map<TQSymbol, QuantityCost> getPositions() {
+		throw new UnimplementedException();
+	}
+
+	@Override
+	public void reset() {
+		throw new UnimplementedException();
+	}
+
 
 }

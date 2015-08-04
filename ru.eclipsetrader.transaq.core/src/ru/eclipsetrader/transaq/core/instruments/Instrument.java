@@ -7,11 +7,11 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import ru.eclipsetrader.transaq.core.account.QuantityCost;
 import ru.eclipsetrader.transaq.core.candle.CandleList;
 import ru.eclipsetrader.transaq.core.candle.CandleStorage;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.event.ListObserver;
-import ru.eclipsetrader.transaq.core.interfaces.IAccount;
 import ru.eclipsetrader.transaq.core.interfaces.IProcessingContext;
 import ru.eclipsetrader.transaq.core.model.Quote;
 import ru.eclipsetrader.transaq.core.model.QuoteGlass;
@@ -19,14 +19,13 @@ import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Quotation;
 import ru.eclipsetrader.transaq.core.model.internal.SymbolGapMap;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
-import ru.eclipsetrader.transaq.core.quotes.TQQuotationService;
 import ru.eclipsetrader.transaq.core.trades.IDataFeedContext;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 
 public class Instrument implements Closeable {
 	
-	Logger logger = LogManager.getLogger(Instrument.class);
+	Logger logger = LogManager.getLogger("Instrument");
 	
 	public static int CANDLE_HISTORY_COUNT = 1000;
 	private TQSymbol symbol;
@@ -36,8 +35,7 @@ public class Instrument implements Closeable {
 	
 	IProcessingContext context;
 	IDataFeedContext dataFeedContext;
-	IAccount account;
-	
+
 	ListObserver<Quote> iQuotesObserver = new ListObserver<Quote>() {
 		@Override
 		public void update(List<Quote> list) {
@@ -79,12 +77,13 @@ public class Instrument implements Closeable {
 		this.context = context;
 		this.dataFeedContext = dataFeedContext;
 		this.candleStorage = new CandleStorage(this, context);
-		this.account = dataFeedContext.getAccount(symbol);
-		this.quotation =  new Quotation(symbol.getBoard(), symbol.getSeccode());
 		for (CandleType ct : context.getCandleTypes()) {
 			CandleList candleList = candleStorage.createCandleTypeList(ct);
 			candleList.appendCandles(dataFeedContext.getCandleList(symbol, ct, new Date(), CANDLE_HISTORY_COUNT));
 		}
+		
+		this.quotation =  new Quotation(symbol.getBoard(), symbol.getSeccode());
+		
 		dataFeedContext.getQuotesFeeder().addObserver(symbol, iQuotesObserver);
 		dataFeedContext.getTicksFeeder().addObserver(symbol, iTickObserver);
 		dataFeedContext.getQuotationGapsFeeder().addObserver(symbol, iQuotationObserver);
@@ -95,6 +94,18 @@ public class Instrument implements Closeable {
 		dataFeedContext.getQuotesFeeder().deleteObserver(symbol, iQuotesObserver);
 		dataFeedContext.getTicksFeeder().deleteObserver(symbol, iTickObserver);
 	};
+	
+	/**
+	 * Обнуляет содержимое внутренних объектов инструмента
+	 */
+	public void reset() {
+		this.candleStorage = new CandleStorage(this, context);
+		for (CandleType ct : context.getCandleTypes()) {
+			CandleList candleList = candleStorage.createCandleTypeList(ct);
+			candleList.appendCandles(dataFeedContext.getCandleList(symbol, ct, new Date(), CANDLE_HISTORY_COUNT));
+		}		
+		this.quotation =  new Quotation(symbol.getBoard(), symbol.getSeccode());		
+	}
 	
 	public TQSymbol getSymbol() {
 		return symbol;
@@ -118,7 +129,7 @@ public class Instrument implements Closeable {
 	}
 	
 	public void updateQuotations(List<SymbolGapMap> list) {
-		TQQuotationService.applyQuotationGap(list, quotation);
+		quotation.applyQuotationGap(list);
 		context.onQuotationsChange(this, quotation);
 	}
 		
@@ -128,5 +139,16 @@ public class Instrument implements Closeable {
 		context.onTick(this, tick);
 	}
 
+	public QuantityCost buy(int quantity) {
+		QuantityCost bought = dataFeedContext.getAccount().buy(symbol, quantity, glass);
+		logger.info(Utils.formatDate(dataFeedContext.currentDate()) + " BUY: " + symbol + " requested = " + quantity + ", bought = " + bought + ", free = " + dataFeedContext.getAccount().getFree());
+		return bought;
+	}
+	
+	public QuantityCost sell(int quantity) {
+		QuantityCost sold = dataFeedContext.getAccount().sell(symbol, quantity, glass);
+		logger.info(Utils.formatDate(dataFeedContext.currentDate()) + " SELL: " + symbol + " requested = " + quantity + ", sold = " + sold + ", free = " + dataFeedContext.getAccount().getFree() );
+		return sold;
+	}
 
 }

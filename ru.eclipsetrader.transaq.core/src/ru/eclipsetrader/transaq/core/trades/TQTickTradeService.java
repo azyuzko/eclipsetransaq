@@ -4,9 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
 
-import ru.eclipsetrader.transaq.core.data.DataManager;
+import ru.eclipsetrader.transaq.core.data.DatabaseManager;
 import ru.eclipsetrader.transaq.core.event.ListObserver;
 import ru.eclipsetrader.transaq.core.instruments.TQInstrumentService;
 import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
@@ -20,21 +19,6 @@ import ru.eclipsetrader.transaq.core.services.ITQTickTradeService;
 public class TQTickTradeService implements ITQTickTradeService {
 	
 	SubscribeTicks subscribeTicks = new SubscribeTicks();
-	ArrayBlockingQueue<List<TickTrade>> queue = new ArrayBlockingQueue<>(300);
-	
-	Thread dbWriteThread = new Thread(new Runnable() {
-		@Override
-		public void run() {
-			while (!Thread.interrupted()) {
-				try {
-					List<TickTrade> list = queue.take();
-					DataManager.batchTickList(list);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-	});
 			
 	static TQTickTradeService instance;
 	public static TQTickTradeService getInstance() {
@@ -50,7 +34,7 @@ public class TQTickTradeService implements ITQTickTradeService {
 	ListObserver<TickTrade> ticksObserver = new ListObserver<TickTrade>() {
 		@Override
 		public void update(List<TickTrade> list) {
-			putInQueue(list);
+			DatabaseManager.writeTicks(list);
 			Map<TQSymbol, List<Tick>> map = createMap(list);
 			for (TQSymbol symbol : map.keySet()) {
 				TQInstrumentService.getInstance().getDefaultTickListEvent().notifyObservers(symbol, map.get(symbol));
@@ -79,21 +63,10 @@ public class TQTickTradeService implements ITQTickTradeService {
 		return map;
 	}
 	
-	public void putInQueue(List<TickTrade> list) {
-		try {
-			queue.put(list);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-	}
+	
 	
 	public ListObserver<TickTrade> getTickObserver() {
 		return ticksObserver;
-	}
-	
-	public TQTickTradeService() {
-		dbWriteThread.setDaemon(true);
-		dbWriteThread.start();
 	}
 
 	@Override

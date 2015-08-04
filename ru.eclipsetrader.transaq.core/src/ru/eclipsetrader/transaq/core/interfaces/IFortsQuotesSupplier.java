@@ -11,6 +11,6 @@ public interface IFortsQuotesSupplier {
 	
 	double getBuyPrice(TQSymbol symbol);
 	double getSellPrice(TQSymbol symbol);
-	double getPrice(TQSymbol symbol);
+	double getAvgPrice(TQSymbol symbol);
 
 }

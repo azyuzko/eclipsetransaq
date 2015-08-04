@@ -1,6 +1,5 @@
 package ru.eclipsetrader.transaq.core.trades;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -9,25 +8,25 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.commons.lang3.time.DateUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import ru.eclipsetrader.transaq.core.account.FortsAccountSimulator;
+import ru.eclipsetrader.transaq.core.account.SimpleAccount;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.candle.TQCandleService;
 import ru.eclipsetrader.transaq.core.data.DataManager;
-import ru.eclipsetrader.transaq.core.event.InstrumentEvent;
+import ru.eclipsetrader.transaq.core.event.IInstrumentEvent;
+import ru.eclipsetrader.transaq.core.event.SynchronousInstrumentEvent;
 import ru.eclipsetrader.transaq.core.interfaces.IAccount;
-import ru.eclipsetrader.transaq.core.interfaces.IFortsQuotesSupplier;
 import ru.eclipsetrader.transaq.core.interfaces.IProcessingContext;
 import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.Quote;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
-import ru.eclipsetrader.transaq.core.model.internal.Quotation;
 import ru.eclipsetrader.transaq.core.model.internal.SymbolGapMap;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
 import ru.eclipsetrader.transaq.core.model.internal.TickTrade;
 import ru.eclipsetrader.transaq.core.quotes.TQQuotationService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuoteService;
-import ru.eclipsetrader.transaq.core.strategy.MACDStrategy;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 /**
@@ -37,22 +36,46 @@ import ru.eclipsetrader.transaq.core.util.Utils;
  */
 public class DataFeeder implements IDataFeedContext {
 	
+	Logger logger = LogManager.getLogger("DataFeeder");
+	
 	Date fromDate;
 	Date toDate;
+	
+	ThreadLocal<Long> threadTickTime = new ThreadLocal<Long>();
 
 	static int TICK_PERIOD = 1; // период тика в милисекундах
 	
-	InstrumentEvent<List<Tick>> ticksEvent = new InstrumentEvent<>("Tick DB emulator");
-	InstrumentEvent<List<Quote>> quotesEvent = new InstrumentEvent<>("Quotes DB emulator");
-	InstrumentEvent<List<SymbolGapMap>> quotationEvent = new InstrumentEvent<>("Quotation DB emulator");
+	SynchronousInstrumentEvent<List<Tick>> ticksEvent = new SynchronousInstrumentEvent<>("Tick DB emulator");
+	SynchronousInstrumentEvent<List<Quote>> quotesEvent = new SynchronousInstrumentEvent<>("Quotes DB emulator");
+	SynchronousInstrumentEvent<List<SymbolGapMap>> quotationEvent = new SynchronousInstrumentEvent<>("Quotation DB emulator");
+	
+	Boolean feedPrepared = false;
+	
+	TreeMap<Long, List<TickTrade>> tickFeed;
+	TreeMap<Long, List<Quote>> quoteFeed;
+	TreeMap<Long, List<SymbolGapMap>> quotationFeed;
 	
 	public DataFeeder(Date fromDate, Date toDate) {
 		this.fromDate = fromDate;
 		this.toDate = toDate;
 	}
 	
-	public static TreeMap<Long, List<TickTrade>> getTradeList(Date dateFrom, Date dateTo) {
-		List<TickTrade> ticks = DataManager.getTickList(dateFrom, dateTo);
+	public void prepareFeed(IProcessingContext context) {
+		synchronized (feedPrepared) {
+			if (!feedPrepared) {
+				logger.info("Loading trades");
+				tickFeed = getTradeList(fromDate, toDate, context.getSymbols());
+				logger.info("Loading quotes");
+				quoteFeed = getQuoteList(fromDate, toDate, context.getSymbols());
+				logger.info("Loading quotation");
+				quotationFeed = getQuotationGapList(fromDate, toDate, context.getSymbols());	
+				feedPrepared = true;
+			}
+		}
+	}
+	
+	public static TreeMap<Long, List<TickTrade>> getTradeList(Date dateFrom, Date dateTo, TQSymbol[] symbols) {
+		List<TickTrade> ticks = DataManager.getTickList(dateFrom, dateTo, symbols);
 		TreeMap<Long, List<TickTrade>> result = new TreeMap<>();
 		for (TickTrade tick : ticks) {
 			long time = tick.getTime().getTime();
@@ -66,8 +89,8 @@ public class DataFeeder implements IDataFeedContext {
 		return result;
 	}
 	
-	public static TreeMap<Long, List<Quote>> getQuoteList(Date dateFrom, Date dateTo) {
-		List<Quote> quotes = DataManager.getQuoteList(dateFrom, dateTo); // возвращает данные сплошным списком
+	public static TreeMap<Long, List<Quote>> getQuoteList(Date dateFrom, Date dateTo, TQSymbol[] symbols) {
+		List<Quote> quotes = DataManager.getQuoteList(dateFrom, dateTo, symbols); // возвращает данные сплошным списком
 		// разложим их по датам
 		TreeMap<Long, List<Quote>> result = new TreeMap<>();
 		for (Quote q : quotes) {
@@ -84,8 +107,8 @@ public class DataFeeder implements IDataFeedContext {
 		return result;
 	}
 	
-	public static TreeMap<Long, List<SymbolGapMap>> getQuotationGapList(Date dateFrom, Date dateTo) {
-		List<SymbolGapMap> quotationGapList = DataManager.getQuotationGapList(dateFrom, dateTo);
+	public static TreeMap<Long, List<SymbolGapMap>> getQuotationGapList(Date dateFrom, Date dateTo, TQSymbol[] symbols) {
+		List<SymbolGapMap> quotationGapList = DataManager.getQuotationGapList(dateFrom, dateTo, symbols);
 		// разложим их по датам
 		TreeMap<Long, List<SymbolGapMap>> result = new TreeMap<>();
 		for (SymbolGapMap sg : quotationGapList) {
@@ -111,17 +134,17 @@ public class DataFeeder implements IDataFeedContext {
 	}
 	
 	@Override
-	public InstrumentEvent<List<Quote>> getQuotesFeeder() {
+	public IInstrumentEvent<List<Quote>> getQuotesFeeder() {
 		return quotesEvent;
 	}
 	
 	@Override
-	public InstrumentEvent<List<Tick>> getTicksFeeder() {
+	public IInstrumentEvent<List<Tick>> getTicksFeeder() {
 		return ticksEvent;
 	}
 
 	@Override
-	public InstrumentEvent<List<SymbolGapMap>> getQuotationGapsFeeder() {
+	public IInstrumentEvent<List<SymbolGapMap>> getQuotationGapsFeeder() {
 		return quotationEvent;
 	}
 	
@@ -131,15 +154,17 @@ public class DataFeeder implements IDataFeedContext {
 		// Do nothing
 	}
 
-
 	public void feed(IProcessingContext context) {
-		long tickTime = this.fromDate.getTime();
+				
+		long tickTime = fromDate.getTime();
+		threadTickTime.set(tickTime);
 		long prevTickTime = 0;
 		
-		TreeMap<Long, List<TickTrade>> tickFeed = getTradeList(fromDate, toDate);
-		TreeMap<Long, List<Quote>> quoteFeed = getQuoteList(fromDate, toDate);		
-		TreeMap<Long, List<SymbolGapMap>> quotationFeed = getQuotationGapList(fromDate, toDate);		
+		logger.debug("Feeding from " + Utils.formatDate(fromDate) + " to " + Utils.formatDate(toDate));
 
+		prepareFeed(context);
+		
+		logger.debug("Starting tick " + context.getName());
 		while (tickTime < toDate.getTime()) {			
 			SortedMap<Long, List<Quote>> subQuotes = quoteFeed.subMap(prevTickTime, true, tickTime, false);
 			SortedMap<Long, List<TickTrade>> subTicks = tickFeed.subMap(prevTickTime, true, tickTime, false);
@@ -163,7 +188,6 @@ public class DataFeeder implements IDataFeedContext {
 				}
 			}
 				
-			
 			if (subTicks.size() > 0) {
 				 List<TickTrade> subTicksTempList = new ArrayList<>();
 				 for (List<TickTrade> l : subTicks.values()) {
@@ -174,63 +198,33 @@ public class DataFeeder implements IDataFeedContext {
 					 ticksEvent.notifyObservers(symbol, map.get(symbol));
 				 }
 			}
-		
+
+			
 			prevTickTime = tickTime;
 			tickTime += TICK_PERIOD;
+			threadTickTime.set(tickTime);
 		}
+
+		logger.debug("Complete " + context.getName());
 	}
-	
-	class FortsQuotesSupplier implements IFortsQuotesSupplier {
-		
-		@Override
-		public double getSellPrice(TQSymbol symbol) {
-			// TODO Auto-generated method stub
-			return 0;
-		}
-		
-		@Override
-		public double getPrice(TQSymbol symbol) {
-			// TODO Auto-generated method stub
-			return 0;
-		}
-		
-		@Override
-		public double getBuyPrice(TQSymbol symbol) {
-			// TODO Auto-generated method stub
-			return 0;
-		}
-	};
-	
-	FortsQuotesSupplier fortsQuotesSupplier = new FortsQuotesSupplier();
 
 	@Override
-	public IAccount getAccount(TQSymbol symbol) {
-		FortsAccountSimulator account = new FortsAccountSimulator(fortsQuotesSupplier, 10000);
+	public Date currentDate() {
+		return new Date(threadTickTime.get());
+	}
+
+	static final double INITIAL_AMOUNT = 100000;
+	
+	ThreadLocal<IAccount> threadAccount = new ThreadLocal<IAccount>();
+	
+	@Override
+	public IAccount getAccount() {
+		IAccount account = threadAccount.get();
+		if (account == null) {
+			account = new SimpleAccount(INITIAL_AMOUNT, this);
+			threadAccount.set(account);
+		}
 		return account;
 	}
-	
-	public static void main(String[] args) throws IOException {
-		Date fromDate = Utils.parseDate("30.07.2015 16:57:00.000");
-		Date toDate = Utils.parseDate("30.07.2015 17:15:00.000");
-		
-		
-		DataFeeder dataFeeder = new DataFeeder(fromDate, toDate);
-		
-		MACDStrategy macd = new MACDStrategy(dataFeeder);
-		
-		dataFeeder.feed(macd);
-		
-		//TreeMap<Long, List<SymbolGapMap>> map = getQuotationGapList(fromDate, toDate);
-		//System.out.println("size = " + map.size());
-		//for (List<SymbolGapMap> sgl : map.values()) {
-		//	System.out.println(Utils.formatDate(sg.getTime() )+ " " + sg.getBoard() + " " + sg.getSeccode() + " " + SymbolGapMap.mapToString(sg.getGaps()));
-		//}
-
-		System.out.println("Done!");
-		// System.in.read();
-	}
-
-
-
 	
 }

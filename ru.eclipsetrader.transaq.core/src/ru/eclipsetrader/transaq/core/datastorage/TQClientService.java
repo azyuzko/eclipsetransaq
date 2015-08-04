@@ -9,10 +9,8 @@ import ru.eclipsetrader.transaq.core.Constants;
 import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.event.Observer;
 import ru.eclipsetrader.transaq.core.interfaces.IPersistable;
-import ru.eclipsetrader.transaq.core.interfaces.ITQSecurity;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Client;
-import ru.eclipsetrader.transaq.core.model.internal.Security;
 import ru.eclipsetrader.transaq.core.services.ITQClientService;
 
 public class TQClientService implements ITQClientService, IPersistable, Observer<Client> {

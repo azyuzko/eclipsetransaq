@@ -2,18 +2,15 @@ package ru.eclipsetrader.transaq.core.model.internal;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityListeners;
 import javax.persistence.Id;
 import javax.persistence.IdClass;
 import javax.persistence.Table;
 
-import ru.eclipsetrader.transaq.core.data.DefaultJPAListener;
 import ru.eclipsetrader.transaq.core.interfaces.ITQKey;
 import ru.eclipsetrader.transaq.core.model.BaseFortsMoney;
 
 @Entity
 @Table(name="fortsmoney_position")
-@EntityListeners(DefaultJPAListener.class)
 @IdClass(FortsMoneyPositionId.class)
 public class FortsMoneyPosition extends BaseFortsMoney implements ITQKey {
 

@@ -59,6 +59,7 @@ public class TradeHandler extends BaseXMLProcessor<Trade> {
 	@Override
 	void characters(String value) throws SAXException {
 		switch (QNAME.valueOf(currentElement())) {
+		case secid: break;
 		case tradeno:
 			objectStack.peek().setTradeno(value);
 			break;

@@ -41,7 +41,6 @@ import ru.eclipsetrader.transaq.core.schedule.LoadCandlesSchedule;
 import ru.eclipsetrader.transaq.core.securities.TQSecurityService;
 import ru.eclipsetrader.transaq.core.server.command.ChangePasswordCommand;
 import ru.eclipsetrader.transaq.core.server.command.Command;
-import ru.eclipsetrader.transaq.core.strategy.MACDStrategy;
 import ru.eclipsetrader.transaq.core.trades.TQTickTradeService;
 import ru.eclipsetrader.transaq.core.util.Utils;
 import ru.eclipsetrader.transaq.core.xml.handler.XMLHandler;
@@ -50,7 +49,8 @@ import com.sun.jna.Pointer;
 
 public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Closeable {
 	
-	private static final Logger logger = LogManager.getFormatterLogger(TransaqServer.class);
+	static Logger logger = LogManager.getFormatterLogger(TransaqServer.class);
+	static Logger xmlLogger = LogManager.getFormatterLogger("XMLTrace");
 	
 	protected String serverId;
 	
@@ -195,11 +195,15 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 		String data = pData.getString(0);	
 		TransaqLibrary.FreeMemory(pData);
 		
-		if ( Settings.SHOW_CONSOLE_TRACE || logger.isDebugEnabled()) {
-			logger.warn(data);
+		if ( Settings.SHOW_CONSOLE_TRACE) {
+			xmlLogger.warn(data);
+		} else if (xmlLogger.isDebugEnabled()) {
+			xmlLogger.debug(data);
+		} else if (xmlLogger.isInfoEnabled()) {
+			xmlLogger.info(data.substring(0, Math.min(50, data.length()-1)) +  "...");
 		}
 		
-		// DatabaseManager.writeInputEvent(sessionId, data);
+		// DatabaseManager.writeInputEvent(session.getSessionId(), data);
 		
 		try {
 			XMLHandler handler = new XMLHandler(serverId, eventHolder);
@@ -310,6 +314,10 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 	@Override
 	public String getId() {
 		return serverId;
+	}
+	
+	public String getSessionId() {
+		return session.getServerId();
 	}
 
 	public void onConnect() {

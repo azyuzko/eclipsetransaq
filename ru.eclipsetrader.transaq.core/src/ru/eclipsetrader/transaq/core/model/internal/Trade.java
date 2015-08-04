@@ -1,14 +1,10 @@
 package ru.eclipsetrader.transaq.core.model.internal;
 
 import javax.persistence.Entity;
-import javax.persistence.EntityListeners;
 import javax.persistence.Table;
-
-import ru.eclipsetrader.transaq.core.data.DefaultJPAListener;
 
 @Table(name="trades")
 @Entity(name="Trade")
-@EntityListeners(DefaultJPAListener.class)
 public class Trade extends Tick  {
 
 	String orderno;

@@ -1,17 +1,14 @@
 package ru.eclipsetrader.transaq.core.model.internal;
 
 import javax.persistence.Entity;
-import javax.persistence.EntityListeners;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
 import ru.eclipsetrader.transaq.core.Constants;
-import ru.eclipsetrader.transaq.core.data.DefaultJPAListener;
 import ru.eclipsetrader.transaq.core.interfaces.ITQKey;
 
 @Entity
 @Table(name="positions")
-@EntityListeners(DefaultJPAListener.class)
 public class MoneyPosition extends ServerObject implements ITQKey{
 	
 	@Id

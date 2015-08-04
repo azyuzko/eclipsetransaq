@@ -1,4 +1,4 @@
-package ru.eclipsetrader.transaq.core.data;
+package ru.eclipsetrader.transaq.core.model;
 
 import java.sql.Timestamp;
 

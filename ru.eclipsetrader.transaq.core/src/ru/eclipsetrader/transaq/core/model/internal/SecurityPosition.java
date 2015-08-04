@@ -1,17 +1,15 @@
 package ru.eclipsetrader.transaq.core.model.internal;
 
 import javax.persistence.Entity;
-import javax.persistence.EntityListeners;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
-import ru.eclipsetrader.transaq.core.data.DefaultJPAListener;
 import ru.eclipsetrader.transaq.core.interfaces.ITQKey;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 
 @Entity
 @Table(name="positions")
-@EntityListeners(DefaultJPAListener.class)
+
 public class SecurityPosition extends ServerObject implements ITQKey{
 	
 	Integer secid;

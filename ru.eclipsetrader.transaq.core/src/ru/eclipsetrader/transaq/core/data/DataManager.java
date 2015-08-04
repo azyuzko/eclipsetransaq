@@ -1,5 +1,6 @@
 package ru.eclipsetrader.transaq.core.data;
 
+import java.io.StringReader;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -8,6 +9,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -31,16 +33,19 @@ import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.Quote;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.TradePeriod;
+import ru.eclipsetrader.transaq.core.model.XMLDataEvent;
 import ru.eclipsetrader.transaq.core.model.internal.ServerObject;
 import ru.eclipsetrader.transaq.core.model.internal.SymbolGapMap;
 import ru.eclipsetrader.transaq.core.model.internal.TickTrade;
 import ru.eclipsetrader.transaq.core.server.TransaqServer;
 import ru.eclipsetrader.transaq.core.util.Holder;
 import ru.eclipsetrader.transaq.core.util.Utils;
+import ru.eclipsetrader.transaq.core.util.XMLFormatter;
+import ru.eclipsetrader.transaq.core.xml.handler.XMLProcessType;
 
 public class DataManager {
 	
-	static Logger logger = LogManager.getLogger(DataManager.class);
+	static Logger logger = LogManager.getLogger("DataManager");
 		
 	public static EntityManagerFactory entityManagerFactory = null;
 	
@@ -54,15 +59,17 @@ public class DataManager {
 		}
 	};
 	
-	final static String TICK_INSERT_SQL = "merge /*+ index (t1 ticks_IX1) */ into ticks t1 using (select ? board, ? seccode, ? tradeno, ? time from dual) t2 "
+	final static String TICK_INSERT_SQL = "merge into ticks t1 using (select ? board, ? seccode, ? tradeno, ? time from dual) t2 "
 			+ "on (t1.board = t2.board and t1.seccode = t2.seccode and t1.time = t2.time and t1.tradeno = t2.tradeno) "
 			+ " when not matched then insert (server, board, seccode, tradeno, time, buysell, price, quantity, period, openinterest)"
 			+ " values (?, t2.board, t2.seccode, t2.tradeno, t2.time, ?, ?, ?, ?, ? )";
 	final static String TICK_SELECT_SQL = "select t.tradeno, t.time, t.board, t.seccode, t.buysell, t.price, t.quantity, t.period, t.openinterest"
-			+ " from ticks t where t.time between ? and ? order by t.time, t.tradeno";
+			+ " from ticks t where t.time between ? and ?";
+	final static String MAX_TICK_SQL = "select max(t.tradeno) from ticks t where t.board = ? and t.seccode = ? and t.time between ? and ?";
 	
 	final static String QUOTE_INSERT_SQL = "insert into quotes (id, time, board, seccode, price, yield, buy, sell) values (quote_seq.nextval, ?, ?, ?, ?, ?, ?, ?)";
-	final static String QUOTE_SELECT_SQL = "select time, board, seccode, price, yield, buy, sell from quotes where time between ? and ? order by time, id";
+	final static String QUOTE_SELECT_SQL = "select time, board, seccode, price, yield, buy, sell from quotes q"
+			+ " where q.time between ? and ? ";
 	
 	final static String CANDLES_INSERT_SQL = "merge /*+ index(c1 candles_IX1)*/ into candles c1"
 			+ " using (select ? board, ? seccode, ? candletype, ? startDate, ? open, ? high, ? low, ? close, ? volume, ? oi from dual) c2 "
@@ -72,10 +79,10 @@ public class DataManager {
 	final static String CANDLES_SELECT_SQL = "select startDate, open, high, low, close, volume, oi from candles c where c.board = ? and c.seccode = ? and c.candletype = ?"
 			+ " and c.startDate between ? and ?";
 	
-	final static String QUOTATION_GAP_INSERT = "insert into quotation_gap (board, seccode, time, hashmap) values (?, ?, ?, ?)";
-	final static String QUOTATION_GAP_SELECT = "select time, board, seccode, hashmap from quotation_gap where time between ? and ?";
+	final static String QUOTATION_GAP_INSERT = "insert into quotation_gap (id, board, seccode, time, hashmap) values (quotation_seq.nextval, ?, ?, ?, ?)";
+	final static String QUOTATION_GAP_SELECT = "select time, board, seccode, hashmap from quotation_gap where time between ? and ? ";
 	
-	final static String MAX_TICK_SQL = "select max(t.tradeno) from ticks t where t.board = ? and t.seccode = ? and t.time between ? and ?";
+	static final String XMLDATA_INSERT_SQL = "INSERT INTO event_audit (session_id, event_time, direction, operation, data) values (?, ?, ?, ?, ?)";
 	
 	public static List<Candle> getCandles(TQSymbol symbol, CandleType candleType, Date fromDate, Date toDate) {
 		EntityManager em = tlsEm.get();
@@ -214,7 +221,10 @@ public class DataManager {
 		} 
 	}
 	
-	public static List<TickTrade> getTickList(Date dateFrom, Date dateTo) {
+	public static List<TickTrade> getTickList(Date dateFrom, Date dateTo, TQSymbol[] symbols) {
+		if (logger.isDebugEnabled()) {
+			logger.debug("getTickList: from " + Utils.formatDate(dateFrom) + " to " + Utils.formatDate(dateTo) + " symbols = " + Arrays.toString(symbols));
+		}
 		EntityManager em = tlsEm.get();
 		PreparedStatement stmt;
 		OracleConnection oc = null;
@@ -223,10 +233,30 @@ public class DataManager {
 			em.getTransaction().begin();
 			oc = (OracleConnection)em.unwrap(Connection.class);
 			oc.setAutoCommit(false);
-			stmt = (PreparedStatement) oc.prepareStatement(TICK_SELECT_SQL);
+			
+			String sql = TICK_SELECT_SQL;
+			if (symbols.length > 0) {
+				sql += " and (";
+				for (int i = 0; i < symbols.length; i++) {
+					sql += (i > 0 ? " or (" : " (") + "board = ? and seccode = ?)"; 
+				}
+				sql += ")";
+			}
+			
+			logger.debug(sql);
+			
+			stmt = (PreparedStatement) oc.prepareStatement(sql);
 			stmt.setTimestamp(1, new java.sql.Timestamp(dateFrom.getTime()));
 			stmt.setTimestamp(2, new java.sql.Timestamp(dateTo.getTime()));
+			
+			int i = 0;
+			for (TQSymbol symbol : symbols) {
+				stmt.setString(3+i, symbol.getBoard().toString());
+				stmt.setString(4+i, symbol.getSeccode());
+				i += 2;
+			}
 			ResultSet rs = stmt.executeQuery();
+			logger.debug("getTickList: executed. Fetching...");
 			while (rs.next()) {
 				TickTrade t = new TickTrade();
 				t.setTradeno(rs.getString(1));
@@ -249,6 +279,7 @@ public class DataManager {
 			rs.close();
 			stmt.close();
 			em.getTransaction().commit();
+			logger.debug("getTickList: complete");
 		} catch (SQLException e) {
 			em.getTransaction().rollback();
 			e.printStackTrace();
@@ -285,7 +316,10 @@ public class DataManager {
 		} 
 	}
 	
-	public static List<Quote> getQuoteList(Date dateFrom, Date dateTo) {
+	public static List<Quote> getQuoteList(Date dateFrom, Date dateTo, TQSymbol[] symbols) {
+		if (logger.isDebugEnabled()) {
+			logger.debug("getQuoteList from " + Utils.formatDate(dateFrom) + " to " + Utils.formatDate(dateTo) + " symbols = " + Arrays.toString(symbols));
+		}
 		EntityManager em = tlsEm.get();
 		PreparedStatement stmt;
 		OracleConnection oc = null;
@@ -294,10 +328,29 @@ public class DataManager {
 			em.getTransaction().begin();
 			oc = (OracleConnection)em.unwrap(Connection.class);
 			oc.setAutoCommit(false);
-			stmt = (PreparedStatement) oc.prepareStatement(QUOTE_SELECT_SQL);
+			String sql = QUOTE_SELECT_SQL;
+			
+			if (symbols.length > 0) {
+				sql += " and (";
+				for (int i = 0; i < symbols.length; i++) {
+					sql += (i > 0 ? "or (" : "(") + " board = ? and seccode = ?)";
+				}
+				sql += ") ";
+			}
+			logger.debug(sql);
+			stmt = (PreparedStatement) oc.prepareStatement(sql);
 			stmt.setTimestamp(1, new java.sql.Timestamp(dateFrom.getTime()));
 			stmt.setTimestamp(2, new java.sql.Timestamp(dateTo.getTime()));
+			
+			int i = 0;
+			for (TQSymbol symbol : symbols) {
+				stmt.setString(3+i, symbol.getBoard().toString());
+				stmt.setString(4+i, symbol.getSeccode());
+				i += 2;
+			}
+			
 			ResultSet rs = stmt.executeQuery();
+			logger.debug("getQuoteList executed. Fetching...");
 			while (rs.next()) {
 				Quote q = new Quote(rs.getTimestamp(1), BoardType.valueOf(rs.getString(2)), rs.getString(3));
 				q.setPrice(rs.getDouble(4));
@@ -309,6 +362,7 @@ public class DataManager {
 			rs.close();
 			stmt.close();
 			em.getTransaction().commit();
+			logger.debug("getQuoteList complete!");
 		} catch (SQLException e) {
 			em.getTransaction().rollback();
 			e.printStackTrace();
@@ -341,7 +395,12 @@ public class DataManager {
 		} 
 	}
 	
-	public static List<SymbolGapMap> getQuotationGapList(Date dateFrom, Date dateTo) {
+	public static List<SymbolGapMap> getQuotationGapList(Date dateFrom, Date dateTo, TQSymbol[] symbols) {
+		
+		if (logger.isDebugEnabled()) {
+			logger.debug("getQuotationGapList from " + Utils.formatDate(dateFrom) + " to " + Utils.formatDate(dateTo) + " symbols = " + Arrays.toString(symbols));
+		}
+		
 		EntityManager em = tlsEm.get();
 		PreparedStatement stmt;
 		OracleConnection oc = null;
@@ -350,10 +409,30 @@ public class DataManager {
 			em.getTransaction().begin();
 			oc = (OracleConnection)em.unwrap(Connection.class);
 			oc.setAutoCommit(false);
-			stmt = (PreparedStatement) oc.prepareStatement(QUOTATION_GAP_SELECT);
+			
+			String sql = QUOTATION_GAP_SELECT;
+			if (symbols.length > 0) {
+				sql += " and (";
+				for (int i = 0; i < symbols.length; i++) {
+					sql += (i > 0 ? "or (" : "(") + " board = ? and seccode = ?)";
+				}
+				sql += ") ";
+			}			
+			logger.debug(sql);
+			
+			stmt = (PreparedStatement) oc.prepareStatement(sql);
 			stmt.setTimestamp(1, new java.sql.Timestamp(dateFrom.getTime()));
 			stmt.setTimestamp(2, new java.sql.Timestamp(dateTo.getTime()));
+			
+			int i = 0;
+			for (TQSymbol symbol : symbols) {
+				stmt.setString(3+i, symbol.getBoard().toString());
+				stmt.setString(4+i, symbol.getSeccode());
+				i += 2;
+			}
+			
 			ResultSet rs = stmt.executeQuery();
+			logger.debug("getQuotationGapList executed. Fetching...");
 			while (rs.next()) {
 				SymbolGapMap s = new SymbolGapMap(rs.getTimestamp(1));
 				s.setBoard(BoardType.valueOf(rs.getString(2)));
@@ -367,6 +446,7 @@ public class DataManager {
 			rs.close();
 			stmt.close();
 			em.getTransaction().commit();
+			logger.debug("getQuotationGapList complete!");
 		} catch (SQLException e) {
 			em.getTransaction().rollback();
 			e.printStackTrace();
@@ -374,6 +454,52 @@ public class DataManager {
 		return result;
 	}
 	
+	public static void batchXMLDataEventList(List<XMLDataEvent> list) {
+		EntityManager em = tlsEm.get();
+		PreparedStatement stmt;
+		OracleConnection oc = null;
+		try {
+			em.getTransaction().begin();
+			oc = (OracleConnection)em.unwrap(Connection.class);
+			oc.setAutoCommit(false);
+			stmt = oc.prepareCall(XMLDATA_INSERT_SQL);
+			for (XMLDataEvent event : list) {
+				if (event.getOperation() == null) {
+					String data = event.getData();
+					try {
+						int ind1 = data.indexOf(" ");
+						int ind2 = data.indexOf(">");
+						int index = 0;
+						if (ind1 > -1) {
+							index = Math.min(ind1, ind2);
+						} else {
+							index = ind2;
+						}
+						String sub = data.substring(1, index).toUpperCase();
+						event.setOperation(XMLProcessType.valueOf(sub));
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+				
+				stmt.setString(1, event.getSessionId());
+				stmt.setTimestamp(2, event.getEventTime());
+				stmt.setString(3, event.getDirection().toString());
+				stmt.setString(4, event.getOperation().toString());
+				String data = XMLFormatter.format(event.getData());
+				StringReader r = new StringReader(data);
+				stmt.setCharacterStream(5, r, data.length());
+				stmt.addBatch();
+			}
+			stmt.executeBatch();
+			stmt.close();
+			em.getTransaction().commit();
+		} catch (SQLException e) {
+			em.getTransaction().rollback();
+			e.printStackTrace();
+		} 
+		
+	}
 
 	public static <T> void persist(T t) {
 		EntityManager em = tlsEm.get();
@@ -502,12 +628,25 @@ public class DataManager {
 	
 	public static void main(String[] args) {
 		
-		List<TickTrade> list = new ArrayList<TickTrade>();
+		
+		Date fromDate = Utils.parseDate("03.08.2015 09:30:00.000");
+		Date toDate = Utils.parseDate("03.08.2015 12:15:00.000");
+		TQSymbol[] symbols = new TQSymbol[] { TQSymbol.BRQ5, TQSymbol.SiU5, TQSymbol.BRU5} ;
+		List<Quote> ql = getQuoteList(fromDate, toDate, symbols);
+		List<TickTrade> tl = getTickList(fromDate, toDate, symbols);
+		List<SymbolGapMap> gl = getQuotationGapList(fromDate, toDate, symbols);
+		System.out.println("QL size = " + ql.size());
+		System.out.println("TL size = " + tl.size());
+		System.out.println("GL size = " + gl.size());
+		
+		System.out.println(Utils.getMemoryDetails());
+		
+		/*List<TickTrade> list = new ArrayList<TickTrade>();
 		TickTrade tt = new TickTrade();
 		Utils.generateStub(tt);
 		list.add(tt);
 		
-		batchTickList(list);
+		batchTickList(list);*/
 		
 		/*for (String id : (List<String>)DataManager.executeQuery("select s.id from Server s")) {
 			System.out.println(id);

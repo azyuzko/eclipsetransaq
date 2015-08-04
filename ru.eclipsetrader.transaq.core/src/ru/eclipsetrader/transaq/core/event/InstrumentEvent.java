@@ -7,7 +7,7 @@ import java.util.Map;
 
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 
-public class InstrumentEvent<T> {
+public class InstrumentEvent<T> implements IInstrumentEvent<T> {
 
 	Map<TQSymbol, Event<T>> eventMap  = new HashMap<TQSymbol, Event<T>>();
 
@@ -17,10 +17,12 @@ public class InstrumentEvent<T> {
 		this.name = name;
 	}
 	
+	@Override
 	public List<TQSymbol> getSymbolList() {
 		return new ArrayList<>(eventMap.keySet());
 	}
 	
+	@Override
 	public synchronized void addObserver(TQSymbol symbol, Observer<T> paramObserver) {
 		if (symbol == null || paramObserver == null) {
 			throw new IllegalArgumentException();
@@ -37,6 +39,7 @@ public class InstrumentEvent<T> {
 		event.addObserver(paramObserver);
 	}
 	
+	@Override
 	public void notifyObservers(TQSymbol symbol, T paramObject) {
 		if (symbol == null) {
 			throw new IllegalArgumentException();
@@ -47,6 +50,7 @@ public class InstrumentEvent<T> {
 		}
 	}
 	
+	@Override
 	public void deleteObserver(TQSymbol symbol, Observer<T> paramObserver) {
 		if (eventMap.containsKey(symbol)) {
 			Event<T> event = eventMap.get(symbol);

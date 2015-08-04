@@ -1,7 +1,6 @@
 package ru.eclipsetrader.transaq.core.trades;
 
 import ru.eclipsetrader.transaq.core.interfaces.IAccount;
-import ru.eclipsetrader.transaq.core.model.TQSymbol;
 
 /**
  * Поставщик данных по счету
@@ -10,6 +9,6 @@ import ru.eclipsetrader.transaq.core.model.TQSymbol;
  */
 public interface IAccountSupplier {
 
-	IAccount getAccount(TQSymbol symbol);
+	IAccount getAccount();
 	
 }

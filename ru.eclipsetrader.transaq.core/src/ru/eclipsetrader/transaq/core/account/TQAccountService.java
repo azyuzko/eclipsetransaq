@@ -8,6 +8,7 @@ import ru.eclipsetrader.transaq.core.Constants;
 import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.event.Observer;
 import ru.eclipsetrader.transaq.core.exception.UnimplementedException;
+import ru.eclipsetrader.transaq.core.instruments.Instrument;
 import ru.eclipsetrader.transaq.core.interfaces.IAccount;
 import ru.eclipsetrader.transaq.core.interfaces.ITQPosition;
 import ru.eclipsetrader.transaq.core.interfaces.ITQSecurity;
@@ -47,51 +48,9 @@ public class TQAccountService implements ITQAccountService, Observer<Holder<Posi
 	}
 	
 	
-	IAccount fortsAccount = new IAccount() {
-		
-		@Override
-		public void sell(TQSymbol symbol, int quantity) {
-			OrderRequest orderRequest = OrderRequest.createByMarketRequest(symbol, BuySell.S, quantity);
-			Order order = TQOrderTradeService.getInstance().createOrder(orderRequest);
-		}
-		
-		@Override
-		public void closePosition(TQSymbol symbol) {
-			
-		}
-		
-		@Override
-		public void cancelOpenOrders(TQSymbol symbol) {
-			for (Order order : TQOrderTradeService.getInstance().getActiveOrders()) {
-				TQOrderTradeService.getInstance().cancelOrder(order.getTransactionid());
-			}
-		}
-		
-		@Override
-		public void buy(TQSymbol symbol, int quantity) {
-			OrderRequest orderRequest = OrderRequest.createByMarketRequest(symbol, BuySell.B, quantity);
-			Order order = TQOrderTradeService.getInstance().createOrder(orderRequest);
-			
-		}
-
-		@Override
-		public int availableToBuy(TQSymbol symbol) {
-			return 0;
-		}
-
-		@Override
-		public int availableToSell(TQSymbol symbol) {
-			// TODO Auto-generated method stub
-			return 0;
-		}
-	};
 	
 	public IAccount getAccount(TQSymbol symbol) {
-		if (symbol.getBoard() == BoardType.FUT) {
-			return fortsAccount;
-		} else {
-			throw new UnimplementedException();
-		}
+		throw new UnimplementedException();
 	}
 	
 	public void applyPositionGap(String serverId, Holder<PositionType, Map<String, String>> gapHolder) {

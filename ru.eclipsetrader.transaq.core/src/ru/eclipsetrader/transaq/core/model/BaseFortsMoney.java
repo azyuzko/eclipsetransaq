@@ -23,11 +23,13 @@ public class BaseFortsMoney extends ServerObject {
 	 * Пересчитывает размер свободных средств
 	 * @param oldGO старый размер ГО
 	 * @param newGO новый размер ГО
+	 * @return разницу между старым и новым
 	 */
-	public void recalcGO(double oldGO, double newGO) {
+	public double recalcGO(double oldGO, double newGO) {
 		double diff = oldGO - newGO;
 		free += diff;
 		blocked -= diff;
+		return diff;
 	}
 	
 	/**

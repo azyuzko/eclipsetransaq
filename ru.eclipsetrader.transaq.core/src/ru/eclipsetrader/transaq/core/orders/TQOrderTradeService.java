@@ -40,8 +40,8 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 		public void update(Order order) {
 			logger.info("Received order " + order.getOrderno() + " transactionId = " + order.getTransactionid());
 
-			if (logger.isDebugEnabled()) {
-				logger.debug(Utils.toString(order));
+			if (logger.isTraceEnabled()) {
+				logger.trace(Utils.toString(order));
 			}
 			
 			if (order.getTransactionid() != null) {
@@ -66,7 +66,7 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 	Observer<Trade> tradeObserver = new Observer<Trade>() {
 		@Override
 		public void update(Trade trade) {
-			logger.info("New trade " + trade);
+			logger.info("Received trade = " + trade.getTradeno() + " orderno = " + trade.getOrderno());
 			put(trade);	
 		}
 	};

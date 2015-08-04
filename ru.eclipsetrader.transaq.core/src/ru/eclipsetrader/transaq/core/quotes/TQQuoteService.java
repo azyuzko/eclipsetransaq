@@ -1,13 +1,14 @@
 package ru.eclipsetrader.transaq.core.quotes;
 
-import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
 
-import ru.eclipsetrader.transaq.core.data.DataManager;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import ru.eclipsetrader.transaq.core.data.DatabaseManager;
 import ru.eclipsetrader.transaq.core.event.Observer;
 import ru.eclipsetrader.transaq.core.instruments.TQInstrumentService;
 import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
@@ -17,23 +18,9 @@ import ru.eclipsetrader.transaq.core.model.internal.SymbolGapMap;
 import ru.eclipsetrader.transaq.core.server.command.SubscribeCommand;
 import ru.eclipsetrader.transaq.core.services.ITQQuoteService;
 
-public class TQQuoteService implements ITQQuoteService, Closeable {
+public class TQQuoteService implements ITQQuoteService {
 	
-	ArrayBlockingQueue<List<Quote>> quoteQueue = new ArrayBlockingQueue<List<Quote>>(300);
-	
-	Thread dbWriteThread = new Thread(new Runnable() {
-		@Override
-		public void run() {
-			while (!Thread.interrupted()) {
-				try {
-					List<Quote> list = quoteQueue.take();
-					DataManager.batchQuoteList(list);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-	});
+	Logger logger = LogManager.getLogger(TQQuoteService.class);
 	
 	static TQQuoteService instance;
 	public static TQQuoteService getInstance() {
@@ -43,24 +30,14 @@ public class TQQuoteService implements ITQQuoteService, Closeable {
 		return instance;
 	}
 	
-	private TQQuoteService() {
-		dbWriteThread.setDaemon(true);
-		dbWriteThread.start();
-	}
-	
-	@Override
-	public void close() {
-		dbWriteThread.interrupt();
-	}
-	
 	Observer<List<SymbolGapMap>> quoteGapObserver = new Observer<List<SymbolGapMap>>(){
 		@Override
 		public void update(List<SymbolGapMap> gapList) {
 			Map<TQSymbol, List<Quote>> quoteMap = applyQuoteGap(gapList);
 			for (TQSymbol symbol : quoteMap.keySet()) {
 				List<Quote> quotesList = quoteMap.get(symbol);
-				quoteQueue.add(quotesList);
 				TQInstrumentService.getInstance().getDefaultQuoteListEvent().notifyObservers(symbol, quotesList);
+				DatabaseManager.writeQuotes(quotesList);
 			}
 		}
 	};
