@@ -215,13 +215,12 @@ public class TransaqCommandProvider implements CommandProvider {
 		}
 	
 		case "showglass": {
-			System.out.println(strategy.BRQ5.getQuoteGlass().toString());
+			
 			break;
 		}
 		
 		case "test": {
-			IAccount account = TQAccountService.getInstance().getAccount(TQSymbol.BRQ5);
-			
+		
 			break;
 		}
 

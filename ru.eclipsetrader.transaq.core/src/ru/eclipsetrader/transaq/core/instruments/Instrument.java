@@ -33,14 +33,18 @@ public class Instrument implements Closeable {
 	private CandleStorage candleStorage;
 	private Quotation quotation;
 	
-	IProcessingContext context;
-	IDataFeedContext dataFeedContext;
+	final IProcessingContext context;
+	final IDataFeedContext dataFeedContext;
+
+	public IProcessingContext getContext() {
+		return context;
+	}
 
 	ListObserver<Quote> iQuotesObserver = new ListObserver<Quote>() {
 		@Override
 		public void update(List<Quote> list) {
 			if (logger.isDebugEnabled()) {
-				logger.debug("iQuotesObserver " + list.get(0).getSeccode() + " size = " + list.size() + " " + Utils.formatTime(list.get(0).getTime()) + " -- " + Utils.formatTime(list.get(list.size()-1).getTime()) );
+				logger.debug("iQuotesObserver " + list.get(0).getSeccode() + " Context = " + context + "  size = " + list.size() + " " + Utils.formatTime(list.get(0).getTime()) + " -- " + Utils.formatTime(list.get(list.size()-1).getTime()) );
 			}
 			updateQuotes(list);
 		}
@@ -50,7 +54,7 @@ public class Instrument implements Closeable {
 		@Override
 		public void update(List<Tick> list) {
 			if (logger.isDebugEnabled()) {
-				logger.debug("iTickObserver " + list.get(0).getSeccode() + " size = " + list.size() + " " + Utils.formatTime(list.get(0).getTime()) + " -- " + Utils.formatTime(list.get(list.size()-1).getTime()) );
+				logger.debug("iTickObserver " + list.get(0).getSeccode()+ " Context = " + context + "  size = " + list.size() + " " + Utils.formatTime(list.get(0).getTime()) + " -- " + Utils.formatTime(list.get(list.size()-1).getTime()) );
 			}
 			for (Tick tick : list) {
 				processTrade(tick);
@@ -62,7 +66,7 @@ public class Instrument implements Closeable {
 		@Override
 		public void update(List<SymbolGapMap> list) {
 			if (logger.isDebugEnabled()) {
-				logger.debug("iQuotationObserver " + list.get(0).getSeccode() + " size = " + list.size() + "  "+ Utils.formatTime(list.get(0).getTime()) + " -- " + Utils.formatTime(list.get(list.size()-1).getTime()) );
+				logger.debug("iQuotationObserver " + list.get(0).getSeccode() + " Context = " + context + "  size = " + list.size() + "  "+ Utils.formatTime(list.get(0).getTime()) + " -- " + Utils.formatTime(list.get(list.size()-1).getTime()) );
 			}
 			updateQuotations(list);
 		}
@@ -73,24 +77,26 @@ public class Instrument implements Closeable {
 	}
 	
 	public Instrument(TQSymbol symbol, IProcessingContext context, IDataFeedContext dataFeedContext) {
+		if (logger.isDebugEnabled()) {
+			// logger.debug("Creating new instrument for " + symbol + ", ProcessingContext = " + context);
+		}
 		this.symbol = symbol;
 		this.context = context;
 		this.dataFeedContext = dataFeedContext;
 		this.candleStorage = new CandleStorage(this, context);
 		for (CandleType ct : context.getCandleTypes()) {
-			CandleList candleList = candleStorage.createCandleTypeList(ct);
+			CandleList candleList = this.candleStorage.getCandleList(ct);
 			candleList.appendCandles(dataFeedContext.getCandleList(symbol, ct, new Date(), CANDLE_HISTORY_COUNT));
-		}
-		
+		}		
 		this.quotation =  new Quotation(symbol.getBoard(), symbol.getSeccode());
-		
-		dataFeedContext.getQuotesFeeder().addObserver(symbol, iQuotesObserver);
-		dataFeedContext.getTicksFeeder().addObserver(symbol, iTickObserver);
-		dataFeedContext.getQuotationGapsFeeder().addObserver(symbol, iQuotationObserver);
+		this.glass = new QuoteGlass();
 	}
 	
 	@Override
 	public void close() throws java.io.IOException {
+		if (logger.isDebugEnabled()) {
+			logger.debug("Closing instrument " + symbol + ", ProcessingContext = " + context);
+		}
 		dataFeedContext.getQuotesFeeder().deleteObserver(symbol, iQuotesObserver);
 		dataFeedContext.getTicksFeeder().deleteObserver(symbol, iTickObserver);
 	};
@@ -98,13 +104,11 @@ public class Instrument implements Closeable {
 	/**
 	 * Обнуляет содержимое внутренних объектов инструмента
 	 */
-	public void reset() {
-		this.candleStorage = new CandleStorage(this, context);
-		for (CandleType ct : context.getCandleTypes()) {
-			CandleList candleList = candleStorage.createCandleTypeList(ct);
-			candleList.appendCandles(dataFeedContext.getCandleList(symbol, ct, new Date(), CANDLE_HISTORY_COUNT));
-		}		
-		this.quotation =  new Quotation(symbol.getBoard(), symbol.getSeccode());		
+	public void init() {
+		logger.debug("Reset instrument settings " + symbol + " " + Integer.toHexString(hashCode()) + " context " + Integer.toHexString(context.hashCode()));
+		dataFeedContext.getQuotesFeeder().addObserver(symbol, iQuotesObserver);
+		dataFeedContext.getTicksFeeder().addObserver(symbol, iTickObserver);
+		dataFeedContext.getQuotationGapsFeeder().addObserver(symbol, iQuotationObserver);
 	}
 	
 	public TQSymbol getSymbol() {
@@ -124,6 +128,7 @@ public class Instrument implements Closeable {
 	}
 
 	public void updateQuotes(List<Quote> quotes) {
+		logger.debug("Update quotes " + symbol);
 		glass.update(quotes);
 		context.onQuotesChange(this, glass);
 	}
@@ -140,15 +145,25 @@ public class Instrument implements Closeable {
 	}
 
 	public QuantityCost buy(int quantity) {
-		QuantityCost bought = dataFeedContext.getAccount().buy(symbol, quantity, glass);
-		logger.info(Utils.formatDate(dataFeedContext.currentDate()) + " BUY: " + symbol + " requested = " + quantity + ", bought = " + bought + ", free = " + dataFeedContext.getAccount().getFree());
-		return bought;
+		if (glass.getSellStack().size() == 0) {
+			logger.warn("Trying to buy on empty quote glass!");
+			return new QuantityCost(0,0);
+		} else {
+			QuantityCost bought = context.getAccount().buy(symbol, quantity, glass);
+			logger.info(Utils.formatDate(context.getDateTime()) + " BUY: " + symbol + " requested = " + quantity + ", bought = " + bought + ", free = " + context.getAccount().getFree());
+			return bought;
+		}
 	}
 	
 	public QuantityCost sell(int quantity) {
-		QuantityCost sold = dataFeedContext.getAccount().sell(symbol, quantity, glass);
-		logger.info(Utils.formatDate(dataFeedContext.currentDate()) + " SELL: " + symbol + " requested = " + quantity + ", sold = " + sold + ", free = " + dataFeedContext.getAccount().getFree() );
-		return sold;
+		if (glass.getBuyStack().size() == 0) {
+			logger.warn(Utils.formatTime(context.getDateTime()) + " Trying to sell on empty quote glass!");
+			return new QuantityCost(0,0);
+		} else {
+			QuantityCost sold = context.getAccount().sell(symbol, quantity, glass);
+			logger.info(Utils.formatDate(context.getDateTime()) + " SELL: " + symbol + " requested = " + quantity + ", sold = " + sold + ", free = " + context.getAccount().getFree() );
+			return sold;
+		}
 	}
 
 }

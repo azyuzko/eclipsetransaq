@@ -4,12 +4,18 @@ import java.lang.reflect.Field;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.QuotationStatus;
+import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.TradingStatus;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class Quotation {
+	
+	Logger logger;
 
 	BoardType board; //Идентификатор режима торгов по умолчанию
 	String seccode; //Код инструмента
@@ -52,17 +58,24 @@ public class Quotation {
 	double theoreticalprice; // Теоретическая цена
 	
 	public Quotation(){
-		
+		this(null, null);
 	}
 	
 	public Quotation(BoardType boardType, String seccode) {
 		this.board = boardType;
 		this.seccode = seccode;
+		TQSymbol symbol = new TQSymbol(boardType, seccode);
+		logger = LogManager.getLogger("Quotation."+symbol.toString());
+		logger.debug("Quotation for " + symbol +" created");
 	}
 
 	
 	public void applyQuotationGap(List<SymbolGapMap> quotationGapList) {
 		synchronized (this) {
+			
+			if (logger.isDebugEnabled()) {
+				logger.debug("applyQuotationGap. size = " + quotationGapList.size());
+			}
 			
 			for (SymbolGapMap gapMap : quotationGapList) {
 	

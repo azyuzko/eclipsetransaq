@@ -10,7 +10,7 @@ public class Signal {
 
 	TQSymbol symbol;
 	Date date;
-	double price;
+	double cost;
 	BuySell buySell;
 	String log;
 	int quantity;
@@ -18,16 +18,16 @@ public class Signal {
 	public Signal(TQSymbol symbol, Date date,BuySell buySell, double price) {
 		this.symbol = symbol;
 		this.date = date;
-		this.price = price;
+		this.cost = price;
 		this.buySell = buySell;
 	}
 
 	public double getPrice() {
-		return price;
+		return cost;
 	}
 
 	public void setPrice(double price) {
-		this.price = price;
+		this.cost = price;
 	}
 
 	public BuySell getBuySell() {

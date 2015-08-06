@@ -6,6 +6,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 
 /**
@@ -16,8 +19,14 @@ import ru.eclipsetrader.transaq.core.model.TQSymbol;
  * @param <T>
  */
 public class SynchronousInstrumentEvent<T> implements IInstrumentEvent<T> {
+	
+	Logger logger = LogManager.getLogger("SynchronousInstrumentEvent");
 
 	Map<TQSymbol, Observer<T>> observers = Collections.synchronizedMap(new HashMap<TQSymbol, Observer<T>>());
+	
+	public String toString() {
+		return String.valueOf(observers);
+	};
 	
 	String name;
 	
@@ -32,7 +41,10 @@ public class SynchronousInstrumentEvent<T> implements IInstrumentEvent<T> {
 
 	@Override
 	public void addObserver(TQSymbol symbol, Observer<T> paramObserver) {
-		observers.put(symbol, paramObserver);
+		Observer<T> prev = observers.put(symbol, paramObserver);
+		if (prev != null) {
+			logger.warn("Replaced previous observer " + prev + " for " + symbol);
+		}
 	}
 
 	@Override

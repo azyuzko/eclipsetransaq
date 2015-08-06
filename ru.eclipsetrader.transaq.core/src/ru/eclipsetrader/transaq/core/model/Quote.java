@@ -20,6 +20,8 @@ public class Quote {
 		this.board = board;
 		this.seccode = seccode;
 	}
+	
+	
 
 	public Date getTime() {
 		return time;

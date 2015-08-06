@@ -69,22 +69,11 @@ public class TQInstrumentService implements ITQInstrumentService {
 			}
 
 			@Override
-			public void OnStart() {
+			public void OnStart(Instrument[] instruments) {
 				// На старте ищем все инструменты из событий и запускаем на них подписку
 				TQTickTradeService.getInstance().subscribeAllTrades(tickListEvent.getSymbolList());
 				TQQuoteService.getInstance().subscribe(quoteListEvent.getSymbolList());
 				TQQuotationService.getInstance().subscribe(quoteListEvent.getSymbolList());
-			}
-
-			@Override
-			public IAccount getAccount() {
-				return TQAccountService.getInstance().getAccount(null);
-			}
-
-			@Override
-			public Date currentDate() {
-				// TODO diff with server time!
-				return new Date();
 			}
 
 		};

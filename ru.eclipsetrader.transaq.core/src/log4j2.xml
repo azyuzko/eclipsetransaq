@@ -24,9 +24,12 @@
 		<logger name="ru.eclipsetrader.transaq.core.orders.TQOrderTradeService"	level="info" />
 		<logger name="ru.eclipsetrader.transaq.core.instruments.Instrument"	level="info" />
 		<logger name="XMLTrace"	level="off" />
-		<logger name="Instrument"	level="off" />
-		<logger name="MACDStrategy"	level="debug">
-			<AppenderRef ref="StrategyLogger" />
+		<logger name="Instrument"	level="warn" />
+		<logger name="QuoteGlass"	level="info" />
+		<logger name="Quotation"	level="warn" />
+		<logger name="DataFeeder"	level="warn" />		
+		<logger name="Strategy"	level="warn">
+			<!-- AppenderRef ref="StrategyLogger" /-->
 		</logger>
 		<Root level="info">
 			<AppenderRef ref="Console" />

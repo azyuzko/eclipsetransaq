@@ -24,12 +24,6 @@ public class TQStrategyService {
 		if (TransaqServer.getInstance() == null || TransaqServer.getInstance().getStatus() != ConnectionStatus.CONNECTED) {
 			throw new RuntimeException("Not connected to server, cannot start");
 		}
-		
-		for (String code : strategies.keySet()) {
-			System.out.println("Starting " + code + " strategy...");
-			strategies.get(code).start();
-			System.out.println("Complete start " + code);
-		}
 
 	}
 

@@ -3,8 +3,9 @@ package ru.eclipsetrader.transaq.core.model;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 /**
  * Стакан котировок
  * SortedMap<Цена, Кол-во> 
@@ -14,8 +15,14 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class QuoteGlass {
 	
+	Logger logger = LogManager.getLogger("QuoteGlass");
+	
 	ConcurrentSkipListMap<Double, Integer> sellStack = new ConcurrentSkipListMap<Double, Integer>(); 
-	ConcurrentSkipListMap<Double, Integer> buyStack = new ConcurrentSkipListMap<Double, Integer>(); 
+	ConcurrentSkipListMap<Double, Integer> buyStack = new ConcurrentSkipListMap<Double, Integer>();
+	
+	public QuoteGlass() {
+		logger.debug("QuoteGlass created");
+	}
 
 	public ConcurrentSkipListMap<Double, Integer> getSellStack() {
 		return sellStack;
@@ -34,6 +41,9 @@ public class QuoteGlass {
 	 */
 	public ConcurrentSkipListMap<Double, Integer> subSell(int quantity) {
 		synchronized (this) {
+			if (logger.isDebugEnabled()) {
+				logger.debug("subSell = " + quantity);
+			}
 			ConcurrentSkipListMap<Double, Integer> result = new ConcurrentSkipListMap<Double, Integer>();
 			int remain_quantity = quantity;
 			for (Double price : sellStack.keySet()) {
@@ -66,6 +76,10 @@ public class QuoteGlass {
 	 */
 	public ConcurrentSkipListMap<Double, Integer> subBuy(int quantity) {
 		synchronized (this) {
+			if (logger.isDebugEnabled()) {
+				logger.debug("subBuy = " + quantity);
+			}
+
 			ConcurrentSkipListMap<Double, Integer> result = new ConcurrentSkipListMap<Double, Integer>(new Comparator<Double>() { // inverted order
 				@Override
 				public int compare(Double d1, Double d2) {
@@ -103,6 +117,10 @@ public class QuoteGlass {
 		synchronized (this) {
 			if (quote.getSource() != null) {
 				throw new RuntimeException("Field source not implemented yet in QuoteGlass");
+			}
+			
+			if (logger.isDebugEnabled()) {
+				logger.debug("Update glass = " + quote.getSeccode() + " B " + quote.getBuy() + " S " + quote.getSell() + " Price " + quote.getPrice()) ;
 			}
 			
 			double priceValue = quote.getPrice();

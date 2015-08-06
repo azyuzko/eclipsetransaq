@@ -2,14 +2,17 @@ package ru.eclipsetrader.transaq.core.strategy;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import ru.eclipsetrader.transaq.core.account.QuantityCost;
 import ru.eclipsetrader.transaq.core.candle.CandleList;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.indicators.MACD;
 import ru.eclipsetrader.transaq.core.instruments.Instrument;
+import ru.eclipsetrader.transaq.core.interfaces.IAccount;
 import ru.eclipsetrader.transaq.core.interfaces.IProcessingContext;
 import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.Candle;
@@ -23,29 +26,49 @@ import ru.eclipsetrader.transaq.core.util.Holder;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class Strategy implements IProcessingContext, IStrategy {
+	
+	public static enum WorkOn {
+		CandleClose,
+		Tick,
+	}
 
-	Logger logger = LogManager.getLogger("MACDStrategy");
+	Logger logger = LogManager.getLogger("Strategy");
 	
 	private MACD macd;
 
-	public Instrument BRQ5;
-	public Instrument SiU5;
-	public Instrument RIU5;
+	public Instrument iWatch;
+	public Instrument iOper;
 	
 	IDataFeedContext dataFeedContext;
+	IAccount account;
+	PriceType priceType;
+	WorkOn workOn;
+	CandleType candleType;
+	Date currentDate = null;
 	
-	public Strategy(IDataFeedContext dataFeedContext, int fast, int slow, int signal) {
+	public Strategy(IDataFeedContext dataFeedContext, int fast, int slow, int signal, PriceType priceType, TQSymbol iWatch, TQSymbol iOper, WorkOn workOn, CandleType candleType) {
 		this.dataFeedContext = dataFeedContext;
-		macd = new MACD(fast, slow, signal);
-		BRQ5 = new Instrument(TQSymbol.BRQ5, this, dataFeedContext);
-		SiU5 = new Instrument(TQSymbol.SiU5, this, dataFeedContext);
-		RIU5 = new Instrument(TQSymbol.RIU5, this, dataFeedContext);		
+		this.priceType = priceType;
+		this.macd = new MACD(fast, slow, signal);
+		this.candleType = candleType; // before create instruments
+		this.iWatch = new Instrument(iWatch, this, dataFeedContext);
+		this.iOper = new Instrument(iOper, this, dataFeedContext);
+		this.workOn = workOn;
 	}
-	
-	public void reset() {
-		BRQ5.reset();
-		SiU5.reset();
-		RIU5.reset();
+
+	@Override
+	public void setDateTime(Date date) {
+		currentDate = date;
+	}
+
+
+	@Override
+	public Date getDateTime() {
+		if (currentDate == null) {
+			return new Date();
+		} else {
+			return currentDate;
+		}
 	}
 
 	public MACD getMacd() {
@@ -57,26 +80,26 @@ public class Strategy implements IProcessingContext, IStrategy {
 	}
 
 	public void tick(Instrument i) {
-		Holder<Date[], double[]> values = i.getCandleStorage().getCandleList(CandleType.CANDLE_1M).values(PriceType.CLOSE);
-		Date[] dates = values.getFirst();
-		double[] inReal = values.getSecond();
-		macd.evaluate(inReal, dates);
-		
-		double[] m = macd.getOutMACD();
-		double[] signal = macd.getOutMACDSignal();
-		double[] hist = macd.getOutMACDHist();
-		if (hist.length > macd.getLookback()) {
-			if (Math.signum(hist[hist.length-1]) != Math.signum(hist[hist.length-2])) {
-				BuySell bs;
-				if (Math.signum(hist[hist.length-1]) == -1) {
-					bs = BuySell.B;
-				} else {
-					bs = BuySell.S;
+		if (i == iWatch) {
+			Holder<Date[], double[]> values = i.getCandleStorage().getCandleList(candleType).values(priceType);
+			Date[] dates = values.getFirst();
+			double[] inReal = values.getSecond();
+			macd.evaluate(inReal, dates);
+			
+			double[] m = macd.getOutMACD();
+			double[] signal = macd.getOutMACDSignal();
+			double[] hist = macd.getOutMACDHist();
+			if (hist.length > macd.getLookback()) {
+				if (Math.signum(hist[hist.length-1]) != Math.signum(hist[hist.length-2])) {
+					BuySell bs;
+					if (Math.signum(hist[hist.length-1]) == -1) {
+						bs = BuySell.B;
+					} else {
+						bs = BuySell.S;
+					}
+					signal(iOper, bs);
 				}
-				if (i == RIU5) {
-					signal(SiU5, bs);
-				}
-			}
+			}		
 		}
 	}
 
@@ -97,21 +120,23 @@ public class Strategy implements IProcessingContext, IStrategy {
 	}
 
 	private void createSignal(Instrument i, BuySell buySell) {
-		signals.put(i.getSymbol(), new Signal(i.getSymbol(), dataFeedContext.currentDate(), buySell, 0));
-		int quantity = 100;
+		int quantity = 1000;
+		int result = 0;
 		if (buySell == BuySell.B) {
-			quantity = i.buy(quantity).getQuantity();
+			result = i.buy(quantity).getQuantity();
 		} else {
-			quantity = i.sell(quantity).getQuantity();
+			result = i.sell(quantity).getQuantity();
 		}
-		// System.out.println(i.getSymbol() +" signal " + Utils.formatDate(date) + " " + buySell + " = " + quantity);
-		
+		if (result > 0) {
+			signals.put(i.getSymbol(), new Signal(i.getSymbol(), getDateTime(), buySell, 0));
+			logger.info("Executed " +i.getSymbol() +" signal " + Utils.formatDate(getDateTime()) + " " + buySell + " = " + quantity + " result = " + result);
+		}
 	}
 	
 	HashMap<TQSymbol, Signal> signals = new HashMap<>();
 	
 	public void signal(Instrument i, BuySell buySell) {
-		
+		logger.debug("signal " + i.getSymbol() + " " + buySell);
 		if (signals.size() == 0) {
 			createSignal(i, buySell);
 		} else {
@@ -124,31 +149,38 @@ public class Strategy implements IProcessingContext, IStrategy {
 
 
 	@Override
-	public void start() {
-		reset();
-		dataFeedContext.OnStart();
+	public void start(IAccount account) {
+		logger.debug("Prepare to start...");
+		this.account = account;
+		dataFeedContext.OnStart(new Instrument[] { iOper, iWatch });
+		logger.debug("Started.");
 	}
 
 	@Override
 	public void stop() {
-		
+		logger.debug("Stopped");
 	}
 
 
 	@Override
 	public void onTick(Instrument instrument, Tick tick) {
-//		System.out.println(tick);
-		tick(instrument);
+		//System.out.println("onTick: " + instrument.getSymbol() + " " + tick.getTime());
+		if (workOn == WorkOn.Tick) {
+			tick(instrument);
+		}
 	}
 
 	@Override
 	public void onQuotesChange(Instrument instrument, QuoteGlass quoteGlass) {
-		// System.out.println("OnQuotesChange: " + instrument.getSymbol() );
+		// System.out.println(instrument.getSymbol() + " on Quotes Change");
 	}
 
 	@Override
 	public void onCandleClose(Instrument instrument, CandleList candleList, Candle candle) {
-		//System.out.println("onCandleClose: " + instrument.getSymbol() + " " + candle.toString());
+//		System.out.println("onCandleClose: " + instrument.getSymbol() + " " + candle.toString());
+		if (workOn == WorkOn.CandleClose) {
+			tick(instrument);
+		}
 	}
 
 	@Override
@@ -165,18 +197,18 @@ public class Strategy implements IProcessingContext, IStrategy {
 
 	@Override
 	public void onQuotationsChange(Instrument instrument, Quotation quotation) {
-		// System.out.println("Quotations changed");
+		
 	}
 
 	@Override
 	public CandleType[] getCandleTypes() {
-		return new CandleType[] { CandleType.CANDLE_1M };
+		return new CandleType[] { candleType };
 	}
 	
 
 	@Override
 	public TQSymbol[] getSymbols() {
-		return new TQSymbol[] {SiU5.getSymbol(), BRQ5.getSymbol(), RIU5.getSymbol()} ;
+		return new TQSymbol[] {iWatch.getSymbol(), iOper.getSymbol() } ;
 	}
 
 
@@ -192,20 +224,46 @@ public class Strategy implements IProcessingContext, IStrategy {
 
 	@Override
 	public Instrument getInstrument(TQSymbol symbol) {
-		if (symbol.equals(TQSymbol.SiU5)) {
-			return SiU5;
-		} else if (symbol.equals(TQSymbol.BRQ5)) {
-			return BRQ5;
-		} else if (symbol.equals(TQSymbol.RIU5)) {
-			return RIU5;
+		if (symbol.equals(iWatch.getSymbol())) {
+			return iWatch;
+		} else if (symbol.equals(iOper.getSymbol())) {
+			return iOper;
 		}
 		return null;
 	}
 
 	@Override
-	public String getName() {
-		return "MACD strategy fast = " + macd.getOptInFastPeriod() + ", slow = " + macd.getOptInSlowPeriod() + ", signal = " + macd.getOptInSignalPeriod();
+	public String toString() {
+		return "STR fast= " + macd.getOptInFastPeriod() + ", slow= " + macd.getOptInSlowPeriod() + ", signal= " + macd.getOptInSignalPeriod() + " iWatch= " + (iWatch != null ? iWatch.getSymbol() : "null") + " iOper= " + (iOper != null ? iOper.getSymbol() : "null") + " " + workOn + " " +candleType + " " + priceType;
 	}
+
+	@Override
+	public void closePositions() {
+		Map<TQSymbol, QuantityCost> positions = account.getPositions();
+		logger.debug("Close positions size " + positions.size());
+		for (TQSymbol symbol : positions.keySet()) {
+			logger.debug("Closing position " + symbol + " = " + positions.get(symbol));
+			Instrument i = getInstrument(symbol);
+			if (i != null) {
+				QuantityCost toSell = positions.get(symbol);
+				QuantityCost sold = i.sell(toSell.getQuantity());
+				if (sold.getQuantity() < toSell.getQuantity()) {
+					logger.error("Position cannot be closed! toSell = " + toSell + ",   sold = " + sold);
+					i.sell(toSell.getQuantity());
+				} else {
+					logger.debug("Closed " +symbol + "position " + sold);
+				}
+			} else{
+				throw new RuntimeException("Instrument " + symbol + " not found");
+			}
+		}
+	}
+
+	@Override
+	public IAccount getAccount() {
+		return account;
+	}
+
 
 	
 }

@@ -7,6 +7,8 @@ import java.util.Iterator;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.commons.lang3.time.DateUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.PriceType;
@@ -20,6 +22,8 @@ import ru.eclipsetrader.transaq.core.util.Utils;
  *
  */
 public class CandleList {
+	
+	Logger logger = LogManager.getLogger("CandleList");
 
 	public static interface ICandleProcessContext {
 		void onCandleClose(Candle candle);

@@ -16,6 +16,7 @@ import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.QuoteGlass;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.trades.IDataFeedContext;
+import ru.eclipsetrader.transaq.core.trades.IDateTimeSupplier;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class SimpleAccount implements IAccount {
@@ -25,7 +26,7 @@ public class SimpleAccount implements IAccount {
 	double initialFree;
 	double free;
 
-	IDataFeedContext context;
+	IDateTimeSupplier dateTimeSupplier;
 	
 	// holder = кол-во и размер ГО
 	Map<TQSymbol, QuantityCost> positions = new HashMap<>();
@@ -36,9 +37,9 @@ public class SimpleAccount implements IAccount {
 		this(free, null);
 	}
 	
-	public SimpleAccount(double free, IDataFeedContext context) {
+	public SimpleAccount(double free, IDateTimeSupplier dateTimeSupplier) {
 		logger.debug("Create SimpleAccount with " + free + " cash");
-		this.context = context;
+		this.dateTimeSupplier = dateTimeSupplier;
 		this.initialFree = free;
 		this.free = free;
 	}
@@ -52,8 +53,8 @@ public class SimpleAccount implements IAccount {
 	}
 	
 	private Date currentDate() {
-		if (context != null) {
-			return context.currentDate();
+		if (dateTimeSupplier != null) {
+			return dateTimeSupplier.getDateTime();
 		} else {
 			return new Date();
 		}
@@ -213,7 +214,10 @@ public class SimpleAccount implements IAccount {
 			QuantityCost position = positions.get(symbol);
 			sb.append("\n" + symbol + ": " + position.getQuantity() + " - " + position.getCost());
 		}
-		sb.append(" Operations: " + operations.size() );
+		sb.append(" Operations: " + operations.size());
+		for (AccountOperation ao : operations) {
+			sb.append(" {" + Utils.formatTime(ao.getTime()) + "_" + ao.getBuySell() + "_" + ao.getQuantity() + "_" + ao.getCost() + "}");
+		}
 		return sb.toString();
 	}
 	

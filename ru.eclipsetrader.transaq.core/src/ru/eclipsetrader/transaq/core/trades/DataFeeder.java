@@ -5,7 +5,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.logging.log4j.LogManager;
@@ -17,8 +17,7 @@ import ru.eclipsetrader.transaq.core.candle.TQCandleService;
 import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.event.IInstrumentEvent;
 import ru.eclipsetrader.transaq.core.event.SynchronousInstrumentEvent;
-import ru.eclipsetrader.transaq.core.interfaces.IAccount;
-import ru.eclipsetrader.transaq.core.interfaces.IProcessingContext;
+import ru.eclipsetrader.transaq.core.instruments.Instrument;
 import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.Quote;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
@@ -27,6 +26,7 @@ import ru.eclipsetrader.transaq.core.model.internal.Tick;
 import ru.eclipsetrader.transaq.core.model.internal.TickTrade;
 import ru.eclipsetrader.transaq.core.quotes.TQQuotationService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuoteService;
+import ru.eclipsetrader.transaq.core.strategy.IStrategy;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 /**
@@ -36,47 +36,57 @@ import ru.eclipsetrader.transaq.core.util.Utils;
  */
 public class DataFeeder implements IDataFeedContext {
 	
+
+	static final double INITIAL_AMOUNT = 100000;
+	
+	
 	Logger logger = LogManager.getLogger("DataFeeder");
 	
 	Date fromDate;
 	Date toDate;
-	
-	ThreadLocal<Long> threadTickTime = new ThreadLocal<Long>();
 
 	static int TICK_PERIOD = 1; // период тика в милисекундах
 	
-	SynchronousInstrumentEvent<List<Tick>> ticksEvent = new SynchronousInstrumentEvent<>("Tick DB emulator");
-	SynchronousInstrumentEvent<List<Quote>> quotesEvent = new SynchronousInstrumentEvent<>("Quotes DB emulator");
-	SynchronousInstrumentEvent<List<SymbolGapMap>> quotationEvent = new SynchronousInstrumentEvent<>("Quotation DB emulator");
+	ThreadLocal<SynchronousInstrumentEvent<List<Tick>>> ticksEvent = new ThreadLocal<SynchronousInstrumentEvent<List<Tick>>>() {
+		@Override
+		protected SynchronousInstrumentEvent<List<Tick>> initialValue() {
+			return new SynchronousInstrumentEvent<List<Tick>>("Tick DB emulator");
+		}
+	};
+	ThreadLocal<SynchronousInstrumentEvent<List<Quote>>> quotesEvent = new ThreadLocal<SynchronousInstrumentEvent<List<Quote>>>() {
+		@Override
+		protected SynchronousInstrumentEvent<List<Quote>> initialValue() {
+			return new SynchronousInstrumentEvent<>("Quotes DB emulator");
+		}
+	};
+	ThreadLocal<SynchronousInstrumentEvent<List<SymbolGapMap>>> quotationEvent = new ThreadLocal<SynchronousInstrumentEvent<List<SymbolGapMap>>>(){
+		@Override
+		protected SynchronousInstrumentEvent<List<SymbolGapMap>> initialValue() {
+			return new SynchronousInstrumentEvent<List<SymbolGapMap>>("Quotation DB emulator");
+		}
+	};
 	
 	Boolean feedPrepared = false;
 	
-	TreeMap<Long, List<TickTrade>> tickFeed;
-	TreeMap<Long, List<Quote>> quoteFeed;
-	TreeMap<Long, List<SymbolGapMap>> quotationFeed;
+	ConcurrentSkipListMap<Long, List<TickTrade>> tickFeed;
+	ConcurrentSkipListMap<Long, List<Quote>> quoteFeed;
+	ConcurrentSkipListMap<Long, List<SymbolGapMap>> quotationFeed;
+
 	
-	public DataFeeder(Date fromDate, Date toDate) {
+	public DataFeeder(Date fromDate, Date toDate, TQSymbol[] symbols) {
 		this.fromDate = fromDate;
 		this.toDate = toDate;
+		logger.info("Loading trades");
+		tickFeed = getTradeList(fromDate, toDate, symbols);
+		logger.info("Loading quotes");
+		quoteFeed = getQuoteList(fromDate, toDate, symbols);
+		logger.info("Loading quotation");
+		quotationFeed = getQuotationGapList(fromDate, toDate, symbols);	
 	}
-	
-	public void prepareFeed(IProcessingContext context) {
-		synchronized (feedPrepared) {
-			if (!feedPrepared) {
-				logger.info("Loading trades");
-				tickFeed = getTradeList(fromDate, toDate, context.getSymbols());
-				logger.info("Loading quotes");
-				quoteFeed = getQuoteList(fromDate, toDate, context.getSymbols());
-				logger.info("Loading quotation");
-				quotationFeed = getQuotationGapList(fromDate, toDate, context.getSymbols());	
-				feedPrepared = true;
-			}
-		}
-	}
-	
-	public static TreeMap<Long, List<TickTrade>> getTradeList(Date dateFrom, Date dateTo, TQSymbol[] symbols) {
+		
+	public static ConcurrentSkipListMap<Long, List<TickTrade>> getTradeList(Date dateFrom, Date dateTo, TQSymbol[] symbols) {
 		List<TickTrade> ticks = DataManager.getTickList(dateFrom, dateTo, symbols);
-		TreeMap<Long, List<TickTrade>> result = new TreeMap<>();
+		ConcurrentSkipListMap<Long, List<TickTrade>> result = new ConcurrentSkipListMap<>();
 		for (TickTrade tick : ticks) {
 			long time = tick.getTime().getTime();
 			List<TickTrade> list = result.get(time);
@@ -89,10 +99,10 @@ public class DataFeeder implements IDataFeedContext {
 		return result;
 	}
 	
-	public static TreeMap<Long, List<Quote>> getQuoteList(Date dateFrom, Date dateTo, TQSymbol[] symbols) {
+	public static ConcurrentSkipListMap<Long, List<Quote>> getQuoteList(Date dateFrom, Date dateTo, TQSymbol[] symbols) {
 		List<Quote> quotes = DataManager.getQuoteList(dateFrom, dateTo, symbols); // возвращает данные сплошным списком
 		// разложим их по датам
-		TreeMap<Long, List<Quote>> result = new TreeMap<>();
+		ConcurrentSkipListMap<Long, List<Quote>> result = new ConcurrentSkipListMap<>();
 		for (Quote q : quotes) {
 			List<Quote> list;
 			long time = q.getTime().getTime();
@@ -107,10 +117,10 @@ public class DataFeeder implements IDataFeedContext {
 		return result;
 	}
 	
-	public static TreeMap<Long, List<SymbolGapMap>> getQuotationGapList(Date dateFrom, Date dateTo, TQSymbol[] symbols) {
+	public static ConcurrentSkipListMap<Long, List<SymbolGapMap>> getQuotationGapList(Date dateFrom, Date dateTo, TQSymbol[] symbols) {
 		List<SymbolGapMap> quotationGapList = DataManager.getQuotationGapList(dateFrom, dateTo, symbols);
 		// разложим их по датам
-		TreeMap<Long, List<SymbolGapMap>> result = new TreeMap<>();
+		ConcurrentSkipListMap<Long, List<SymbolGapMap>> result = new ConcurrentSkipListMap<>();
 		for (SymbolGapMap sg : quotationGapList) {
 			List<SymbolGapMap> list;
 			long time = sg.getTime().getTime();
@@ -135,96 +145,99 @@ public class DataFeeder implements IDataFeedContext {
 	
 	@Override
 	public IInstrumentEvent<List<Quote>> getQuotesFeeder() {
-		return quotesEvent;
+		return quotesEvent.get();
 	}
 	
 	@Override
 	public IInstrumentEvent<List<Tick>> getTicksFeeder() {
-		return ticksEvent;
+		return ticksEvent.get();
 	}
 
 	@Override
 	public IInstrumentEvent<List<SymbolGapMap>> getQuotationGapsFeeder() {
-		return quotationEvent;
+		return quotationEvent.get();
 	}
 	
+	Object s = new Object();
 
 	@Override
-	public void OnStart() {
-		// Do nothing
+	public void OnStart(Instrument[] instruments) {
+		synchronized (s) {
+			for (Instrument i : instruments) {
+				logger.debug("On start " + i.getSymbol() + " " + Integer.toHexString(i.hashCode()));
+				i.init();
+				logger.debug("ticksEvent.get() = " + ticksEvent.get());
+			}
+		}
 	}
 
-	public void feed(IProcessingContext context) {
-				
+	public void feed(IStrategy strategy) {
+		
 		long tickTime = fromDate.getTime();
-		threadTickTime.set(tickTime);
 		long prevTickTime = 0;
 		
-		logger.debug("Feeding from " + Utils.formatDate(fromDate) + " to " + Utils.formatDate(toDate));
-
-		prepareFeed(context);
+		logger.debug("Starting feed context = " + Integer.toHexString(strategy.hashCode()) + " from " + Utils.formatDate(fromDate) + " to " + Utils.formatDate(toDate));
 		
-		logger.debug("Starting tick " + context.getName());
-		while (tickTime < toDate.getTime()) {			
+		SimpleAccount sa = new SimpleAccount(INITIAL_AMOUNT, strategy);
+		
+		strategy.start(sa);
+		
+		logger.debug("Starting feed... ");
+		while (tickTime < toDate.getTime()) {
+			
+			Date newDate = new Date(tickTime);
+			strategy.setDateTime(newDate);
+			
 			SortedMap<Long, List<Quote>> subQuotes = quoteFeed.subMap(prevTickTime, true, tickTime, false);
 			SortedMap<Long, List<TickTrade>> subTicks = tickFeed.subMap(prevTickTime, true, tickTime, false);
 			SortedMap<Long, List<SymbolGapMap>> subQuotations = quotationFeed.subMap(prevTickTime, true, tickTime, false);
 			
 			if (subQuotes.size() > 0) {
+				logger.debug("Time = " + Utils.formatTime(newDate) +" subQuotes.size = " + subQuotes.size());
 				for (List<Quote> quoteList : subQuotes.values()) {
 					Map<TQSymbol, List<Quote>> map = TQQuoteService.createMap(quoteList);
 					for (TQSymbol symbol : map.keySet()) {
-						quotesEvent.notifyObservers(symbol, map.get(symbol));
+						quotesEvent.get().notifyObservers(symbol, map.get(symbol));
 					}
 				}
 			}
 			
 			if (subQuotations.size() > 0) {
+				logger.debug("Time = " + Utils.formatTime(newDate) +" subQuotations.size = " + subQuotations.size());
 				for (List<SymbolGapMap> symbolGap : subQuotations.values()) {
 					Map<TQSymbol, List<SymbolGapMap>> map = TQQuotationService.createMap(symbolGap);
 					for (TQSymbol symbol : map.keySet()) {
-						quotationEvent.notifyObservers(symbol, map.get(symbol));
+						quotationEvent.get().notifyObservers(symbol, map.get(symbol));
 					}
 				}
 			}
 				
 			if (subTicks.size() > 0) {
+				logger.debug("Time = " + Utils.formatTime(newDate) +" subTicks.size = " + subTicks.size());
 				 List<TickTrade> subTicksTempList = new ArrayList<>();
 				 for (List<TickTrade> l : subTicks.values()) {
 					 subTicksTempList.addAll(l);
 				 }
 				 Map<TQSymbol, List<Tick>> map = TQTickTradeService.createMap(subTicksTempList);
 				 for (TQSymbol symbol : map.keySet()) {
-					 ticksEvent.notifyObservers(symbol, map.get(symbol));
+					 ticksEvent.get().notifyObservers(symbol, map.get(symbol));
 				 }
 			}
 
 			
 			prevTickTime = tickTime;
 			tickTime += TICK_PERIOD;
-			threadTickTime.set(tickTime);
 		}
-
-		logger.debug("Complete " + context.getName());
+		strategy.stop();
+		logger.debug("Complete " + strategy);
+		
+		
+		// Remove threadlocals
+		quotationEvent.remove();
+		ticksEvent.remove();
+		quotesEvent.remove();
+		
 	}
 
-	@Override
-	public Date currentDate() {
-		return new Date(threadTickTime.get());
-	}
-
-	static final double INITIAL_AMOUNT = 100000;
-	
-	ThreadLocal<IAccount> threadAccount = new ThreadLocal<IAccount>();
-	
-	@Override
-	public IAccount getAccount() {
-		IAccount account = threadAccount.get();
-		if (account == null) {
-			account = new SimpleAccount(INITIAL_AMOUNT, this);
-			threadAccount.set(account);
-		}
-		return account;
-	}
 	
 }

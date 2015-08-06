@@ -14,6 +14,21 @@ import ru.eclipsetrader.transaq.core.exception.UnimplementedException;
  */
 public enum CandleType {
 
+	CANDLE_1S(1),
+	CANDLE_2S(2),
+	CANDLE_3S(3),
+	CANDLE_4S(4),
+	CANDLE_5S(5),
+	CANDLE_6S(6),
+	CANDLE_7S(7),
+	CANDLE_8S(8),
+	CANDLE_9S(9),
+	CANDLE_10S(10),
+	CANDLE_15S(15),
+	CANDLE_20S(20),
+	CANDLE_30S(30),
+	CANDLE_45S(40),
+	
 	CANDLE_1M(60), 
 	CANDLE_2M(120), 
 	CANDLE_3M(180), 
@@ -52,6 +67,23 @@ public enum CandleType {
 	 */
 	public int getCalendarBase() {
 		switch (this) {
+		case CANDLE_1S:
+		case CANDLE_2S:
+		case CANDLE_3S:
+		case CANDLE_4S:
+		case CANDLE_5S:
+		case CANDLE_6S:
+		case CANDLE_7S:
+		case CANDLE_8S:
+		case CANDLE_9S:
+		case CANDLE_10S:
+		case CANDLE_15S:
+		case CANDLE_20S:
+		case CANDLE_30S:
+		case CANDLE_45S:
+			return Calendar.MINUTE;
+		
+		
 		case CANDLE_1M:
 		case CANDLE_2M:
 		case CANDLE_3M:

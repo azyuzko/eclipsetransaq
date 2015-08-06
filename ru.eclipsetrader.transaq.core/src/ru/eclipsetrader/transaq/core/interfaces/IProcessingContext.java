@@ -8,16 +8,21 @@ import ru.eclipsetrader.transaq.core.model.QuoteGlass;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Quotation;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
+import ru.eclipsetrader.transaq.core.trades.IDateTimeSupplier;
 
-public interface IProcessingContext {
+public interface IProcessingContext extends IDateTimeSupplier {
+	
 	void onTick(Instrument instrument, Tick tick);
 	void onQuotesChange(Instrument instrument, QuoteGlass quoteGlass);
 	void onCandleClose(Instrument instrument, CandleList candleList, Candle closedCandle);
 	void onCandleOpen(Instrument instrument, CandleList candleList, Candle openedCandle);
 	void onCandleChange(Instrument instrument, CandleList candleList, Candle changedCandle);
 	void onQuotationsChange(Instrument instrument, Quotation quotation);
+	
 	CandleType[] getCandleTypes();
 	TQSymbol[] getSymbols();
 	Instrument getInstrument(TQSymbol symbol);
-	String getName();
+	IAccount getAccount();
+	
+	void closePositions();
 }

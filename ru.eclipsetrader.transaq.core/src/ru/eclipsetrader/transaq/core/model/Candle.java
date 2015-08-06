@@ -123,6 +123,7 @@ public class Candle {
 		c.data.add(new Holder<Double, Integer>(40.0, 2));
 		c.data.add(new Holder<Double, Integer>(70.0, 1));
 		c.data.add(new Holder<Double, Integer>(60.0, 5));
+		
 		System.out.println(c.getPriceValueByType(PriceType.MED));
 		System.out.println(c.getPriceValueByType(PriceType.VOL1));
 		System.out.println(c.getPriceValueByType(PriceType.TYPICAL));

@@ -18,6 +18,11 @@ public class CandleStorage  {
 	public CandleStorage(Instrument instrument, IProcessingContext context) {
 		this.instrument = instrument;
 		this.context = context;
+		if (context != null) {
+			for (CandleType candleType : context.getCandleTypes()) {
+				storage.put(candleType, new CandleList(candleType));
+			}
+		}
 	}
 	
 	public CandleStorage(CandleType[] candleTypes) {
