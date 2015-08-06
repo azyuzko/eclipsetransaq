@@ -6,10 +6,10 @@ public class TakeProfit {
 	Double activationprice;
 	Date guardtime;
 	String brokerref;
-	Double quantity; // :integer или :double (в случае %)
+	String quantity; // :integer или :double (в случае %)
 	Double extremum;
 	Double level;
-	Double correction;
+	String correction;
 	Double guardspread;
 
 	public Double getActivationprice() {
@@ -36,11 +36,11 @@ public class TakeProfit {
 		this.brokerref = brokerref;
 	}
 
-	public Double getQuantity() {
+	public String getQuantity() {
 		return quantity;
 	}
 
-	public void setQuantity(Double quantity) {
+	public void setQuantity(String quantity) {
 		this.quantity = quantity;
 	}
 
@@ -60,11 +60,11 @@ public class TakeProfit {
 		this.level = level;
 	}
 
-	public Double getCorrection() {
+	public String getCorrection() {
 		return correction;
 	}
 
-	public void setCorrection(Double correction) {
+	public void setCorrection(String correction) {
 		this.correction = correction;
 	}
 

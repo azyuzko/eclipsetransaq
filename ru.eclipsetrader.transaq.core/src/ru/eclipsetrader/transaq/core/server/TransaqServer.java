@@ -183,7 +183,9 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 				onDisconnected.notifyObservers(this);
 			}
 			
-			CoreActivator.getEventAdmin().postEvent(OSGIServerStatusEvent.getEvent(serverId, newStatus));
+			if (CoreActivator.getEventAdmin() != null) {
+				CoreActivator.getEventAdmin().postEvent(OSGIServerStatusEvent.getEvent(serverId, newStatus));
+			}
 		}
 	}
 	

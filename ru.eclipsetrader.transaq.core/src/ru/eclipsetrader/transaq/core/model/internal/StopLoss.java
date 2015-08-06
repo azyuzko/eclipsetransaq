@@ -7,7 +7,7 @@ public class StopLoss {
 	Double activationprice;
 	Date guardtime;
 	String brokerref;
-	Double quantity; // :integer или :double (в случае %)
+	String quantity; // :integer или :double (в случае %)
 	Double orderprice;
 
 	public String getUsecredit() {
@@ -42,11 +42,11 @@ public class StopLoss {
 		this.brokerref = brokerref;
 	}
 
-	public Double getQuantity() {
+	public String getQuantity() {
 		return quantity;
 	}
 
-	public void setQuantity(Double quantity) {
+	public void setQuantity(String quantity) {
 		this.quantity = quantity;
 	}
 

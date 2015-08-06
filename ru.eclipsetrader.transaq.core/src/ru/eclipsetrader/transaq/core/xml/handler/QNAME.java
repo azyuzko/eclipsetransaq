@@ -8,6 +8,7 @@ public enum QNAME {
 	name,
 	market,
 	type,
+	bymarket,
 	
 	candles,
 	candle,

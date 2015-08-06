@@ -25,6 +25,14 @@ public class StopOrder  {
 
 	StopLoss stopLoss;
 	TakeProfit takeProfit;
+	
+	public StopOrder() {
+		
+	}
+	
+	public StopOrder(String transactionId) {
+		this.transactionid = transactionId;
+	}
 
 	public String getTransactionid() {
 		return transactionid;

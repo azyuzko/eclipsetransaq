@@ -15,6 +15,7 @@ import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
 import ru.eclipsetrader.transaq.core.model.OrderStatus;
 import ru.eclipsetrader.transaq.core.model.internal.CommandResult;
 import ru.eclipsetrader.transaq.core.model.internal.Order;
+import ru.eclipsetrader.transaq.core.model.internal.StopOrder;
 import ru.eclipsetrader.transaq.core.model.internal.Trade;
 import ru.eclipsetrader.transaq.core.services.ITQOrderTradeService;
 import ru.eclipsetrader.transaq.core.util.Utils;
@@ -31,6 +32,8 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 	
 	// ключ - orderno
 	private Map<String, Order> orders = Collections.synchronizedMap(new HashMap<String, Order>());
+	
+	private Map<String, StopOrder> stopOrders = Collections.synchronizedMap(new HashMap<String, StopOrder>());
 	
 	// ключ - tradeno
 	private Map<String, Trade> trades = Collections.synchronizedMap(new HashMap<String, Trade>());
@@ -70,6 +73,15 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 			put(trade);	
 		}
 	};
+	
+	Observer<StopOrder> stopOrderObserver = new Observer<StopOrder>() {
+		
+		@Override
+		public void update(StopOrder stopOrder) {
+			put(stopOrder);
+		}
+		
+	};
 
 	public Observer<Order> getOrderObserver() {
 		return orderObserver;
@@ -100,6 +112,15 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 		}
 		orders.put(order.getOrderno(), order);
 		DataManager.merge(order);
+	}
+	
+	public void put(StopOrder stopOrder) {
+		if (stopOrder.getTransactionid() == null) {
+			// dont push orders without transactionId
+			return;
+		}
+		stopOrders.put(stopOrder.getTransactionid(), stopOrder);
+		DataManager.merge(stopOrder);
 	}
 	
 	public void putTradeList(List<Trade> tradeList){
@@ -185,6 +206,12 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 		} else {
 			throw new RuntimeException(result.getMessage());
 		}		
+	}
+
+	@Override
+	public StopOrder getStopOrderById(String transactionId) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 	
 }

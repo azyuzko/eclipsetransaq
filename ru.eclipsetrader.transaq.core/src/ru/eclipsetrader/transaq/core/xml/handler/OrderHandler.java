@@ -60,15 +60,12 @@ public class OrderHandler extends DefaultHandler {
 		case stoporder:
 			processingType = ProcessingType.STOP_ORDER;
 			transactionId = attributes.getValue("transactionid");
-			/* TODO refactor
-			if (DataManager.hasStopOrder(transactionId)) {
-				currentStopOrder = DataManager.getStopOrder(transactionId);
-			} else {
-				currentStopOrder = new StopOrder();
-				DataManager.putStopOrder(transactionId, currentStopOrder);
+			currentStopOrder = TQOrderTradeService.getInstance().getStopOrderById(transactionId);
+			if (currentStopOrder == null) {
+				logger.warn("StopOrder with transactionId = " + transactionId + " not found. Creating new one..");
+				currentStopOrder = new StopOrder(transactionId);
 			}
-			break;*/
-			throw new UnimplementedException();
+			break;
 		case stoploss:
 			processingType = ProcessingType.STOP_LOSS;
 			currentStopOrder.setStopLoss(new StopLoss());
@@ -98,12 +95,9 @@ public class OrderHandler extends DefaultHandler {
 			if (notifyStopOrder != null) {
 				notifyStopOrder.notifyObservers(currentStopOrder);
 			}
-			/* TODO refactor
-			currentStopOrder = DataManager.mergeStopOrder(currentStopOrder);
 			processingType = null;
 			break;
-			*/			
-			throw new UnimplementedException();
+
 		case stoploss:
 		case takeprofit:
 			processingType = null;
@@ -188,7 +182,7 @@ public class OrderHandler extends DefaultHandler {
 				case activationprice: stopLoss.setActivationprice(Double.valueOf(value)); break;
 				case guardtime:	stopLoss.setGuardtime(Utils.parseDate(value)); break;
 				case brokerref:	stopLoss.setBrokerref(value); break;
-				case quantity:	stopLoss.setQuantity(Double.valueOf(value)); break;
+				case quantity:	stopLoss.setQuantity(value); break; // 100%
 				case orderprice:	stopLoss.setOrderprice(Double.valueOf(value)); break;
 				default:
 					break;
@@ -201,10 +195,10 @@ public class OrderHandler extends DefaultHandler {
 				case activationprice:	takeProfit.setActivationprice(Double.valueOf(value)); break;
 				case guardtime:	takeProfit.setGuardtime(Utils.parseDate(value)); break;
 				case brokerref:	takeProfit.setBrokerref(value); break;
-				case quantity:	takeProfit.setQuantity(Double.valueOf(value)); break;
+				case quantity:	takeProfit.setQuantity(value); break;
 				case extremum:	takeProfit.setExtremum(Double.valueOf(value)); break;
 				case level:		takeProfit.setLevel(Double.valueOf(value)); break;
-				case correction:	takeProfit.setCorrection(Double.valueOf(value)); break;
+				case correction:	takeProfit.setCorrection(value); break; // 0.0%
 				case guardspread:	takeProfit.setGuardspread(Double.valueOf(value)); break;
 	
 				default:
