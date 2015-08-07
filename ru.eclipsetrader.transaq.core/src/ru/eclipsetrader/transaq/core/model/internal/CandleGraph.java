@@ -3,7 +3,7 @@ package ru.eclipsetrader.transaq.core.model.internal;
 import java.util.ArrayList;
 import java.util.List;
 
-import ru.eclipsetrader.transaq.core.model.Candle;
+import ru.eclipsetrader.transaq.core.candle.Candle;
 
 public class CandleGraph {
 

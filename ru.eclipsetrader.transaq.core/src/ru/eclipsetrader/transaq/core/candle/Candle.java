@@ -1,14 +1,21 @@
-package ru.eclipsetrader.transaq.core.model;
+package ru.eclipsetrader.transaq.core.candle;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.TreeMap;
 
 import ru.eclipsetrader.transaq.core.exception.UnimplementedException;
+import ru.eclipsetrader.transaq.core.model.PriceType;
+import ru.eclipsetrader.transaq.core.model.internal.Tick;
 import ru.eclipsetrader.transaq.core.util.Holder;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class Candle {
+	
+	public interface ICandleCalculator {
+		double getPrice();
+	}
 
 	Date date;
 	double open;
@@ -18,12 +25,20 @@ public class Candle {
 	int volume;
 	int oi; // open interest (for futures and options only) 
 	
-	// все операции лежат в этой структуре
+	// все тики свечи лежат в этой структуре
 	// используется для расчета других типов цен
-	List<Holder<Double, Integer>> data = new ArrayList<Holder<Double, Integer>>();
+	TreeMap<Date, List<Holder<Double, Integer>>> ticks = new TreeMap<Date, List<Holder<Double, Integer>>>();
 	
-	public List<Holder<Double, Integer>> getData() {
-		return data;
+	public void putData(Tick tick) {
+		Date date = tick.getTime();
+		double price = tick.getPrice();
+		int volume = tick.getQuantity();
+		List<Holder<Double, Integer>> list = ticks.get(date);
+		if (list == null) {
+			list = new ArrayList<Holder<Double,Integer>>();
+			ticks.put(date, list);
+		}
+		list.add(new Holder<Double, Integer>(price, volume));
 	}
 
 	@Override
@@ -42,12 +57,15 @@ public class Candle {
 		case HIGH: return getHigh();
 		case LOW: return getLow();
 		case MED: return (getHigh() + getLow()) / 2;
-		case WEIGHTED_CLOSE: return (getHigh() + getLow() + 2 * getClose()) / 4;
 		case TYPICAL: return (getHigh() + getLow() + getClose()) / 3;
-		case VOL1: {
+		case WEIGHTED_CLOSE: return (getHigh() + getLow() + 2 * getClose()) / 4;
+		case WEIGHTED3_CLOSE: return (getHigh() + getLow() + 3 * getClose()) / 5;
+		case VOLUME_WEIGHTED: {
 			double full = 0;
-			for (Holder<Double, Integer> x : data) {
-				full += x.getFirst() * x.getSecond();
+			for (Date tickDate : ticks.keySet()) {
+				for (Holder<Double, Integer> x : ticks.get(tickDate)) {
+					full += x.getFirst() * x.getSecond();
+				}
 			}
 			return full / getVolume();
 		}
@@ -119,13 +137,9 @@ public class Candle {
 		c.high = 70.0;
 		c.close = 60.0;
 		c.volume = 12;
-		c.data.add(new Holder<Double, Integer>(50.0, 4));
-		c.data.add(new Holder<Double, Integer>(40.0, 2));
-		c.data.add(new Holder<Double, Integer>(70.0, 1));
-		c.data.add(new Holder<Double, Integer>(60.0, 5));
 		
 		System.out.println(c.getPriceValueByType(PriceType.MED));
-		System.out.println(c.getPriceValueByType(PriceType.VOL1));
+		System.out.println(c.getPriceValueByType(PriceType.VOLUME_WEIGHTED));
 		System.out.println(c.getPriceValueByType(PriceType.TYPICAL));
 		System.out.println(c.getPriceValueByType(PriceType.WEIGHTED_CLOSE));
 	}

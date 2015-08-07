@@ -24,10 +24,15 @@ public enum CandleType {
 	CANDLE_8S(8),
 	CANDLE_9S(9),
 	CANDLE_10S(10),
+	CANDLE_11S(11),
 	CANDLE_15S(15),
 	CANDLE_20S(20),
+	CANDLE_29S(29),
 	CANDLE_30S(30),
-	CANDLE_45S(40),
+	CANDLE_45S(45),
+	CANDLE_50S(50),
+	CANDLE_55S(55),
+	CANDLE_59S(59),
 	
 	CANDLE_1M(60), 
 	CANDLE_2M(120), 
@@ -77,10 +82,15 @@ public enum CandleType {
 		case CANDLE_8S:
 		case CANDLE_9S:
 		case CANDLE_10S:
+		case CANDLE_11S:
 		case CANDLE_15S:
 		case CANDLE_20S:
+		case CANDLE_29S:
 		case CANDLE_30S:
 		case CANDLE_45S:
+		case CANDLE_50S:
+		case CANDLE_55S:
+		case CANDLE_59S:
 			return Calendar.MINUTE;
 		
 		
@@ -105,7 +115,7 @@ public enum CandleType {
 		case CANDLE_1D:
 //		case CANDLE_2D:
 			return Calendar.MONTH;
-			
+
 		default:
 			throw new UnimplementedException();
 		}

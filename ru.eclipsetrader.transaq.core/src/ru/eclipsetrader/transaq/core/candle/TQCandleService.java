@@ -3,9 +3,9 @@ package ru.eclipsetrader.transaq.core.candle;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.WeakHashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 
@@ -16,7 +16,6 @@ import ru.eclipsetrader.transaq.core.Constants;
 import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.event.Observer;
 import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
-import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.CandleGraph;
 import ru.eclipsetrader.transaq.core.model.internal.CandleKind;
@@ -24,12 +23,14 @@ import ru.eclipsetrader.transaq.core.model.internal.CandleStatus;
 import ru.eclipsetrader.transaq.core.server.command.GetHistoryDataCommand;
 import ru.eclipsetrader.transaq.core.services.ITQCandleService;
 import ru.eclipsetrader.transaq.core.util.Holder;
+import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class TQCandleService implements ITQCandleService {
 	
 	Logger logger = LogManager.getLogger(TQCandleService.class);
-	
-	HashSet<CandleKind> candleKinds = new HashSet<CandleKind>();
+
+	// Ключ - период свечи в секундах
+	TreeMap<Integer, CandleKind> candleKinds = new TreeMap<Integer, CandleKind>();
 	
 	WeakHashMap<Holder<TQSymbol, CandleType>, List<Candle>> buffer = new WeakHashMap<>();
 	ArrayBlockingQueue<CandleGraph> dbWriteQueue = new ArrayBlockingQueue<>(300);
@@ -65,7 +66,9 @@ public class TQCandleService implements ITQCandleService {
 		@Override
 		public void update(List<CandleKind> candleKindList) {
 			candleKindList.clear();
-			candleKinds.addAll(candleKindList);
+			for (CandleKind ck : candleKindList) {
+				candleKinds.put(ck.getPeriod(), ck);
+			}
 			persist();
 		}
 	}; 
@@ -107,7 +110,7 @@ public class TQCandleService implements ITQCandleService {
 	@Override
 	public List<CandleType> getCandleTypes() {
 		List<CandleType> result = new ArrayList<CandleType>();
-		for (CandleKind candleKind : candleKinds) {
+		for (CandleKind candleKind : candleKinds.values()) {
 			result.add(getCandleTypeByKind(candleKind));
 		}
 		return result;
@@ -115,12 +118,14 @@ public class TQCandleService implements ITQCandleService {
 
 	@Override
 	public void persist() {
-		DataManager.mergeList(candleKinds);
+		DataManager.mergeList(candleKinds.values());
 	}
 
 	@Override
 	public void load(String serverId) {
-		candleKinds.addAll(DataManager.getList(CandleKind.class));
+		for (CandleKind ck : DataManager.getList(CandleKind.class)) {
+			candleKinds.put(ck.getPeriod(), ck);
+		}
 	}
 
 	public CandleType getCandleTypeByKind(CandleKind candleKind) {
@@ -128,16 +133,14 @@ public class TQCandleService implements ITQCandleService {
 	}
 	
 	public CandleKind getCandleKindByType(CandleType candleType) {
-		for (CandleKind candleKind : candleKinds) {
-			if (candleKind.getPeriod() == candleType.getSeconds()) {
-				return candleKind;
-			}
+		if (candleKinds.containsKey(candleType.getSeconds())) {
+			return candleKinds.get(candleType.getSeconds());
 		}
-		throw new RuntimeException("Candletype = " + candleType + " NOT found!");
+		return null;
 	}
 	
 	public CandleType getCandleTypeFromPeriodId(Integer periodId) {	
-		for (CandleKind candleKind : candleKinds) {
+		for (CandleKind candleKind : candleKinds.values()) {
 			if (candleKind.getId() == periodId) {
 				return CandleType.fromSeconds(candleKind.getPeriod());
 			}
@@ -149,8 +152,52 @@ public class TQCandleService implements ITQCandleService {
 		return getHistoryData(symbol, candleType, count, true);
 	}
 	
-	// получим свечи
+	public static List<Candle> convertCandleList(CandleType fromCandleType, CandleType toCandleType, List<Candle> list) {
+		List<Candle> result = new ArrayList<Candle>();
+		for (Candle c : list) {
+			Candle last = null;
+			if (result.size() > 0) {
+				last = result.get(result.size()-1);
+			} else {
+			}
+			last = new Candle();
+			last.setDate(c.getDate());
+			last.setOpen(c.getOpen());
+		}
+		return result;
+	}
+	
+	public static void main(String[] args) {
+		Date fromDate = Utils.parseDate("03.08.2015 10:30:00.000");
+		Date toDate = Utils.parseDate("06.08.2015 10:40:00.000");
+		List<Candle> list = TQCandleService.getInstance().getSavedCandles(TQSymbol.SiU5, CandleType.CANDLE_1M, fromDate, toDate);
+		list = convertCandleList(CandleType.CANDLE_1M, CandleType.CANDLE_2M, list);
+		for (Candle c : list) {
+			System.out.println(c);
+		}
+	}
+	
 	public List<Candle> getHistoryData(TQSymbol symbol, CandleType candleType, int count, boolean reset) {		
+		// Проверим, какой тип свечи - реальный или синтетический
+		if (getCandleKindByType(candleType) != null) {
+			return callHistoryData(symbol, candleType, count, reset);
+		} else {
+			Entry<Integer, CandleKind> entry = candleKinds.floorEntry(candleType.getSeconds());
+			if (entry != null) {
+				CandleType tempCandleType = getCandleTypeByKind(entry.getValue());
+				logger.info("Converting candles from " + tempCandleType + " to " + candleType);
+				List<Candle> tempList = getHistoryData(symbol, tempCandleType, count, reset);
+				return convertCandleList(tempCandleType, candleType, tempList);
+			} else {
+				logger.warn("Cannot retrieve and convert candles for type = " + candleType);
+				return new ArrayList<>();
+			}
+		}
+	}
+	
+	// получим свечи
+	private List<Candle> callHistoryData(TQSymbol symbol, CandleType candleType, int count, boolean reset) {		
+		
 		Holder<TQSymbol, CandleType> key = new Holder<TQSymbol, CandleType>(symbol, candleType);
 		logger.debug("Calling getHistoryData for <" + key + ">");
 		if (buffer.containsKey(key)) {

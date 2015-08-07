@@ -10,7 +10,6 @@ import org.apache.commons.lang3.time.DateUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.PriceType;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
 import ru.eclipsetrader.transaq.core.util.Holder;
@@ -47,6 +46,14 @@ public class CandleList {
 	public CandleList(CandleType candleType, Collection<Candle> candles) {
 		this(candleType);
 		appendCandles(candles);
+	}
+	
+	public int size() {
+		return map.size();
+	}
+	
+	public Candle firstDayCandle() {
+		return map.firstEntry().getValue();
 	}
 	
 	public Holder<Date[], double[]> values(PriceType priceType) {
@@ -140,80 +147,28 @@ public class CandleList {
 		default:
 			break;
 		}
-		Date result = DateUtils.truncate(toDate, candleType.getCalendarBase());
-		long delta = toDate.getTime() - result.getTime();
+		Date truncatedDate = DateUtils.truncate(toDate, candleType.getCalendarBase());
+		long delta = toDate.getTime() - truncatedDate.getTime();
 		int mod = (int) (delta % (size * 1000));
 		
-		return DateUtils.addMilliseconds(toDate, -mod);
-	}
-
-	
-	public void processTickInCandle(Tick tick, ICandleProcessContext candleProcessContext) {
-		synchronized (this) {
-			Candle topCandle = getLastCandle(); // если свечей нет, вернет null
-			
-			Date newTime = new Date(0); // minimal date
-			
-			if (topCandle != null) {
-				newTime = new Date(topCandle.getDate().getTime() + (candleType.getSeconds()) * 1000 ); // перешагнули за размер свечи
-				
-				if (tick.getTime() == null) {
-					throw new RuntimeException("trade.getTime() is null");
-				}
-			}
-			
-			if (tick.getTime().after(newTime)) {
-				
-				newTime = CandleList.closestCandleStartTime(tick.getTime(), candleType);
-				
-				if (topCandle != null) {
-					candleProcessContext.onCandleClose(topCandle);
-				}
-				
-				// System.out.println("New candle starting from " + Utils.formatDate(newTime));
-				topCandle = new Candle();
-				topCandle.setDate(newTime);
-				putCandle(topCandle);
-				candleProcessContext.onCandleOpen(topCandle);
-			}
-			
-			double tickPrice =  tick.getPrice();
-			if (tickPrice > topCandle.getHigh()) {
-				topCandle.setHigh(tickPrice);
-			}
-			if (tickPrice < topCandle.getLow()) {
-				topCandle.setLow(tickPrice);
-			}
-			if (topCandle.getOpen() == 0) {
-				topCandle.setOpen(tickPrice);
-			}
-			if (topCandle.getClose() != tickPrice) {
-				topCandle.setClose(tickPrice);
-			}
-			
-			topCandle.setVolume(topCandle.getVolume() + tick.getQuantity());
-			
-			topCandle.getData().add(new Holder<Double, Integer>(tick.getPrice(), tick.getQuantity()));
-			
-			candleProcessContext.onCandleChange(topCandle);
-			
-		}
+		Date result = DateUtils.addMilliseconds(toDate, -mod);
 		
-	}
-	
-	@Override
-	public String toString() {
-		StringBuilder sb= new StringBuilder();
-		for (Date date : map.navigableKeySet()) {
-			sb.append(map.get(date).toString()); sb.append("\n");
+		// Проверим, можно ли полученный результат еще дополнить одной свечей до базы
+		if (DateUtils.addSeconds(result, candleType.getSeconds()).after(DateUtils.ceiling(result, candleType.getCalendarBase())) ) {
+			// нельзя дополнить
+			// 21:47:56.145 CandleType.CANDLE_11S вернет 21:47:44.000
+			// т.к., 21:47:55.000 еще одной свечей дополнить нельзя
+			return DateUtils.addSeconds(result, -candleType.getSeconds());
+		} else {
+			return result;
 		}
-		return sb.toString();
 	}
 	
 	public static void main(String[] args) {
 		
-		Date dt1 = Utils.parseDate("15.02.2015 21:37:56.145");
-		System.out.println(Utils.formatDate(closestCandleStartTime(dt1, CandleType.CANDLE_1D)));
+		Date dt1 = Utils.parseDate("15.02.2015 21:47:56.145");
+		System.out.println(Utils.formatDate(closestCandleStartTime(dt1, CandleType.CANDLE_10S)));
+		//System.out.println(DateUtils.ceiling(dt1, Calendar.MINUTE));
 
 	/*	CandleList cl = new CandleList(CandleType.CANDLE_1H);
 		Candle c1 = new Candle();
@@ -241,5 +196,75 @@ public class CandleList {
 		System.out.println(cl.toString());*/
 		
 	}
+
+	
+	public void processTickInCandle(Tick tick, ICandleProcessContext candleProcessContext) {
+		synchronized (this) {
+			Candle topCandle = getLastCandle(); // если свечей нет, вернет null
+			
+			Date newTime = new Date(0); // minimal date
+			
+			if (topCandle != null) {
+				newTime = new Date(topCandle.getDate().getTime() + (candleType.getSeconds()) * 1000 ); // перешагнули за размер свечи
+				
+				if (tick.getTime() == null) {
+					throw new RuntimeException("trade.getTime() is null");
+				}
+			}
+			
+			if (tick.getTime().after(newTime)) {
+				
+				newTime = CandleList.closestCandleStartTime(tick.getTime(), candleType);
+				
+				if (topCandle != null) {
+					candleProcessContext.onCandleClose(topCandle);
+					// если старая свеча закрыта, и в базу большей свечей не впихнуть
+					// имеет смысл для некратных базе размеров свечи типа 55 или 59 секунд
+					if (topCandle.getDate().equals(newTime)) {
+						return;
+					}
+				}
+				
+				// System.out.println("New candle starting from " + Utils.formatDate(newTime));
+				topCandle = new Candle();
+				topCandle.setDate(newTime);
+				putCandle(topCandle);
+				candleProcessContext.onCandleOpen(topCandle);
+			}
+			
+			double tickPrice =  tick.getPrice();
+			if (tickPrice > topCandle.getHigh()) {
+				topCandle.setHigh(tickPrice);
+			}
+			if (tickPrice < topCandle.getLow()) {
+				topCandle.setLow(tickPrice);
+			}
+			if (topCandle.getOpen() == 0) {
+				topCandle.setOpen(tickPrice);
+			}
+			if (topCandle.getClose() != tickPrice) {
+				topCandle.setClose(tickPrice);
+			}
+			
+			topCandle.setVolume(topCandle.getVolume() + tick.getQuantity());
+			
+			topCandle.putData(tick);
+			
+			candleProcessContext.onCandleChange(topCandle);
+			
+		}
+		
+	}
+	
+	@Override
+	public String toString() {
+		StringBuilder sb= new StringBuilder();
+		for (Date date : map.navigableKeySet()) {
+			sb.append(map.get(date).toString()); sb.append("\n");
+		}
+		return sb.toString();
+	}
+	
+
 	
 }

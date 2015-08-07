@@ -1,6 +1,6 @@
 create table orders
-(session_id char(36),
-transactionid varchar2(200) primary key,
+(server varchar2(20),
+transactionid varchar2(200),
 orderno number,
 secid integer,
 board varchar2(20),

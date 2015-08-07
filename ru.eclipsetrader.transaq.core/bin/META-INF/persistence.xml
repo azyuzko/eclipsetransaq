@@ -20,7 +20,7 @@
 		<class>ru.eclipsetrader.transaq.core.model.BaseFortsContract</class>
 		<class>ru.eclipsetrader.transaq.core.model.BaseFortsMoney</class>
 		<class>ru.eclipsetrader.transaq.core.model.internal.TickTrade</class>
-		
+		<class>ru.eclipsetrader.transaq.core.strategy.StrategyTest</class>
 		<exclude-unlisted-classes>false</exclude-unlisted-classes>
 		<properties>
 			<property name="eclipselink.jdbc.batch-writing" value="Oracle-JDBC"/>

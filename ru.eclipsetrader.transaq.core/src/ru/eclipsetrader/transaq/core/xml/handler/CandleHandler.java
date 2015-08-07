@@ -5,8 +5,8 @@ import org.apache.logging.log4j.Logger;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
+import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.event.Event;
-import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.internal.CandleGraph;
 import ru.eclipsetrader.transaq.core.model.internal.CandleStatus;
 import ru.eclipsetrader.transaq.core.util.Utils;

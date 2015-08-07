@@ -52,8 +52,9 @@ public class OrderHandler extends DefaultHandler {
 			transactionId = attributes.getValue("transactionid");
 			currentOrder = TQOrderTradeService.getInstance().getOrderById(transactionId);
 			if (currentOrder == null) {
-				logger.warn("Order with transactionId = " + transactionId + " not found. Creating new one..");
-				currentOrder = new Order(transactionId);
+				logger.info("Order with transactionId = " + transactionId + " not found. Creating new one..");
+				currentOrder = new Order();
+				currentOrder.setTransactionid(transactionId);
 			}
 			break;
 			
@@ -62,8 +63,9 @@ public class OrderHandler extends DefaultHandler {
 			transactionId = attributes.getValue("transactionid");
 			currentStopOrder = TQOrderTradeService.getInstance().getStopOrderById(transactionId);
 			if (currentStopOrder == null) {
-				logger.warn("StopOrder with transactionId = " + transactionId + " not found. Creating new one..");
-				currentStopOrder = new StopOrder(transactionId);
+				logger.info("StopOrder with transactionId = " + transactionId + " not found. Creating new one..");
+				currentStopOrder = new StopOrder();
+				currentStopOrder.setTransactionid(transactionId);
 			}
 			break;
 		case stoploss:

@@ -5,14 +5,12 @@ import javax.persistence.Id;
 import javax.persistence.IdClass;
 import javax.persistence.Table;
 
-import ru.eclipsetrader.transaq.core.interfaces.ITQKey;
 import ru.eclipsetrader.transaq.core.model.BaseFortsContract;
-import ru.eclipsetrader.transaq.core.model.TQSymbol;
 
 @Entity
 @Table(name="forts_position")
 @IdClass(FortsPositionId.class)
-public class FortsPosition extends BaseFortsContract implements ITQKey {
+public class FortsPosition extends BaseFortsContract {
 
 	Integer secid;
 	@Id
@@ -28,11 +26,6 @@ public class FortsPosition extends BaseFortsContract implements ITQKey {
 	Double sellspotlimit;
 	Double netto;
 	Double kgo;
-	
-	@Override
-	public String getKey() {
-		return String.valueOf(market) + TQSymbol.DELIMITER_MARKET + seccode;
-	}
 	
 	public FortsPosition() {
 		this(null);

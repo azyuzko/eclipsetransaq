@@ -3,11 +3,14 @@ package ru.eclipsetrader.transaq.core.strategy;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import ru.eclipsetrader.transaq.core.account.QuantityCost;
+import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.candle.CandleList;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.indicators.MACD;
@@ -15,7 +18,6 @@ import ru.eclipsetrader.transaq.core.instruments.Instrument;
 import ru.eclipsetrader.transaq.core.interfaces.IAccount;
 import ru.eclipsetrader.transaq.core.interfaces.IProcessingContext;
 import ru.eclipsetrader.transaq.core.model.BuySell;
-import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.PriceType;
 import ru.eclipsetrader.transaq.core.model.QuoteGlass;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
@@ -25,11 +27,11 @@ import ru.eclipsetrader.transaq.core.trades.IDataFeedContext;
 import ru.eclipsetrader.transaq.core.util.Holder;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
-public class Strategy implements IProcessingContext, IStrategy {
+public class Strategy extends StrategyParamsType implements IProcessingContext, IStrategy {
 	
 	public static enum WorkOn {
 		CandleClose,
-		Tick,
+		CandleChange,
 	}
 
 	Logger logger = LogManager.getLogger("Strategy");
@@ -41,19 +43,14 @@ public class Strategy implements IProcessingContext, IStrategy {
 	
 	IDataFeedContext dataFeedContext;
 	IAccount account;
-	PriceType priceType;
-	WorkOn workOn;
-	CandleType candleType;
 	Date currentDate = null;
 	
-	public Strategy(IDataFeedContext dataFeedContext, int fast, int slow, int signal, PriceType priceType, TQSymbol iWatch, TQSymbol iOper, WorkOn workOn, CandleType candleType) {
+	public Strategy(IDataFeedContext dataFeedContext, StrategyParamsType params) {
+		super(params);
 		this.dataFeedContext = dataFeedContext;
-		this.priceType = priceType;
 		this.macd = new MACD(fast, slow, signal);
-		this.candleType = candleType; // before create instruments
-		this.iWatch = new Instrument(iWatch, this, dataFeedContext);
-		this.iOper = new Instrument(iOper, this, dataFeedContext);
-		this.workOn = workOn;
+		this.iWatch = new Instrument(watchSymbol, this, dataFeedContext);
+		this.iOper = new Instrument(operSymbol, this, dataFeedContext);
 	}
 
 	@Override
@@ -81,7 +78,11 @@ public class Strategy implements IProcessingContext, IStrategy {
 
 	public void tick(Instrument i) {
 		if (i == iWatch) {
-			Holder<Date[], double[]> values = i.getCandleStorage().getCandleList(candleType).values(priceType);
+			logger.debug("working on " + i.getSymbol());
+			PriceType _pt = priceType;
+			CandleType _ct = candleType;	
+			
+			Holder<Date[], double[]> values = i.getCandleStorage().getCandleList(_ct).values(_pt);
 			Date[] dates = values.getFirst();
 			double[] inReal = values.getSecond();
 			macd.evaluate(inReal, dates);
@@ -90,6 +91,7 @@ public class Strategy implements IProcessingContext, IStrategy {
 			double[] signal = macd.getOutMACDSignal();
 			double[] hist = macd.getOutMACDHist();
 			if (hist.length > macd.getLookback()) {
+				logger.debug("hist " + hist[hist.length-1] + " -- " + hist[hist.length-2]);
 				if (Math.signum(hist[hist.length-1]) != Math.signum(hist[hist.length-2])) {
 					BuySell bs;
 					if (Math.signum(hist[hist.length-1]) == -1) {
@@ -99,7 +101,9 @@ public class Strategy implements IProcessingContext, IStrategy {
 					}
 					signal(iOper, bs);
 				}
-			}		
+			} else {
+				logger.debug("Not enough history length = " + hist.length + " for lookback " + macd.getLookback());
+			}
 		}
 	}
 
@@ -118,18 +122,46 @@ public class Strategy implements IProcessingContext, IStrategy {
 		}
 		
 	}
+	
+	Lock signalLock = new ReentrantLock();
 
+	int quantity = 4;
+	boolean firstPos = true;
+	
 	private void createSignal(Instrument i, BuySell buySell) {
-		int quantity = 1000;
-		int result = 0;
-		if (buySell == BuySell.B) {
-			result = i.buy(quantity).getQuantity();
+		if (signalLock.tryLock()) {
+			try {
+				logger.info("createSignal " +i.getSymbol() + " " + buySell);
+				
+				int result = 0;
+				if (buySell == BuySell.B) {
+					if (firstPos) {
+						result = i.buy(quantity / 2).getQuantity();
+					} else {
+						result = i.buy(quantity).getQuantity();
+					}
+					
+				} else {
+					if (firstPos) {
+						result = i.sell(quantity / 2).getQuantity();
+					} else {
+						result = i.sell(quantity).getQuantity();
+					}
+				}
+				if (result > 0) {
+					signals.put(i.getSymbol(), new Signal(i.getSymbol(), getDateTime(), buySell, 0));
+					logger.info("Executed " +i.getSymbol() +" signal " + Utils.formatDate(getDateTime()) + " " + buySell + " = " + quantity + " result = " + result);
+					print(slow);
+				}
+				firstPos = false;
+			} catch (Exception e) {
+				logger.error(e);
+				e.printStackTrace();
+			} finally {
+				signalLock.unlock();
+			}
 		} else {
-			result = i.sell(quantity).getQuantity();
-		}
-		if (result > 0) {
-			signals.put(i.getSymbol(), new Signal(i.getSymbol(), getDateTime(), buySell, 0));
-			logger.info("Executed " +i.getSymbol() +" signal " + Utils.formatDate(getDateTime()) + " " + buySell + " = " + quantity + " result = " + result);
+			logger.debug("Already locked for another buysell operation on " + i.getSymbol());
 		}
 	}
 	
@@ -165,9 +197,7 @@ public class Strategy implements IProcessingContext, IStrategy {
 	@Override
 	public void onTick(Instrument instrument, Tick tick) {
 		//System.out.println("onTick: " + instrument.getSymbol() + " " + tick.getTime());
-		if (workOn == WorkOn.Tick) {
-			tick(instrument);
-		}
+		
 	}
 
 	@Override
@@ -177,7 +207,7 @@ public class Strategy implements IProcessingContext, IStrategy {
 
 	@Override
 	public void onCandleClose(Instrument instrument, CandleList candleList, Candle candle) {
-//		System.out.println("onCandleClose: " + instrument.getSymbol() + " " + candle.toString());
+		logger.debug("onCandleClose: " + instrument.getSymbol() + " " + candle.toString());
 		if (workOn == WorkOn.CandleClose) {
 			tick(instrument);
 		}
@@ -192,6 +222,9 @@ public class Strategy implements IProcessingContext, IStrategy {
 	@Override
 	public void onCandleChange(Instrument instrument, CandleList candleList, Candle candle) {
 //		System.out.println("onCandleChange: " + instrument.getSymbol() + " " + candle.toString());
+		if (workOn == WorkOn.CandleChange) {
+			tick(instrument);
+		}
 	}
 	
 
@@ -203,6 +236,7 @@ public class Strategy implements IProcessingContext, IStrategy {
 	@Override
 	public CandleType[] getCandleTypes() {
 		return new CandleType[] { candleType };
+		//return CandleType.values();
 	}
 	
 

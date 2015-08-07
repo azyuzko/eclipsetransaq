@@ -1,14 +1,15 @@
 package ru.eclipsetrader.transaq.core.instruments;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 import ru.eclipsetrader.transaq.core.account.TQAccountService;
+import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.candle.TQCandleService;
 import ru.eclipsetrader.transaq.core.event.InstrumentEvent;
 import ru.eclipsetrader.transaq.core.interfaces.IAccount;
-import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.Quote;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.SymbolGapMap;
@@ -70,10 +71,16 @@ public class TQInstrumentService implements ITQInstrumentService {
 
 			@Override
 			public void OnStart(Instrument[] instruments) {
-				// На старте ищем все инструменты из событий и запускаем на них подписку
-				TQTickTradeService.getInstance().subscribeAllTrades(tickListEvent.getSymbolList());
-				TQQuoteService.getInstance().subscribe(quoteListEvent.getSymbolList());
-				TQQuotationService.getInstance().subscribe(quoteListEvent.getSymbolList());
+				List<TQSymbol> list = new ArrayList<TQSymbol>();
+				for (Instrument i : instruments) {
+					list.add(i.getSymbol());
+					i.init();
+				}
+				
+				// На старте запускаем подписку
+				TQTickTradeService.getInstance().subscribeAllTrades(list);
+				TQQuoteService.getInstance().subscribe(list);
+				TQQuotationService.getInstance().subscribe(list);
 			}
 
 		};

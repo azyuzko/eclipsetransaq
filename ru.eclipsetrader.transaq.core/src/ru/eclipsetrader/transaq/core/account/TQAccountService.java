@@ -15,6 +15,7 @@ import ru.eclipsetrader.transaq.core.interfaces.ITQSecurity;
 import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.PositionType;
+import ru.eclipsetrader.transaq.core.model.QuoteGlass;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.FortsMoneyPosition;
 import ru.eclipsetrader.transaq.core.model.internal.FortsPosition;
@@ -47,10 +48,68 @@ public class TQAccountService implements ITQAccountService, Observer<Holder<Posi
 		this.serverId = serverId;
 	}
 	
-	
+	IAccount fortsAccount = new IAccount() {
+		
+		@Override
+		public QuantityCost sell(TQSymbol symbol, int quantity,
+				QuoteGlass quoteGlass) {
+			System.err.println("Sell1 " + quantity);
+			OrderRequest or = OrderRequest.createByMarketRequest(symbol, BuySell.S, quantity);
+			Order order = TQOrderTradeService.getInstance().createOrder(or);
+			return new QuantityCost(order.getQuantity(), order.getPrice());
+		}
+		
+		@Override
+		public QuantityCost sell(TQSymbol symbol, int quantity, double price) {
+			System.err.println("Sell2 " + quantity);
+			return null;
+		}
+		
+		@Override
+		public void reset() {
+			
+		}
+		
+		@Override
+		public Map<TQSymbol, QuantityCost> getPositions() {
+			Map<TQSymbol, QuantityCost> result = new HashMap<>();
+			for (String seccode : fortsPosition.keySet()) {
+				result.put(new TQSymbol(BoardType.FUT, seccode), new QuantityCost(fortsPosition.get(seccode).getTotalnet(), 0));
+			}
+			return result;
+		}
+		
+		@Override
+		public double getFree() {
+			return fortsMoneyPosition.values().toArray(new FortsMoneyPosition[0])[0].getFree();
+		}
+		
+		@Override
+		public QuantityCost close(TQSymbol symbol, double price) {
+
+			return null;
+		}
+		
+		@Override
+		public QuantityCost buy(TQSymbol symbol, int quantity, QuoteGlass quoteGlass) {
+			System.err.println("Buy " + quantity);
+			OrderRequest or = OrderRequest.createByMarketRequest(symbol, BuySell.B, quantity);
+			Order order = TQOrderTradeService.getInstance().createOrder(or);
+			return new QuantityCost(order.getQuantity(), order.getPrice());
+		}
+		
+		@Override
+		public QuantityCost buy(TQSymbol symbol, int quantity, double price) {
+			System.err.println("Buy " + quantity);
+			return null;
+		}
+	};
 	
 	public IAccount getAccount(TQSymbol symbol) {
-		throw new UnimplementedException();
+		if (symbol.getBoard() == BoardType.FUT) {
+			return fortsAccount;
+		}
+		return null;
 	}
 	
 	public void applyPositionGap(String serverId, Holder<PositionType, Map<String, String>> gapHolder) {
@@ -161,14 +220,18 @@ public class TQAccountService implements ITQAccountService, Observer<Holder<Posi
 
 	@Override
 	public void persist() {
-		DataManager.removeList(DataManager.getList(FortsMoneyPosition.class));
-		DataManager.removeList(DataManager.getList(FortsPosition.class));
-		DataManager.removeList(DataManager.getList(MoneyPosition.class));
-		DataManager.removeList(DataManager.getList(SecurityPosition.class));
-		DataManager.mergeList(fortsMoneyPosition.values());
-		DataManager.mergeList(fortsPosition.values());
-		DataManager.mergeList(securityPosition.values());
-		DataManager.mergeList(moneyPosition.values());
+		try {
+			DataManager.removeList(DataManager.getList(FortsMoneyPosition.class));
+			DataManager.removeList(DataManager.getList(FortsPosition.class));
+			DataManager.removeList(DataManager.getList(MoneyPosition.class));
+			DataManager.removeList(DataManager.getList(SecurityPosition.class));
+			DataManager.mergeList(fortsMoneyPosition.values());
+			DataManager.mergeList(fortsPosition.values());
+			DataManager.mergeList(securityPosition.values());
+			DataManager.mergeList(moneyPosition.values());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
@@ -178,7 +241,7 @@ public class TQAccountService implements ITQAccountService, Observer<Holder<Posi
 			fortsMoneyPosition.put(p.getKey(), p);
 		}
 		for (FortsPosition p : DataManager.getServerObjectList(FortsPosition.class, serverId)) {
-			fortsPosition.put(p.getKey(), p);
+			fortsPosition.put(p.getSeccode(), p);
 		}
 		for (SecurityPosition p : DataManager.getServerObjectList(SecurityPosition.class, serverId)) {
 			securityPosition.put(p.getKey(), p);

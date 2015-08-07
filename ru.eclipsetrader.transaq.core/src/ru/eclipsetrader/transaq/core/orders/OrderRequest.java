@@ -17,7 +17,7 @@ public class OrderRequest {
 	BuySell buysell;
 	boolean byMarket = false;
 	String brokerref;
-	private UnfilledType unfilled = UnfilledType.ImmOrCancel; // немедленно, или отменить
+	private UnfilledType unfilled = UnfilledType.CancelBalance; // немедленно, или отменить ImmOrCancel не работает для FUT
 	private boolean usecredit;
 	private boolean nosplit;
 	private Date expdate;
@@ -38,6 +38,30 @@ public class OrderRequest {
 		OrderRequest orderRequest = new OrderRequest(symbol, bs, quantity);
 		orderRequest.byMarket = true;
 		return orderRequest;
+	}
+
+	public TQSymbol getSymbol() {
+		return symbol;
+	}
+
+	public void setSymbol(TQSymbol symbol) {
+		this.symbol = symbol;
+	}
+
+	public int getHidden() {
+		return hidden;
+	}
+
+	public void setHidden(int hidden) {
+		this.hidden = hidden;
+	}
+
+	public double getPrice() {
+		return price;
+	}
+
+	public int getQuantity() {
+		return quantity;
 	}
 
 	public String createNewOrderCommand() {

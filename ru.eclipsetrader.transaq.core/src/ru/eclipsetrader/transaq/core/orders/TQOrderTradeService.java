@@ -30,7 +30,7 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 	// ключ - transactionId
 	Map<String, OrderRequest> requests = Collections.synchronizedMap(new HashMap<String, OrderRequest>());
 	
-	// ключ - orderno
+	// ключ - transactionId
 	private Map<String, Order> orders = Collections.synchronizedMap(new HashMap<String, Order>());
 	
 	private Map<String, StopOrder> stopOrders = Collections.synchronizedMap(new HashMap<String, StopOrder>());
@@ -49,12 +49,16 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 			
 			if (order.getTransactionid() != null) {
 				// найдем его запрос
-					OrderRequest orderRequest = requests.get(order.getTransactionid());
+				OrderRequest orderRequest = requests.get(order.getTransactionid());
 				if (orderRequest != null) {
 					// оповестим, что пришел запрос
-					orderRequest.notifyAll();
+					synchronized (orderRequest) {
+						orderRequest.notifyAll();						
+					}
+					
 					// удалим запрос
 					requests.remove(order.getTransactionid());
+					
 				} else {
 					logger.info("Order request for " + order.getTransactionid() + " not found. May be request from previous session");
 				}
@@ -63,6 +67,7 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 			}
 			// положим запрос в map
 			put(order);				
+			DataManager.merge(order);
 		}
 	};
 	
@@ -71,6 +76,7 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 		public void update(Trade trade) {
 			logger.info("Received trade = " + trade.getTradeno() + " orderno = " + trade.getOrderno());
 			put(trade);	
+			DataManager.merge(trade);
 		}
 	};
 	
@@ -78,6 +84,7 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 		
 		@Override
 		public void update(StopOrder stopOrder) {
+			logger.info("Received stop order = " + stopOrder.getActiveorderno() + " transactionId = " + stopOrder.getTransactionid());
 			put(stopOrder);
 		}
 		
@@ -110,7 +117,7 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 			// dont push orders without transactionId
 			return;
 		}
-		orders.put(order.getOrderno(), order);
+		orders.put(order.getTransactionid(), order);
 		DataManager.merge(order);
 	}
 	
@@ -180,19 +187,28 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 
 	@Override
 	public Order createOrder(OrderRequest orderRequest) {
-		logger.warn("Create new order:\n" + orderRequest);
 		String command = orderRequest.createNewOrderCommand();
-		CommandResult result = TransaqLibrary.SendCommand(command);
-		if (result.getTransactionId() == null || result.getTransactionId().isEmpty()) {
-			throw new RuntimeException("Null transactionId was returned");
-		}
-		requests.put(result.getTransactionId(), orderRequest);
-		try {
-			orderRequest.wait(TIMEOUT);
-			return getOrderById(result.getTransactionId());
-		} catch (InterruptedException e) {
-			System.err.println("TIMEOUT EXCEPTION while waiting for order " + result.getTransactionId() +"from callback");
-			throw new RuntimeException(e);
+		synchronized (orderRequest) {
+			logger.warn(orderRequest.getSymbol() + " Create new "  + orderRequest.getBuysell() + " order: " + command);
+			CommandResult result = TransaqLibrary.SendCommand(command);
+			if (result.getTransactionId() == null || result.getTransactionId().isEmpty()) {
+				throw new RuntimeException("Null transactionId was returned");
+			}
+			requests.put(result.getTransactionId(), orderRequest);
+			try {
+				logger.debug("begin wait for server response");
+				orderRequest.wait(TIMEOUT);
+				Order order = getOrderById(result.getTransactionId());
+				if (order != null) {
+					logger.debug("received response order " + order.getOrderno());
+				} else {
+					logger.warn("received EMPTY response order!!!");
+				}
+				return order;
+			} catch (InterruptedException e) {
+				System.err.println("TIMEOUT EXCEPTION while waiting for order " + result.getTransactionId() +" from callback");
+				throw new RuntimeException(e);
+			}			
 		}
 	}
 

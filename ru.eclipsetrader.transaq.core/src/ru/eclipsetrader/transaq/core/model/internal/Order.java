@@ -20,8 +20,8 @@ import ru.eclipsetrader.transaq.core.util.Utils;
 @Entity
 public class Order extends ServerObject {
 	
-	@Id
 	String transactionid;
+	@Id
 	String orderno;
 	Integer secid;
 	@Enumerated(EnumType.STRING)
@@ -72,18 +72,13 @@ public class Order extends ServerObject {
 	Double cond_value;
 	
 	public Order() {
-		this(null);
+		super(null);
 	}
 	
 	public Order(String serverId) {
-		this(null, serverId);
+		super(serverId);		
 	}
-	
-	public Order(String transactionId, String serverId) {
-		super(serverId);
-		this.transactionid = transactionId;
-	}
-	
+
 	public String createNewCondOrder() {
 		StringBuilder sb = new StringBuilder();
 		sb.append("<command id=\"newcondorder\">");

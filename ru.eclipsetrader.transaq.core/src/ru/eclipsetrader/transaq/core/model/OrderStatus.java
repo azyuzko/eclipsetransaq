@@ -17,5 +17,6 @@ public enum OrderStatus {
 	wait, // Не наступило время активации
 	watching, // Ожидает наступления условия
 	
-	tp_executed; // ?????? 
+	tp_executed, // ?????? 
+	sl_executed;
 }

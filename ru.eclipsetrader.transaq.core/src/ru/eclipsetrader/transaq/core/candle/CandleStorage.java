@@ -6,7 +6,6 @@ import java.util.TreeMap;
 
 import ru.eclipsetrader.transaq.core.instruments.Instrument;
 import ru.eclipsetrader.transaq.core.interfaces.IProcessingContext;
-import ru.eclipsetrader.transaq.core.model.Candle;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
 
 public class CandleStorage  {
