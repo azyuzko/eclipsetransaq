@@ -9,19 +9,15 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.tictactec.ta.lib.MAType;
-
 import ru.eclipsetrader.transaq.core.account.QuantityCost;
 import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.candle.CandleList;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
-import ru.eclipsetrader.transaq.core.indicators.MA;
 import ru.eclipsetrader.transaq.core.indicators.MACD;
 import ru.eclipsetrader.transaq.core.instruments.Instrument;
 import ru.eclipsetrader.transaq.core.interfaces.IAccount;
 import ru.eclipsetrader.transaq.core.interfaces.IProcessingContext;
 import ru.eclipsetrader.transaq.core.model.BuySell;
-import ru.eclipsetrader.transaq.core.model.MarketType;
 import ru.eclipsetrader.transaq.core.model.PriceType;
 import ru.eclipsetrader.transaq.core.model.QuoteGlass;
 import ru.eclipsetrader.transaq.core.model.StrategyWorkOn;
@@ -32,9 +28,7 @@ import ru.eclipsetrader.transaq.core.trades.IDataFeedContext;
 import ru.eclipsetrader.transaq.core.util.Holder;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
-public class Strategy extends StrategyParamsType implements IProcessingContext, IStrategy {
-	
-
+public class Strategy2 extends StrategyParamsType implements IProcessingContext, IStrategy {
 
 	Logger logger = LogManager.getLogger("Strategy");
 	
@@ -47,7 +41,7 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 	IAccount account;
 	Date currentDate = null;
 	
-	public Strategy(IDataFeedContext dataFeedContext, StrategyParamsType params) {
+	public Strategy2(IDataFeedContext dataFeedContext, StrategyParamsType params) {
 		super(params);
 		this.dataFeedContext = dataFeedContext;
 		this.macd = new MACD(fast, slow, signal);

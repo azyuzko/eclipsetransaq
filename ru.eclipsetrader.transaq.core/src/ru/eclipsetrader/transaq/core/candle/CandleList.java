@@ -10,6 +10,8 @@ import org.apache.commons.lang3.time.DateUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.sun.org.apache.regexp.internal.recompile;
+
 import ru.eclipsetrader.transaq.core.model.PriceType;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
 import ru.eclipsetrader.transaq.core.util.Holder;
@@ -82,11 +84,13 @@ public class CandleList {
 	 * @param toDate дата тоже отсекаетс€
 	 */
 	public void truncHead(Date toDate) {
-		Iterator<Date> itd = map.descendingKeySet().iterator();
-		while (itd.hasNext()) {
-			Date d = itd.next();
-			if (!toDate.after(d)) {
-				itd.remove();
+		synchronized (map) {
+			Iterator<Date> itd = map.descendingKeySet().iterator();
+			while (itd.hasNext()) {
+				Date d = itd.next();
+				if (!toDate.after(d)) {
+					itd.remove();
+				}
 			}
 		}
 	}
@@ -96,12 +100,14 @@ public class CandleList {
 	 * @param toDate дата тоже отсекаетс€
 	 */
 	public void truncTail(Date toDate) {
-		Iterator<Date> itd = map.descendingKeySet().iterator();
-		while (itd.hasNext()) {
-			Date d = itd.next();
-			if (!toDate.before(d)) {
-				itd.remove();
-			}
+		synchronized (map) {
+			Iterator<Date> itd = map.descendingKeySet().iterator();
+			while (itd.hasNext()) {
+				Date d = itd.next();
+				if (!toDate.before(d)) {
+					itd.remove();
+				}
+			}			
 		}
 	}
 	
@@ -110,35 +116,47 @@ public class CandleList {
 	}
 	
 	public Candle getLastCandle() {
-		if (map.size() > 0) {
-			return map.lastEntry().getValue();
-		} else {
-			return null;
+		synchronized (map) {
+			if (map.size() > 0) {
+				return map.lastEntry().getValue();
+			} else {
+				return null;
+			}			
 		}
 	}
 	
 	public void appendCandles(Collection<Candle> candles) {
-		if (candles != null) {
-			// System.out.println("appendCandles size = " + candles.size() + " to " + candleType);
-			for (Candle candle : candles) {
-				map.put(candle.getDate(), candle);
-			}
+		synchronized (map) {
+			if (candles != null) {
+				// System.out.println("appendCandles size = " + candles.size() + " to " + candleType);
+				for (Candle candle : candles) {
+					map.put(candle.getDate(), candle);
+				}
+			}			
 		}
 	}
 	
 	public void putCandle(Candle candle) {
-		map.put(candle.getDate(), candle);
+		synchronized (map) {
+			map.put(candle.getDate(), candle);			
+		}
 	}
 	
 	/**
 	 * »щет ближайшую к указанной дату начала свечи дл€ указанного размера
 	 * ’ороша€ задача дл€ кандидатов на java-разработчиков :)
+	 * 
+	 * ƒл€ некратных размеров пример:
+	 * 21:47:30.145 CANDLE_16S = 21:47:15.000
+	 * 21:47:31.145 CANDLE_16S = 21:47:30.000
+	 * 
+	 * 
 	 * @param toDate дата
 	 * @param candleType размер свечи
 	 * @return
 	 */
 	public static Date closestCandleStartTime(Date toDate, CandleType candleType) {
-		long size = candleType.getSeconds();
+		int size = candleType.getSeconds();
 		switch (candleType) {
 		case CANDLE_1M: return DateUtils.truncate(toDate, Calendar.MINUTE);
 		case CANDLE_1H: return DateUtils.truncate(toDate, Calendar.HOUR);
@@ -147,12 +165,29 @@ public class CandleList {
 		default:
 			break;
 		}
-		Date truncatedDate = DateUtils.truncate(toDate, candleType.getCalendarBase());
-		long delta = toDate.getTime() - truncatedDate.getTime();
-		int mod = (int) (delta % (size * 1000));
 		
-		Date result = DateUtils.addMilliseconds(toDate, -mod);
+		CandleType rounded60CandleType = candleType.getClosest60Candle();
+		// ≈сли свеча некратного размера
+		if (rounded60CandleType != candleType) {
+			Date truncatedDate = DateUtils.truncate(toDate, rounded60CandleType.getCalendarBase());
+			long ms_delta = toDate.getTime() - truncatedDate.getTime();
+			int s_rounded_size = rounded60CandleType.getSeconds();
+			int s_rounded_delta = size - s_rounded_size;
+			int ms_mod = (int) (ms_delta % (s_rounded_size * 1000));
+			if (ms_mod < s_rounded_delta * 1000) {
+				return DateUtils.addMilliseconds(toDate, -ms_mod - s_rounded_size*1000);
+			} else {
+				return DateUtils.addMilliseconds(toDate, -ms_mod);
+			}
+		} else {
+			Date truncatedDate = DateUtils.truncate(toDate, candleType.getCalendarBase());
+			long ms_delta = toDate.getTime() - truncatedDate.getTime();
+			int ms_mod = (int) (ms_delta % (size * 1000));
+			return DateUtils.addMilliseconds(toDate, -ms_mod);
+		}
 		
+		
+		/*
 		// ѕроверим, можно ли полученный результат еще дополнить одной свечей до базы
 		if (DateUtils.addSeconds(result, candleType.getSeconds()).after(DateUtils.ceiling(result, candleType.getCalendarBase())) ) {
 			// нельз€ дополнить
@@ -161,16 +196,16 @@ public class CandleList {
 			return DateUtils.addSeconds(result, -candleType.getSeconds());
 		} else {
 			return result;
-		}
+		}*/
 	}
 	
 	public static void main(String[] args) {
 		
-		Date dt1 = Utils.parseDate("15.02.2015 21:47:56.145");
-		System.out.println(Utils.formatDate(closestCandleStartTime(dt1, CandleType.CANDLE_10S)));
+		Date dt1 = Utils.parseDate("15.02.2015 21:47:01.145");
+		System.out.println(Utils.formatDate(closestCandleStartTime(dt1, CandleType.CANDLE_61S)));
 		//System.out.println(DateUtils.ceiling(dt1, Calendar.MINUTE));
 
-	/*	CandleList cl = new CandleList(CandleType.CANDLE_1H);
+	/*	CandleList cl = new CandleList(CandleType.CANDLE_1M);
 		Candle c1 = new Candle();
 		c1.setDate(Utils.parseDate("16.07.2015 23:00:00.000"));
 		c1.setOpen(1.2);
@@ -199,7 +234,7 @@ public class CandleList {
 
 	
 	public void processTickInCandle(Tick tick, ICandleProcessContext candleProcessContext) {
-		synchronized (this) {
+		synchronized (map) {
 			Candle topCandle = getLastCandle(); // если свечей нет, вернет null
 			
 			Date newTime = new Date(0); // minimal date

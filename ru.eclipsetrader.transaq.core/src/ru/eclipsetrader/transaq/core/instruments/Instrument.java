@@ -146,7 +146,7 @@ public class Instrument implements Closeable {
 
 	public QuantityCost buy(int quantity) {
 		if (glass.getSellStack().size() == 0) {
-			logger.warn("Trying to buy on empty quote glass!");
+			logger.warn(symbol + " "+ Utils.formatTime(context.getDateTime()) + " Trying to buy on empty quote glass!");
 			return new QuantityCost(0,0);
 		} else {
 			QuantityCost bought = context.getAccount().buy(symbol, quantity, glass);
@@ -157,7 +157,7 @@ public class Instrument implements Closeable {
 	
 	public QuantityCost sell(int quantity) {
 		if (glass.getBuyStack().size() == 0) {
-			logger.warn(Utils.formatTime(context.getDateTime()) + " Trying to sell on empty quote glass!");
+			logger.warn(symbol + " " + Utils.formatTime(context.getDateTime()) + " Trying to sell on empty quote glass!");
 			return new QuantityCost(0,0);
 		} else {
 			QuantityCost sold = context.getAccount().sell(symbol, quantity, glass);

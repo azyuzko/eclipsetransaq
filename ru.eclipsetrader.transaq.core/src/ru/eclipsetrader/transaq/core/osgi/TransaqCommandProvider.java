@@ -15,6 +15,7 @@ import ru.eclipsetrader.transaq.core.instruments.TQInstrumentService;
 import ru.eclipsetrader.transaq.core.interfaces.IAccount;
 import ru.eclipsetrader.transaq.core.interfaces.ITransaqServer;
 import ru.eclipsetrader.transaq.core.model.PriceType;
+import ru.eclipsetrader.transaq.core.model.StrategyWorkOn;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Order;
 import ru.eclipsetrader.transaq.core.model.internal.Security;
@@ -25,7 +26,6 @@ import ru.eclipsetrader.transaq.core.quotes.TQQuoteService;
 import ru.eclipsetrader.transaq.core.securities.TQSecurityService;
 import ru.eclipsetrader.transaq.core.services.ITransaqServerManager;
 import ru.eclipsetrader.transaq.core.strategy.Strategy;
-import ru.eclipsetrader.transaq.core.strategy.Strategy.WorkOn;
 import ru.eclipsetrader.transaq.core.strategy.StrategyParamsType;
 import ru.eclipsetrader.transaq.core.trades.TQTickTradeService;
 import ru.eclipsetrader.transaq.core.util.Utils;
@@ -217,8 +217,8 @@ public class TransaqCommandProvider implements CommandProvider {
 			sp.setSlow(12);
 			sp.setSignal(9);
 			sp.setPriceType(PriceType.CLOSE);
-			sp.setWorkOn(WorkOn.CandleClose);
-			sp.setWatchSymbol(TQSymbol.RTSI);
+			sp.setWorkOn(StrategyWorkOn.CandleClose);
+			sp.setWatchSymbol(TQSymbol.RIU5);
 			sp.setOperSymbol(TQSymbol.SiU5);
 			sp.setCandleType(CandleType.CANDLE_15S);
 			

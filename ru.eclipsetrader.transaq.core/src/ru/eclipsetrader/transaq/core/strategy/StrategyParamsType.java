@@ -4,8 +4,8 @@ import java.lang.reflect.Field;
 
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.model.PriceType;
+import ru.eclipsetrader.transaq.core.model.StrategyWorkOn;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
-import ru.eclipsetrader.transaq.core.strategy.Strategy.WorkOn;
 
 public class StrategyParamsType {
 
@@ -13,7 +13,7 @@ public class StrategyParamsType {
 	TQSymbol operSymbol;
 
 	PriceType priceType;
-	WorkOn workOn;
+	StrategyWorkOn workOn;
 	CandleType candleType;
 	int fast;
 	int slow;
@@ -62,11 +62,11 @@ public class StrategyParamsType {
 		this.priceType = priceType;
 	}
 
-	public WorkOn getWorkOn() {
+	public StrategyWorkOn getWorkOn() {
 		return workOn;
 	}
 
-	public void setWorkOn(WorkOn workOn) {
+	public void setWorkOn(StrategyWorkOn workOn) {
 		this.workOn = workOn;
 	}
 
@@ -106,7 +106,7 @@ public class StrategyParamsType {
 		StrategyParamsType sp = new StrategyParamsType();
 		sp.setFast(12);
 		sp.setOperSymbol(TQSymbol.BRQ5);
-		sp.setWorkOn(WorkOn.CandleClose);
+		sp.setWorkOn(StrategyWorkOn.CandleClose);
 		
 		StrategyParamsType sp2 = new StrategyParamsType(sp);
 		System.out.println(sp2.getWorkOn());

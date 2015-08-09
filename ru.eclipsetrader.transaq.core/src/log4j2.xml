@@ -23,12 +23,12 @@
 		<logger name="ru.eclipsetrader.transaq.core.library.TransaqLibrary"	level="info" />
 		<logger name="ru.eclipsetrader.transaq.core.orders.TQOrderTradeService"	level="info" />
 		<logger name="ru.eclipsetrader.transaq.core.instruments.Instrument"	level="info" />
-		<logger name="XMLTrace"	level="off" />
-		<logger name="Instrument"	level="info" />
+		<logger name="XMLTrace"	level="error" />
+		<logger name="Instrument"	level="error" />
 		<logger name="QuoteGlass"	level="info" />
 		<logger name="Quotation"	level="warn" />
 		<logger name="DataFeeder"	level="warn" />		
-		<logger name="Strategy"	level="info">
+		<logger name="Strategy"	level="warn">
 			<!-- AppenderRef ref="StrategyLogger" /-->
 		</logger>
 		<Root level="info">

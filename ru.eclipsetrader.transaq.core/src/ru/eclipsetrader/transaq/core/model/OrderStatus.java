@@ -18,5 +18,6 @@ public enum OrderStatus {
 	watching, // Ожидает наступления условия
 	
 	tp_executed, // ?????? 
-	sl_executed;
+	sl_executed,
+	tp_forwarding;
 }

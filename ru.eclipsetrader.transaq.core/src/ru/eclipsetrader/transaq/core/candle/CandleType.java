@@ -2,8 +2,8 @@ package ru.eclipsetrader.transaq.core.candle;
 
 import java.util.Calendar;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 
 import ru.eclipsetrader.transaq.core.exception.UnimplementedException;
 
@@ -24,15 +24,14 @@ public enum CandleType {
 	CANDLE_8S(8),
 	CANDLE_9S(9),
 	CANDLE_10S(10),
-	CANDLE_11S(11),
 	CANDLE_15S(15),
 	CANDLE_20S(20),
-	CANDLE_29S(29),
 	CANDLE_30S(30),
-	CANDLE_45S(45),
-	CANDLE_50S(50),
-	CANDLE_55S(55),
-	CANDLE_59S(59),
+	CANDLE_11S(11),
+	CANDLE_16S(16),
+	CANDLE_21S(21),
+	CANDLE_31S(31),
+	CANDLE_61S(61), // 
 	
 	CANDLE_1M(60), 
 	CANDLE_2M(120), 
@@ -53,7 +52,12 @@ public enum CandleType {
 	CANDLE_1W(604800), 
 	CANDLE_2W(1209600);
 	
-	Map<Integer, CandleType> enumStorage = new HashMap<Integer, CandleType>(); 
+	static TreeMap<Integer, CandleType> enumStorage = new TreeMap<Integer, CandleType>();
+	static {
+		for (CandleType ct : CandleType.values()) {
+			enumStorage.put(ct.seconds, ct);
+		}
+	}
 
 	int seconds;
 	
@@ -65,10 +69,41 @@ public enum CandleType {
 		return this.seconds;
 	}
 	
+	/**
+	 * Возвращает ближайший меньший (к текущему) размер свечи, кратный 60/30/20/15 (минутам/секундам)
+	 * Т.е. для 11S вернет 10S
+	 * Для 35S вернет 30S
+	 * 
+	 */
+	public CandleType getClosest60Candle() {
+		NavigableMap<Integer, CandleType> tail = enumStorage.headMap(getSeconds(), true);
+		for (Integer seconds : tail.descendingKeySet()) {
+			if (seconds % 60 == 0 
+				|| seconds % 30 == 0
+				|| seconds % 20 == 0
+				|| seconds % 15 == 0
+				) {
+				return enumStorage.get(seconds);
+			}
+		}
+		return this;
+	}
+	
+	public CandleType ceilingCandleType() {
+		return enumStorage.ceilingEntry(this.getSeconds()).getValue();
+	}
+	
+	public CandleType floorCandleType() {
+		return enumStorage.floorEntry(this.getSeconds()).getValue();
+	}
+	
+	public static void main(String[] args) {
+		System.out.println(CandleType.CANDLE_61S.getClosest60Candle());
+	}
 	
 	/**
-	 * Ищет базовый размер свечи 1 день/час/минута и т.п.
-	 * @return
+	 * Получает базовый размер свечи 1 день/час/минута и т.п.
+	 * @return Calendar.MINUTE, Calendar.HOUR и т.п.
 	 */
 	public int getCalendarBase() {
 		switch (this) {
@@ -85,12 +120,11 @@ public enum CandleType {
 		case CANDLE_11S:
 		case CANDLE_15S:
 		case CANDLE_20S:
-		case CANDLE_29S:
 		case CANDLE_30S:
-		case CANDLE_45S:
-		case CANDLE_50S:
-		case CANDLE_55S:
-		case CANDLE_59S:
+		case CANDLE_16S:
+		case CANDLE_21S:
+		case CANDLE_31S:
+		case CANDLE_61S:
 			return Calendar.MINUTE;
 		
 		
