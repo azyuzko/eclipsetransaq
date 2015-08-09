@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -113,20 +114,29 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 		}
 	}
 
-	public void print(Date[] dates, double[] macd, double[] macdSignal, double[] macdHist) {
-		print(dates.length, macd, macdSignal, macdHist);
+	public String print(Date[] dates, double[] macd, double[] macdSignal, double[] macdHist) {
+		return print(dates.length, dates, macd, macdSignal, macdHist);
 	}
 	
-	public void print(int lastCount, Date[] dates, double[] macd, double[] macdSignal, double[] macdHist) {
-		logger.info("date   :" + Utils.printArray(macd.getDates(lastCount), "%6tR"));
-		logger.info("macd   :" + Utils.printArray(macd.getOutMACD(lastCount), "%6.2f"));
-		logger.info("signal :" + Utils.printArray(macd.getOutMACDSignal(lastCount), "%6.2f"));
-		logger.info("hist   :" + Utils.printArray(macd.getOutMACDHist(lastCount), "%6.2f"));
+	private Object[] last(Object[] values, int lastCount) {
+		return ArrayUtils.subarray(values, values.length - lastCount, values.length);
+	}
+
+	private double[] last(double[] values, int lastCount) {
+		return ArrayUtils.subarray(values, values.length - lastCount, values.length);
+	}
+	
+	public String print(int lastCount, Date[] dates, double[] macd, double[] macdSignal, double[] macdHist) {
+		StringBuilder sb = new StringBuilder();
+		sb.append("date   :" + Utils.printArray(last(dates, lastCount), "%6tR"));
+		sb.append("macd   :" + Utils.printArray(last(macd, lastCount), "%6.2f"));
+		sb.append("signal :" + Utils.printArray(last(macdSignal, lastCount), "%6.2f"));
+		sb.append("hist   :" + Utils.printArray(last(macdHist, lastCount), "%6.2f"));
 		
 		for (Signal signal : signals.values()) {
-			logger.info(signal);
+			sb.append(signal);
 		}
-		
+		return sb.toString();
 	}
 	
 	Lock signalLock = new ReentrantLock();
@@ -157,7 +167,8 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 				if (result > 0) {
 					signals.put(i.getSymbol(), new Signal(i.getSymbol(), getDateTime(), buySell, price));
 					logger.info("Executed " +i.getSymbol() +" signal " + Utils.formatDate(getDateTime()) + " " + buySell + " = " + quantity + " result = " + result);
-					print(slow);
+					String log = print(slow, macd.getDates(), macd.getOutMACD(), macd.getOutMACDSignal(), macd.getOutMACDHist());
+					logger.info(log);
 				}
 				firstPos = false;
 			} catch (Exception e) {
@@ -184,7 +195,6 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 		}
 		
 	}
-
 
 	@Override
 	public void start(IAccount account) {

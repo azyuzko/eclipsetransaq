@@ -29,16 +29,31 @@ public class Candle {
 	// используется для расчета других типов цен
 	TreeMap<Date, List<Holder<Double, Integer>>> ticks = new TreeMap<Date, List<Holder<Double, Integer>>>();
 	
-	public void putData(Tick tick) {
+	public void processTick(Tick tick) {
 		Date date = tick.getTime();
-		double price = tick.getPrice();
-		int volume = tick.getQuantity();
+		double tickPrice = tick.getPrice();
+
+		if (tickPrice > high) {
+			high = tickPrice;
+		}
+		if (tickPrice < low) {
+			low = tickPrice;
+		}
+		if (open == 0) {
+			open = tickPrice;
+		}
+		if (close != tickPrice) {
+			close = tickPrice;
+		}
+		
+		volume += tick.getQuantity();
+
 		List<Holder<Double, Integer>> list = ticks.get(date);
 		if (list == null) {
 			list = new ArrayList<Holder<Double,Integer>>();
 			ticks.put(date, list);
 		}
-		list.add(new Holder<Double, Integer>(price, volume));
+		list.add(new Holder<Double, Integer>(tickPrice, tick.getQuantity()));
 	}
 
 	@Override

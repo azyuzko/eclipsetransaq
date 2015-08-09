@@ -261,30 +261,6 @@ public class DatabaseManager  {
 		}
 	}
 	
-	static OracleConnection connection = null;
-	static ReadDBThread readThread;
-
-	public static OracleConnection getConnection()
-	{
-		try {
-			if (connection == null) {
-				Class.forName("oracle.jdbc.OracleDriver");
-				connection = (OracleConnection) DriverManager.getConnection(
-				        Settings.DB_CONNECTION_STRING,
-				        Settings.DB_USERNAME,
-				        Settings.DB_PASSWORD);
-			}
-			return connection;
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-	
-	public DatabaseManager() {
-
-	}
-	
-	
 	public static void writeInputEvent(String sessionId, String data) {
 		XMLDataEvent event = new XMLDataEvent();
 		event.setData(data);
