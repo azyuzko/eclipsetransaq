@@ -94,9 +94,13 @@ public class StrategyTest {
 						for (StrategyWorkOn workOn : new StrategyWorkOn[] {StrategyWorkOn.CandleClose} ) {
 							for (CandleType candleType : new CandleType[] {
 									CandleType.CANDLE_15S, CandleType.CANDLE_20S, CandleType.CANDLE_30S, CandleType.CANDLE_1M,
-									CandleType.CANDLE_16S, CandleType.CANDLE_21S, CandleType.CANDLE_31S, CandleType.CANDLE_61S
+									CandleType.CANDLE_16S, CandleType.CANDLE_21S, CandleType.CANDLE_31S, CandleType.CANDLE_61S,
+									CandleType.CANDLE_17S, CandleType.CANDLE_22S, CandleType.CANDLE_32S, CandleType.CANDLE_62S
 									} ) {
-								for (PriceType priceType : new PriceType[] {PriceType.CLOSE}) {
+								for (PriceType priceType : new PriceType[] {
+										PriceType.CLOSE, PriceType.WEIGHTED_CLOSE,
+										//PriceType.VOLUME_WEIGHTED, PriceType.TYPICAL, PriceType.MED
+										}) {
 									// create params
 									StrategyParamsType sp = new StrategyParamsType();
 									sp.setFast(fast);
@@ -138,7 +142,7 @@ public class StrategyTest {
 		logger.info("Completed!");
 		logger.info("Sorted size = " + sorted.size());
 		
-		for (Double free : (new TreeMap<Double, List<String>>(sorted.tailMap(10000.0))).descendingKeySet()) {
+		for (Double free : (new TreeMap<Double, List<String>>(sorted.tailMap(10000.0))).keySet()) {
 			for (String name : sorted.get(free)) {
 				System.out.println("Free: " + free + " = " +  name.substring(0, Math.min(2000, name.length()-1)));
 			}

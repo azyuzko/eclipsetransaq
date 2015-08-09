@@ -32,7 +32,7 @@ public class StrategyJob implements Callable<Holder<Double, String>> {
 
 		IAccount account = macd.getAccount();			
 		Double free = account.getFree();
-		String desc = index + " FREE: " + free + " " + macd + ": " + account.toString();
+		String desc = String.format("%d FREE: %f %s: %s", index, free, macd.toString(), account.toString());
 		logger.info("Complete " + desc );
 		this.macd = null;
 		return new Holder<Double, String>(free, desc);

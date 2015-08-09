@@ -57,9 +57,8 @@ public class Candle {
 		case HIGH: return getHigh();
 		case LOW: return getLow();
 		case MED: return (getHigh() + getLow()) / 2;
-		case TYPICAL: return (getHigh() + getLow() + getClose()) / 3;
+		//case TYPICAL: return (getHigh() + getLow() + getClose()) / 3; вообще ни о чем
 		case WEIGHTED_CLOSE: return (getHigh() + getLow() + 2 * getClose()) / 4;
-		case WEIGHTED3_CLOSE: return (getHigh() + getLow() + 3 * getClose()) / 5;
 		case VOLUME_WEIGHTED: {
 			double full = 0;
 			for (Date tickDate : ticks.keySet()) {
@@ -68,6 +67,17 @@ public class Candle {
 				}
 			}
 			return full / getVolume();
+		}
+		case LAST_1SEC_CLOSE: {
+			double full = 0;
+			int volume = 0;
+			for (Date tickDate : ticks.keySet()) {
+				for (Holder<Double, Integer> x : ticks.get(tickDate)) {
+					full += x.getFirst() * x.getSecond();
+					volume += x.getSecond();
+				}
+			}
+			return full / volume;
 		}
 		default:
 			throw new UnimplementedException();
@@ -140,7 +150,7 @@ public class Candle {
 		
 		System.out.println(c.getPriceValueByType(PriceType.MED));
 		System.out.println(c.getPriceValueByType(PriceType.VOLUME_WEIGHTED));
-		System.out.println(c.getPriceValueByType(PriceType.TYPICAL));
+		//System.out.println(c.getPriceValueByType(PriceType.TYPICAL));
 		System.out.println(c.getPriceValueByType(PriceType.WEIGHTED_CLOSE));
 	}
 

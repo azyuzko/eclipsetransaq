@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -281,7 +282,7 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 
 	@Override
 	public String toString() {
-		return "STR fast= " + macd.getOptInFastPeriod() + ", slow= " + macd.getOptInSlowPeriod() + ", signal= " + macd.getOptInSignalPeriod() + " iWatch= " + (iWatch != null ? iWatch.getSymbol() : "null") + " iOper= " + (iOper != null ? iOper.getSymbol() : "null") + " " + workOn + " " +candleType + " " + priceType;
+		return "STR fast= " + macd.getOptInFastPeriod() + ", slow= " + macd.getOptInSlowPeriod() + ", signal= " + macd.getOptInSignalPeriod() + " iWatch= " + (iWatch != null ? iWatch.getSymbol() : "null") + " iOper= " + (iOper != null ? iOper.getSymbol() : "null") + " " + workOn + " " +candleType + " " + StringUtils.leftPad(priceType.toString(), 15);
 	}
 
 	@Override
