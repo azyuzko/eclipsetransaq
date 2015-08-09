@@ -113,11 +113,11 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 		}
 	}
 
-	public void print() {
-		print(macd.getDates().length);
+	public void print(Date[] dates, double[] macd, double[] macdSignal, double[] macdHist) {
+		print(dates.length, macd, macdSignal, macdHist);
 	}
 	
-	public void print(int lastCount) {
+	public void print(int lastCount, Date[] dates, double[] macd, double[] macdSignal, double[] macdHist) {
 		logger.info("date   :" + Utils.printArray(macd.getDates(lastCount), "%6tR"));
 		logger.info("macd   :" + Utils.printArray(macd.getOutMACD(lastCount), "%6.2f"));
 		logger.info("signal :" + Utils.printArray(macd.getOutMACDSignal(lastCount), "%6.2f"));
