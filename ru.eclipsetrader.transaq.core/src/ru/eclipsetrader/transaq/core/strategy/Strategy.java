@@ -11,19 +11,15 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.tictactec.ta.lib.MAType;
-
 import ru.eclipsetrader.transaq.core.account.QuantityCost;
 import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.candle.CandleList;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
-import ru.eclipsetrader.transaq.core.indicators.MA;
 import ru.eclipsetrader.transaq.core.indicators.MACD;
 import ru.eclipsetrader.transaq.core.instruments.Instrument;
 import ru.eclipsetrader.transaq.core.interfaces.IAccount;
 import ru.eclipsetrader.transaq.core.interfaces.IProcessingContext;
 import ru.eclipsetrader.transaq.core.model.BuySell;
-import ru.eclipsetrader.transaq.core.model.MarketType;
 import ru.eclipsetrader.transaq.core.model.PriceType;
 import ru.eclipsetrader.transaq.core.model.QuoteGlass;
 import ru.eclipsetrader.transaq.core.model.StrategyWorkOn;
@@ -40,10 +36,12 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 
 	Logger logger = LogManager.getLogger("Strategy");
 	
-	private MACD macd;
+	private MACD macdBr;
+	private MACD macdSi;
 
-	public Instrument iWatch;
-	public Instrument iOper;
+	public Instrument iBR;
+	public Instrument iRI;
+	public Instrument iSi;
 	
 	IDataFeedContext dataFeedContext;
 	IAccount account;
@@ -52,11 +50,11 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 	public Strategy(IDataFeedContext dataFeedContext, StrategyParamsType params) {
 		super(params);
 		this.dataFeedContext = dataFeedContext;
-		this.macd = new MACD(fast, slow, signal);
-		this.iWatch = new Instrument(watchSymbol, this, dataFeedContext);
-		if (operSymbol != null) {
-			this.iOper = new Instrument(operSymbol, this, dataFeedContext);
-		}
+		this.macdBr = new MACD(fast, slow, signal);
+		this.macdSi = new MACD(6, 15, 9);
+		this.iBR = new Instrument(TQSymbol.BRQ5, this, dataFeedContext);
+		this.iSi = new Instrument(TQSymbol.SiU5, this, dataFeedContext);
+		this.iRI = new Instrument(TQSymbol.RIU5, this, dataFeedContext);
 	}
 
 	@Override
@@ -75,47 +73,43 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 	}
 
 	public MACD getMacd() {
-		return macd;
+		return macdBr;
 	}
 
 	public void setMacd(MACD macd) {
-		this.macd = macd;
+		this.macdBr = macd;
 	}
 
 	public void tick(Instrument i) {
-		if (i == iWatch) {
+		if (i.getSymbol().equals(TQSymbol.BRQ5)) {
 			logger.debug("working on " + i.getSymbol());
 			PriceType _pt = priceType;
 			CandleType _ct = candleType;	
 			
-			Holder<Date[], double[]> values = i.getCandleStorage().getCandleList(_ct).values(_pt);
-			Date[] dates = values.getFirst();
-			double[] inReal = values.getSecond();
-			macd.evaluate(inReal, dates);
+			Holder<Date[], double[]> valuesBR = iBR.getCandleStorage().getCandleList(_ct).values(_pt);
+			Holder<Date[], double[]> valuesSi = iSi.getCandleStorage().getCandleList(_ct).values(_pt);
+			macdBr.evaluate(valuesBR.getSecond(), valuesBR.getFirst());
+			macdSi.evaluate(valuesSi.getSecond(), valuesSi.getFirst());
 			
-			double[] m = macd.getOutMACD();
-			double[] signal = macd.getOutMACDSignal();
-			double[] hist = macd.getOutMACDHist();
-			if (hist.length > macd.getLookback()) {
-				logger.debug("hist " + hist[hist.length-1] + " -- " + hist[hist.length-2]);
-				if (Math.signum(hist[hist.length-1]) != Math.signum(hist[hist.length-2])) {
+			double[] histBR = macdBr.getOutMACDHist();
+			if (histBR.length > macdBr.getLookback()) {
+				logger.debug("hist " + histBR[histBR.length-1] + " -- " + histBR[histBR.length-2]);
+				if ((Math.signum(histBR[histBR.length-1]) != Math.signum(histBR[histBR.length-2]))
+						&& (Math.abs(histBR[histBR.length-2]) < Math.abs(histBR[histBR.length-3]))
+						&& (Math.abs(histBR[histBR.length-1]) > 0.001)
+						) {
 					BuySell bs;
-					if (Math.signum(hist[hist.length-1]) == -1) {
+					if (Math.signum(histBR[histBR.length-1]) == -1) {
 						bs = BuySell.B;
 					} else {
 						bs = BuySell.S;
 					}
-					Instrument iSignal = (iOper != null ? iOper : iWatch);
-					signal(iSignal, bs, values.getSecond()[values.getSecond().length-1]);
+					signal(iSi, bs, valuesBR, valuesSi);
 				}
 			} else {
-				logger.debug("Not enough history length = " + hist.length + " for lookback " + macd.getLookback());
+				logger.debug("Not enough history length = " + histBR.length + " for lookback " + macdBr.getLookback());
 			}
 		}
-	}
-
-	public String print(Date[] dates, double[] macd, double[] macdSignal, double[] macdHist) {
-		return print(dates.length, dates, macd, macdSignal, macdHist);
 	}
 	
 	private Object[] last(Object[] values, int lastCount) {
@@ -126,49 +120,47 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 		return ArrayUtils.subarray(values, values.length - lastCount, values.length);
 	}
 	
-	public String print(int lastCount, Date[] dates, double[] macd, double[] macdSignal, double[] macdHist) {
-		StringBuilder sb = new StringBuilder();
-		sb.append("date   :" + Utils.printArray(last(dates, lastCount), "%6tR"));
-		sb.append("macd   :" + Utils.printArray(last(macd, lastCount), "%6.2f"));
-		sb.append("signal :" + Utils.printArray(last(macdSignal, lastCount), "%6.2f"));
-		sb.append("hist   :" + Utils.printArray(last(macdHist, lastCount), "%6.2f"));
-		
-		for (Signal signal : signals.values()) {
-			sb.append(signal);
-		}
-		return sb.toString();
-	}
 	
 	Lock signalLock = new ReentrantLock();
 
-	int quantity = 4;
+	int quantity = 1;
 	boolean firstPos = true;
 	
-	private void createSignal(Instrument i, BuySell buySell, double price) {
+	private void createSignal(Instrument i, BuySell buySell, Holder<Date[], double[]> valuesBR, Holder<Date[], double[]> valuesSi) {
 		if (signalLock.tryLock()) {
 			try {
-				logger.info("createSignal " +i.getSymbol() + " " + buySell + " price = " + price);
+				double priceBR = valuesBR.getSecond()[valuesBR.getSecond().length-1];
+				double priceSi = valuesSi.getSecond()[valuesSi.getSecond().length-1];
+				logger.info("createSignal " +i.getSymbol() + " " + buySell + " BR = " + priceBR + ", Si = " + priceSi);
 				
 				int result = 0;
 				if (buySell == BuySell.B) {
 					if (firstPos) {
-						result = i.buy(quantity / 2).getQuantity();
+						result = i.buy(quantity).getQuantity();
 					} else {
 						result = i.buy(quantity).getQuantity();
 					}
 					
 				} else {
 					if (firstPos) {
-						result = i.sell(quantity / 2).getQuantity();
+						result = i.sell(quantity).getQuantity();
 					} else {
 						result = i.sell(quantity).getQuantity();
 					}
 				}
 				if (result > 0) {
-					signals.put(i.getSymbol(), new Signal(i.getSymbol(), getDateTime(), buySell, price));
+					signals.put(i.getSymbol(), new Signal(i.getSymbol(), getDateTime(), buySell, priceBR));
+					
+					StringBuilder sb = new StringBuilder();
+					sb.append("\n");
+					sb.append("date      :" + Utils.printArray(last(valuesBR.getFirst(), 20), "%7tR") + "\n");
+					sb.append("Br prices :" + Utils.printArray(last(valuesBR.getSecond(), 20), "%7.2f") + "\n");
+					sb.append("BR hist   :" + Utils.printArray(last(macdBr.getOutMACDHist(), 20), "%7.4f") + "\n");
+					sb.append("Si price  :" + Utils.printArray(last(valuesSi.getSecond(), 20), "%7.0f") + "\n");
+					sb.append("Si hist   :" + Utils.printArray(last(macdSi.getOutMACDHist(), 20), "%7.2f") + "\n");
+					
 					logger.info("Executed " +i.getSymbol() +" signal " + Utils.formatDate(getDateTime()) + " " + buySell + " = " + quantity + " result = " + result);
-					String log = print(slow, macd.getDates(), macd.getOutMACD(), macd.getOutMACDSignal(), macd.getOutMACDHist());
-					logger.info(log);
+					logger.info(sb.toString());
 				}
 				firstPos = false;
 			} catch (Exception e) {
@@ -184,13 +176,13 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 	
 	HashMap<TQSymbol, Signal> signals = new HashMap<>();
 	
-	public void signal(Instrument i, BuySell buySell, double price) {
+	public void signal(Instrument i, BuySell buySell, Holder<Date[], double[]> valuesBR, Holder<Date[], double[]> valuesSi) {
 		logger.debug("signal " + i.getSymbol() + " " + buySell);
 		if (signals.size() == 0) {
-			createSignal(i, buySell, price);
+			createSignal(i, buySell, valuesBR, valuesSi);
 		} else {
 			if (signals.get(i.getSymbol()) != null && signals.get(i.getSymbol()).getBuySell() != buySell) {
-				createSignal(i, buySell, price);
+				createSignal(i, buySell, valuesBR, valuesSi);
 			}
 		}
 		
@@ -200,10 +192,10 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 	public void start(IAccount account) {
 		logger.debug("Prepare to start...");
 		this.account = account;
-		if (iOper != null) {
-			dataFeedContext.OnStart(new Instrument[] { iWatch, iOper });
+		if (iSi != null) {
+			dataFeedContext.OnStart(new Instrument[] { iBR, iSi });
 		} else {
-			dataFeedContext.OnStart(new Instrument[] { iWatch });
+			dataFeedContext.OnStart(new Instrument[] { iBR });
 		}
 		logger.debug("Started.");
 	}
@@ -262,11 +254,7 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 
 	@Override
 	public TQSymbol[] getSymbols() {
-		if (iOper.getSymbol() != null) {
-			return new TQSymbol[] {iWatch.getSymbol(), iOper.getSymbol() } ;
-		} else {
-			return new TQSymbol[] {iWatch.getSymbol() } ;
-		}
+		return new TQSymbol[] {iBR.getSymbol(), iSi.getSymbol(), iRI.getSymbol() } ;
 	}
 
 
@@ -282,17 +270,19 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 
 	@Override
 	public Instrument getInstrument(TQSymbol symbol) {
-		if (symbol.equals(iWatch.getSymbol())) {
-			return iWatch;
-		} else if (symbol.equals(iOper.getSymbol())) {
-			return iOper;
+		if (symbol.equals(iBR.getSymbol())) {
+			return iBR;
+		} else if (symbol.equals(iSi.getSymbol())) {
+			return iSi;
+		} else if (symbol.equals(iRI.getSymbol())) {
+			return iRI;
 		}
 		return null;
 	}
 
 	@Override
 	public String toString() {
-		return "STR fast= " + macd.getOptInFastPeriod() + ", slow= " + macd.getOptInSlowPeriod() + ", signal= " + macd.getOptInSignalPeriod() + " iWatch= " + (iWatch != null ? iWatch.getSymbol() : "null") + " iOper= " + (iOper != null ? iOper.getSymbol() : "null") + " " + workOn + " " +candleType + " " + StringUtils.leftPad(priceType.toString(), 15);
+		return "STR fast= " + macdBr.getOptInFastPeriod() + ", slow= " + macdBr.getOptInSlowPeriod() + ", signal= " + macdBr.getOptInSignalPeriod() + " iWatch= " + (iBR != null ? iBR.getSymbol() : "null") + " iOper= " + (iSi != null ? iSi.getSymbol() : "null") + " " + workOn + " " +candleType + " " + StringUtils.leftPad(priceType.toString(), 15);
 	}
 
 	@Override

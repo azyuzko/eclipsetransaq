@@ -212,15 +212,16 @@ public class TransaqCommandProvider implements CommandProvider {
 		}
 		
 		case "start": {
+			
+			ci.execute("transaq subscribeall");
+			
 			StrategyParamsType sp = new StrategyParamsType();
 			sp.setFast(6);
 			sp.setSlow(12);
 			sp.setSignal(9);
 			sp.setPriceType(PriceType.CLOSE);
 			sp.setWorkOn(StrategyWorkOn.CandleClose);
-			sp.setWatchSymbol(TQSymbol.RIU5);
-			sp.setOperSymbol(TQSymbol.SiU5);
-			sp.setCandleType(CandleType.CANDLE_15S);
+			sp.setCandleType(CandleType.CANDLE_16S);
 			
 			Strategy s = new Strategy(TQInstrumentService.getInstance().getDefaultDataFeedContext(), sp);
 			

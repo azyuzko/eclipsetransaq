@@ -9,15 +9,16 @@ import ru.eclipsetrader.transaq.core.model.TQSymbol;
 
 public class StrategyParamsType {
 
-	TQSymbol watchSymbol;
-	TQSymbol operSymbol;
-
 	PriceType priceType;
 	StrategyWorkOn workOn;
 	CandleType candleType;
 	int fast;
 	int slow;
 	int signal;
+	
+	int fastSi;
+	int slowSi;
+	int signalSi;
 	
 	public StrategyParamsType()  {
 		
@@ -36,22 +37,6 @@ public class StrategyParamsType {
 				}
 			}
 		}
-	}
-
-	public TQSymbol getWatchSymbol() {
-		return watchSymbol;
-	}
-
-	public void setWatchSymbol(TQSymbol watchSymbol) {
-		this.watchSymbol = watchSymbol;
-	}
-
-	public TQSymbol getOperSymbol() {
-		return operSymbol;
-	}
-
-	public void setOperSymbol(TQSymbol operSymbol) {
-		this.operSymbol = operSymbol;
 	}
 
 	public PriceType getPriceType() {
@@ -105,8 +90,6 @@ public class StrategyParamsType {
 	public static void main(String[] args) {
 		StrategyParamsType sp = new StrategyParamsType();
 		sp.setFast(12);
-		sp.setOperSymbol(TQSymbol.BRQ5);
-		sp.setWorkOn(StrategyWorkOn.CandleClose);
 		
 		StrategyParamsType sp2 = new StrategyParamsType(sp);
 		System.out.println(sp2.getWorkOn());

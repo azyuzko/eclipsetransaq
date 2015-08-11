@@ -61,14 +61,17 @@ public class StrategyTest {
 	}
 
 	public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
-		Date fromDate = Utils.parseDate("07.08.2015 20:31:00.000");
-		Date toDate = Utils.parseDate("07.08.2015 23:55:00.000");
+		
+		Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
+		
+		Date fromDate = Utils.parseDate("10.08.2015 19:00:00.000");
+		Date toDate = Utils.parseDate("10.08.2015 20:35:00.000");
 		
 		DataFeeder dataFeeder = new DataFeeder(fromDate, toDate, 
-				TQSymbol.workingSymbolSet().toArray(new TQSymbol[0])); 
-		// new TQSymbol[] {TQSymbol.EuU5, TQSymbol.SiU5});
+				//TQSymbol.workingSymbolSet().toArray(new TQSymbol[0])); 
+		 new TQSymbol[] {TQSymbol.SiU5, TQSymbol.BRQ5});
 		
-		ExecutorService service = Executors.newFixedThreadPool(10);
+		ExecutorService service = Executors.newFixedThreadPool(2);
 
 		List<Future<Holder<Double, String>>> lr = new ArrayList<>();
 		
@@ -85,7 +88,7 @@ public class StrategyTest {
 		
 		//symbolList.add(new Holder<TQSymbol, TQSymbol>(TQSymbol.SiU5, null));
 		symbolList.add(new Holder<TQSymbol, TQSymbol>(TQSymbol.BRQ5, TQSymbol.SiU5));
-
+		System.out.println("Data loaded..");
 		int index = 0;
 		for (int fast = 6; fast <= 6; fast++) {
 			for (int slow = 12; slow <= 12; slow++) {
@@ -93,12 +96,13 @@ public class StrategyTest {
 					for (Holder<TQSymbol, TQSymbol> symbols : symbolList) {
 						for (StrategyWorkOn workOn : new StrategyWorkOn[] {StrategyWorkOn.CandleClose} ) {
 							for (CandleType candleType : new CandleType[] {
-									CandleType.CANDLE_15S, CandleType.CANDLE_20S, CandleType.CANDLE_30S, CandleType.CANDLE_1M,
-									CandleType.CANDLE_16S, CandleType.CANDLE_21S, CandleType.CANDLE_31S, CandleType.CANDLE_61S,
-									CandleType.CANDLE_17S, CandleType.CANDLE_22S, CandleType.CANDLE_32S, CandleType.CANDLE_62S
+									//CandleType.CANDLE_15S,// CandleType.CANDLE_20S, CandleType.CANDLE_30S, 
+									CandleType.CANDLE_16S//, CandleType.CANDLE_21S, CandleType.CANDLE_31S, 
+									//CandleType.CANDLE_17S
+									, CandleType.CANDLE_22S
 									} ) {
 								for (PriceType priceType : new PriceType[] {
-										PriceType.CLOSE, PriceType.WEIGHTED_CLOSE,
+										PriceType.CLOSE//, PriceType.WEIGHTED_CLOSE,
 										//PriceType.VOLUME_WEIGHTED, PriceType.TYPICAL, PriceType.MED
 										}) {
 									// create params
@@ -108,8 +112,6 @@ public class StrategyTest {
 									sp.setSignal(signal);
 									sp.setPriceType(priceType);
 									sp.setWorkOn(workOn);
-									sp.setWatchSymbol(symbols.getFirst());
-									sp.setOperSymbol(symbols.getSecond());
 									sp.setCandleType(candleType);
 									
 									Strategy macd = new Strategy(dataFeeder, sp);

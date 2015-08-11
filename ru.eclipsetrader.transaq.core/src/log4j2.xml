@@ -28,7 +28,7 @@
 		<logger name="QuoteGlass"	level="info" />
 		<logger name="Quotation"	level="warn" />
 		<logger name="DataFeeder"	level="warn" />		
-		<logger name="Strategy"	level="warn">
+		<logger name="Strategy"	level="debug">
 			<!-- AppenderRef ref="StrategyLogger" /-->
 		</logger>
 		<Root level="info">

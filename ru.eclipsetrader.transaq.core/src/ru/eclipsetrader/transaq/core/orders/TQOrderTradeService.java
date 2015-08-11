@@ -51,6 +51,10 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 				// найдем его запрос
 				OrderRequest orderRequest = requests.get(order.getTransactionid());
 				if (orderRequest != null) {
+					
+					// положим запрос в map
+					put(order);	
+					
 					// оповестим, что пришел запрос
 					synchronized (orderRequest) {
 						orderRequest.notifyAll();						
@@ -65,8 +69,7 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 			} else {
 				logger.info("Order " + order.getOrderno()  + " has no transactionId. May be order came from another Transaq server");
 			}
-			// положим запрос в map
-			put(order);				
+						
 			DataManager.merge(order);
 		}
 	};
