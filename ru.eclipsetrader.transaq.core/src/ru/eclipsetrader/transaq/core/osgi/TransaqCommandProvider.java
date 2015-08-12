@@ -185,9 +185,9 @@ public class TransaqCommandProvider implements CommandProvider {
 		}
 		
 		case "subscribeall": {
-			TQTickTradeService.getInstance().subscribeTicks(TQSymbol.workingSymbolSet());
+			TQTickTradeService.getInstance().subscribeAllTrades(TQSymbol.workingSymbolSet());
 			TQQuoteService.getInstance().subscribe(TQSymbol.workingSymbolSet());
-			TQQuotationService.getInstance().subscribe(TQSymbol.workingSymbolSet());
+			//TQQuotationService.getInstance().subscribe(TQSymbol.workingSymbolSet());
 			break;
 		}
 		
@@ -213,10 +213,8 @@ public class TransaqCommandProvider implements CommandProvider {
 		
 		case "start": {
 			
-			ci.execute("transaq subscribeall");
-			
 			StrategyParamsType sp = new StrategyParamsType();
-			sp.setFast(6);
+			sp.setFast(4);
 			sp.setSlow(12);
 			sp.setSignal(9);
 			sp.setPriceType(PriceType.CLOSE);

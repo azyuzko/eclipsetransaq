@@ -43,18 +43,18 @@ public class TQSymbol implements ITQKey, Serializable {
 	
 	public static TQSymbol BRV5 = new TQSymbol(BoardType.FUT, "BRV5"); // BR-10.15
 
-	public static TQSymbol USD000000TOD = new TQSymbol(BoardType.CETS, "USD000000TOD"); // USD Tod
-	public static TQSymbol USD000UTSTOM = new TQSymbol(BoardType.CETS, "USD000UTSTOM"); // USD Tom
-	public static TQSymbol EUR_RUB__TOD = new TQSymbol(BoardType.CETS, "EUR_RUB__TOD"); // 
-	public static TQSymbol EUR_RUB__TOM = new TQSymbol(BoardType.CETS, "EUR_RUB__TOM"); //
+//	public static TQSymbol USD000000TOD = new TQSymbol(BoardType.CETS, "USD000000TOD"); // USD Tod
+//	public static TQSymbol USD000UTSTOM = new TQSymbol(BoardType.CETS, "USD000UTSTOM"); // USD Tom
+//	public static TQSymbol EUR_RUB__TOD = new TQSymbol(BoardType.CETS, "EUR_RUB__TOD"); // 
+//	public static TQSymbol EUR_RUB__TOM = new TQSymbol(BoardType.CETS, "EUR_RUB__TOM"); //
 //	public static TQSymbol USD000TODTOM = new TQSymbol(BoardType.CETS, "USD000TODTOM"); // USD Tod/Tom
 //	public static TQSymbol EUR000TODTOM = new TQSymbol(BoardType.CETS, "EUR000TODTOM"); //
 	
-	public static TQSymbol VTBR = new TQSymbol(BoardType.TQBR, "VTBR");
-	public static TQSymbol GAZP = new TQSymbol(BoardType.TQBR, "GAZP");
-	public static TQSymbol SBER = new TQSymbol(BoardType.TQBR, "SBER");
-	public static TQSymbol LKOH = new TQSymbol(BoardType.TQBR, "LKOH");
-	public static TQSymbol ROSN = new TQSymbol(BoardType.TQBR, "ROSN");
+//	public static TQSymbol VTBR = new TQSymbol(BoardType.TQBR, "VTBR");
+//	public static TQSymbol GAZP = new TQSymbol(BoardType.TQBR, "GAZP");
+//	public static TQSymbol SBER = new TQSymbol(BoardType.TQBR, "SBER");
+//	public static TQSymbol LKOH = new TQSymbol(BoardType.TQBR, "LKOH");
+//	public static TQSymbol ROSN = new TQSymbol(BoardType.TQBR, "ROSN");
 
 	public static TQSymbol RTSI = new TQSymbol(BoardType.INDEXR, "RTSI");
 	public static TQSymbol RTS2 = new TQSymbol(BoardType.INDEXR, "RTS2");

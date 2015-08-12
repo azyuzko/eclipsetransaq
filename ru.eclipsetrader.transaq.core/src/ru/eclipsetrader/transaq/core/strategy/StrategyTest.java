@@ -64,14 +64,14 @@ public class StrategyTest {
 		
 		Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
 		
-		Date fromDate = Utils.parseDate("10.08.2015 19:00:00.000");
-		Date toDate = Utils.parseDate("10.08.2015 20:35:00.000");
+		Date fromDate = Utils.parseDate("11.08.2015 19:00:00.000");
+		Date toDate = Utils.parseDate("11.08.2015 23:35:00.000");
 		
 		DataFeeder dataFeeder = new DataFeeder(fromDate, toDate, 
 				//TQSymbol.workingSymbolSet().toArray(new TQSymbol[0])); 
 		 new TQSymbol[] {TQSymbol.SiU5, TQSymbol.BRQ5});
 		
-		ExecutorService service = Executors.newFixedThreadPool(2);
+		ExecutorService service = Executors.newFixedThreadPool(4);
 
 		List<Future<Holder<Double, String>>> lr = new ArrayList<>();
 		
@@ -87,19 +87,18 @@ public class StrategyTest {
 		}
 		
 		//symbolList.add(new Holder<TQSymbol, TQSymbol>(TQSymbol.SiU5, null));
-		symbolList.add(new Holder<TQSymbol, TQSymbol>(TQSymbol.BRQ5, TQSymbol.SiU5));
+		symbolList.add(new Holder<TQSymbol, TQSymbol>(TQSymbol.RIU5, TQSymbol.SiU5));
 		System.out.println("Data loaded..");
 		int index = 0;
-		for (int fast = 6; fast <= 6; fast++) {
-			for (int slow = 12; slow <= 12; slow++) {
-				for (int signal = 9; signal <= 9; signal++) {
+		for (int fast = 3; fast <= 8; fast++) {
+			for (int slow = 12; slow <= 20; slow++) {
+				for (int signal = fast-2; signal <= slow; signal++) {
 					for (Holder<TQSymbol, TQSymbol> symbols : symbolList) {
 						for (StrategyWorkOn workOn : new StrategyWorkOn[] {StrategyWorkOn.CandleClose} ) {
 							for (CandleType candleType : new CandleType[] {
-									//CandleType.CANDLE_15S,// CandleType.CANDLE_20S, CandleType.CANDLE_30S, 
-									CandleType.CANDLE_16S//, CandleType.CANDLE_21S, CandleType.CANDLE_31S, 
-									//CandleType.CANDLE_17S
-									, CandleType.CANDLE_22S
+									CandleType.CANDLE_21S, 
+									CandleType.CANDLE_31S,
+									CandleType.CANDLE_1M, 
 									} ) {
 								for (PriceType priceType : new PriceType[] {
 										PriceType.CLOSE//, PriceType.WEIGHTED_CLOSE,

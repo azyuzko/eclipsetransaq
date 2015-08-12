@@ -50,8 +50,8 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 	public Strategy(IDataFeedContext dataFeedContext, StrategyParamsType params) {
 		super(params);
 		this.dataFeedContext = dataFeedContext;
-		this.macdBr = new MACD(fast, slow, signal);
-		this.macdSi = new MACD(6, 15, 9);
+		this.macdBr = new MACD(6, 12, 9);
+		this.macdSi = new MACD(fast, slow, signal);
 		this.iBR = new Instrument(TQSymbol.BRQ5, this, dataFeedContext);
 		this.iSi = new Instrument(TQSymbol.SiU5, this, dataFeedContext);
 		this.iRI = new Instrument(TQSymbol.RIU5, this, dataFeedContext);
@@ -86,17 +86,17 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 			PriceType _pt = priceType;
 			CandleType _ct = candleType;	
 			
-			Holder<Date[], double[]> valuesBR = iBR.getCandleStorage().getCandleList(_ct).values(_pt);
+			Holder<Date[], double[]> valuesBR = iBR.getCandleStorage().getCandleList(CandleType.CANDLE_16S).values(PriceType.CLOSE);
 			Holder<Date[], double[]> valuesSi = iSi.getCandleStorage().getCandleList(_ct).values(_pt);
 			macdBr.evaluate(valuesBR.getSecond(), valuesBR.getFirst());
 			macdSi.evaluate(valuesSi.getSecond(), valuesSi.getFirst());
 			
 			double[] histBR = macdBr.getOutMACDHist();
 			if (histBR.length > macdBr.getLookback()) {
-				logger.debug("hist " + histBR[histBR.length-1] + " -- " + histBR[histBR.length-2]);
 				if ((Math.signum(histBR[histBR.length-1]) != Math.signum(histBR[histBR.length-2]))
 						&& (Math.abs(histBR[histBR.length-2]) < Math.abs(histBR[histBR.length-3]))
-						&& (Math.abs(histBR[histBR.length-1]) > 0.001)
+						&& (Math.signum(histBR[histBR.length-2]) == Math.signum(histBR[histBR.length-3]))
+						&& (Math.abs(histBR[histBR.length-1]) > 0.0005)
 						) {
 					BuySell bs;
 					if (Math.signum(histBR[histBR.length-1]) == -1) {
@@ -192,11 +192,7 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 	public void start(IAccount account) {
 		logger.debug("Prepare to start...");
 		this.account = account;
-		if (iSi != null) {
-			dataFeedContext.OnStart(new Instrument[] { iBR, iSi });
-		} else {
-			dataFeedContext.OnStart(new Instrument[] { iBR });
-		}
+		dataFeedContext.OnStart(new Instrument[] { iBR, iSi, iRI });
 		logger.debug("Started.");
 	}
 
@@ -247,7 +243,7 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 
 	@Override
 	public CandleType[] getCandleTypes() {
-		return new CandleType[] { candleType };
+		return new CandleType[] { CandleType.CANDLE_16S, candleType };
 		//return CandleType.values();
 	}
 	
@@ -282,7 +278,7 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 
 	@Override
 	public String toString() {
-		return "STR fast= " + macdBr.getOptInFastPeriod() + ", slow= " + macdBr.getOptInSlowPeriod() + ", signal= " + macdBr.getOptInSignalPeriod() + " iWatch= " + (iBR != null ? iBR.getSymbol() : "null") + " iOper= " + (iSi != null ? iSi.getSymbol() : "null") + " " + workOn + " " +candleType + " " + StringUtils.leftPad(priceType.toString(), 15);
+		return "STR fast= " + macdSi.getOptInFastPeriod() + ", slow= " + macdSi.getOptInSlowPeriod() + ", signal= " + macdSi.getOptInSignalPeriod() + " iWatch= " + (iBR != null ? iBR.getSymbol() : "null") + " iOper= " + (iSi != null ? iSi.getSymbol() : "null") + " " + workOn + " " +candleType + " " + StringUtils.leftPad(priceType.toString(), 15);
 	}
 
 	@Override

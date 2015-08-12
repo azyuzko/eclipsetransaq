@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.commons.lang3.time.DateUtils;
@@ -88,7 +89,7 @@ public class DataFeeder implements IDataFeedContext {
 		List<TickTrade> ticks = DataManager.getTickList(dateFrom, dateTo, symbols);
 		ConcurrentSkipListMap<Long, List<TickTrade>> result = new ConcurrentSkipListMap<>();
 		for (TickTrade tick : ticks) {
-			long time = tick.getTime().getTime();
+			long time = tick.getReceived().getTime();
 			List<TickTrade> list = result.get(time);
 			if (list == null) {
 				list = new ArrayList<TickTrade>();
