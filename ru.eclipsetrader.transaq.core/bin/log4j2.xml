@@ -33,6 +33,7 @@
 		</logger>
 		<Root level="info">
 			<AppenderRef ref="Console" />
+			<AppenderRef ref="StrategyLogger" />
 		</Root>
 	</Loggers>
 </Configuration>

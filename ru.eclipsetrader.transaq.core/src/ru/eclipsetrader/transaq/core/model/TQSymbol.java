@@ -58,7 +58,7 @@ public class TQSymbol implements ITQKey, Serializable {
 
 	public static TQSymbol RTSI = new TQSymbol(BoardType.INDEXR, "RTSI");
 	public static TQSymbol RTS2 = new TQSymbol(BoardType.INDEXR, "RTS2");
-	public static TQSymbol MICEX = new TQSymbol(BoardType.INDEXR, "MICEX");
+	//public static TQSymbol MICEX = new TQSymbol(BoardType.INDEXR, "MICEX");
 	
 	public static List<TQSymbol> workingSymbolSet() {
 		ArrayList<TQSymbol> result = new ArrayList<TQSymbol>();
