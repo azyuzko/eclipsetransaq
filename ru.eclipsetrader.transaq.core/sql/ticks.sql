@@ -9,6 +9,7 @@ price number(20,6),
 quantity number(10),
 period varchar2(20),
 openinterest number(10),
+received timestamp,
 constraint pk_ticks primary key (board, seccode, time, tradeno)
 )
 organization index;

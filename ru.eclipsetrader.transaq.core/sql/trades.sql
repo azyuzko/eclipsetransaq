@@ -20,5 +20,6 @@ yield number(20,6),
 accruedint number(20,6),
 tradetype varchar2(50),
 settlecode varchar2(50),
-currentpos number(20,6)
+currentpos number(20,6),
+received timestamp
 );

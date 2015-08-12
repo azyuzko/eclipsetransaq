@@ -28,6 +28,10 @@ public abstract class Tick extends ServerObject implements ITQTickTrade {
 	
 	@Temporal(TemporalType.TIMESTAMP)
 	Date time;
+	
+	@Temporal(TemporalType.TIMESTAMP)
+	Date received;
+	
 	double price;
 	int quantity;
 	@Enumerated(EnumType.STRING)
@@ -60,6 +64,7 @@ public abstract class Tick extends ServerObject implements ITQTickTrade {
 
 	public Tick(String serverId) {
 		super(serverId);
+		received = new Date();
 	}
 
 	public String getTradeno() {
