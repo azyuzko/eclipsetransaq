@@ -20,6 +20,6 @@ public interface IDataFeedContext {
 	IInstrumentEvent<List<Tick>> getTicksFeeder();
 	IInstrumentEvent<List<Quote>> getQuotesFeeder();
 	IInstrumentEvent<List<SymbolGapMap>> getQuotationGapsFeeder();
-	List<Candle> getCandleList(TQSymbol symbol, CandleType candleType, Date fromDate, int count);
+	List<Candle> getCandleList(TQSymbol symbol, CandleType candleType, Date onDate, int count);
 
 }

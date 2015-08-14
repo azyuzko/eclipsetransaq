@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import ru.eclipsetrader.transaq.core.account.QuantityCost;
+import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.candle.CandleList;
 import ru.eclipsetrader.transaq.core.candle.CandleStorage;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
@@ -83,11 +84,7 @@ public class Instrument implements Closeable {
 		this.symbol = symbol;
 		this.context = context;
 		this.dataFeedContext = dataFeedContext;
-		this.candleStorage = new CandleStorage(this, context);
-		for (CandleType ct : context.getCandleTypes()) {
-			CandleList candleList = this.candleStorage.getCandleList(ct);
-			candleList.appendCandles(dataFeedContext.getCandleList(symbol, ct, new Date(), CANDLE_HISTORY_COUNT));
-		}		
+		this.candleStorage = new CandleStorage(this, context);	
 		this.quotation =  new Quotation(symbol.getBoard(), symbol.getSeccode());
 		this.glass = new QuoteGlass();
 	}
@@ -104,8 +101,20 @@ public class Instrument implements Closeable {
 	/**
 	 * Обнуляет содержимое внутренних объектов инструмента
 	 */
-	public void init() {
-		logger.debug("Reset instrument settings " + symbol + " " + Integer.toHexString(hashCode()) + " context " + Integer.toHexString(context.hashCode()));
+	public void init(Date initTime) {
+		logger.debug("Init instrument settings " + symbol + " " + Integer.toHexString(hashCode()) + " context " + Integer.toHexString(context.hashCode()));
+		
+		for (CandleType candleType : context.getCandleTypes()) {
+			CandleList candleList = this.candleStorage.getCandleList(candleType);
+			CandleType requestType = candleType;
+			if (candleType == CandleType.CANDLE_61S || candleType == CandleType.CANDLE_62S) {
+				requestType = CandleType.CANDLE_1M;
+			}
+			List<Candle> list = dataFeedContext.getCandleList(symbol, requestType, initTime, CANDLE_HISTORY_COUNT);
+			logger.info("Append history for " + symbol + "  " + requestType + " from " + Utils.formatDate(initTime) + " list.size = " + list.size());
+			candleList.appendCandles(list);
+		}	
+		
 		dataFeedContext.getQuotesFeeder().addObserver(symbol, iQuotesObserver);
 		dataFeedContext.getTicksFeeder().addObserver(symbol, iTickObserver);
 		dataFeedContext.getQuotationGapsFeeder().addObserver(symbol, iQuotationObserver);
@@ -139,6 +148,7 @@ public class Instrument implements Closeable {
 	}
 		
 	public void processTrade(Tick tick) {
+		logger.debug("Process trade " + symbol + " " + tick.getSeccode());
 		// добавим сделку в график свечей
 		candleStorage.processTrade(tick);
 		context.onTick(this, tick);

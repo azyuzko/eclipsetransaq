@@ -27,7 +27,7 @@ import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class TQCandleService implements ITQCandleService {
 	
-	Logger logger = LogManager.getLogger(TQCandleService.class);
+	Logger logger = LogManager.getLogger("TQCandleService");
 
 	// Ключ - период свечи в секундах
 	TreeMap<Integer, CandleKind> candleKinds = new TreeMap<Integer, CandleKind>();
@@ -65,7 +65,7 @@ public class TQCandleService implements ITQCandleService {
 	Observer<List<CandleKind>> candleKindObserver = new Observer<List<CandleKind>>() {
 		@Override
 		public void update(List<CandleKind> candleKindList) {
-			candleKindList.clear();
+			candleKinds.clear();
 			for (CandleKind ck : candleKindList) {
 				candleKinds.put(ck.getPeriod(), ck);
 			}

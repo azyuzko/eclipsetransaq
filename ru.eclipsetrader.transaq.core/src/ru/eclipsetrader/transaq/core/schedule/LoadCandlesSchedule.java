@@ -17,7 +17,7 @@ import ru.eclipsetrader.transaq.core.server.TransaqServer;
 
 public class LoadCandlesSchedule {
 	
-	static Logger logger = LogManager.getLogger(LoadCandlesSchedule.class);
+	static Logger logger = LogManager.getLogger("LoadCandlesSchedule");
 	
 	static ScheduledExecutorService executorService = Executors.newScheduledThreadPool(10);
 
@@ -36,6 +36,7 @@ public class LoadCandlesSchedule {
 					break;
 				}
 				int delay = candleType.getSeconds() * count / 2; 
+				logger.debug("scheduling delay for " + candleType +  " = " + delay);
 				executorService.scheduleWithFixedDelay(new LoadCandlesRunnable(symbol, candleType, count), 0, delay, TimeUnit.SECONDS);
 			}
 		}

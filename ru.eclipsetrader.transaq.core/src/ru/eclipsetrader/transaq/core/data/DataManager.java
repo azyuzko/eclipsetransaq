@@ -98,7 +98,7 @@ public class DataManager {
 			stmt.setTimestamp(4, new Timestamp(fromDate.getTime()));
 			stmt.setTimestamp(5, new Timestamp(toDate.getTime()));
 			ResultSet rs = stmt.executeQuery();
-			if (rs.next()) {
+			while (rs.next()) {
 				Candle candle = new Candle();
 				candle.setDate(rs.getTimestamp(1));
 				candle.setOpen(rs.getDouble(2));
@@ -107,6 +107,7 @@ public class DataManager {
 				candle.setHigh(rs.getDouble(5));
 				candle.setVolume(rs.getInt(6));
 				candle.setOi(rs.getInt(7));
+				result.add(candle);
 			}
 			rs.close();
 			stmt.close();
@@ -633,7 +634,7 @@ public class DataManager {
 		
 		Date fromDate = Utils.parseDate("03.08.2015 09:30:00.000");
 		Date toDate = Utils.parseDate("03.08.2015 12:15:00.000");
-		TQSymbol[] symbols = new TQSymbol[] { TQSymbol.BRQ5, TQSymbol.SiU5, TQSymbol.BRU5} ;
+		TQSymbol[] symbols = new TQSymbol[] { TQSymbol.SiU5, TQSymbol.BRU5} ;
 		List<Quote> ql = getQuoteList(fromDate, toDate, symbols);
 		List<TickTrade> tl = getTickList(fromDate, toDate, symbols);
 		List<SymbolGapMap> gl = getQuotationGapList(fromDate, toDate, symbols);

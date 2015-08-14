@@ -99,6 +99,16 @@ public class Candle {
 		}
 	}
 	
+	public CandleColor getCandleColor() {
+		if (open > close) {
+			return CandleColor.BLACK;
+		} else if (open < close) {
+			return CandleColor.WHITE;
+		} else {
+			return CandleColor.NO_COLOR;
+		}
+	}
+
 	public Date getDate() {
 		return date;
 	}

@@ -1,18 +1,22 @@
 package ru.eclipsetrader.transaq.core.strategy;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.DateUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import ru.eclipsetrader.transaq.core.account.QuantityCost;
 import ru.eclipsetrader.transaq.core.candle.Candle;
+import ru.eclipsetrader.transaq.core.candle.CandleColor;
 import ru.eclipsetrader.transaq.core.candle.CandleList;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.indicators.MACD;
@@ -22,7 +26,6 @@ import ru.eclipsetrader.transaq.core.interfaces.IProcessingContext;
 import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.PriceType;
 import ru.eclipsetrader.transaq.core.model.QuoteGlass;
-import ru.eclipsetrader.transaq.core.model.StrategyWorkOn;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Quotation;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
@@ -32,17 +35,18 @@ import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class Strategy extends StrategyParamsType implements IProcessingContext, IStrategy {
 	
-
+	HashMap<TQSymbol, List<Signal>> signals = new HashMap<>();
 
 	Logger logger = LogManager.getLogger("Strategy");
-	
-	private MACD macdBr;
-	private MACD macdSi;
 
 	public Instrument iBR;
 	public Instrument iRI;
 	public Instrument iSi;
-	
+
+	MACD macdBr = new MACD(fast, slow, signal);
+	MACD macdRI = new MACD(fast, slow, signal);
+	MACD macdSi = new MACD(fast, slow, signal);
+
 	IDataFeedContext dataFeedContext;
 	IAccount account;
 	Date currentDate = null;
@@ -50,8 +54,6 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 	public Strategy(IDataFeedContext dataFeedContext, StrategyParamsType params) {
 		super(params);
 		this.dataFeedContext = dataFeedContext;
-		this.macdBr = new MACD(6, 12, 9);
-		this.macdSi = new MACD(fast, slow, signal);
 		this.iBR = new Instrument(TQSymbol.BRQ5, this, dataFeedContext);
 		this.iSi = new Instrument(TQSymbol.SiU5, this, dataFeedContext);
 		this.iRI = new Instrument(TQSymbol.RIU5, this, dataFeedContext);
@@ -72,42 +74,199 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 		}
 	}
 
-	public MACD getMacd() {
-		return macdBr;
-	}
-
-	public void setMacd(MACD macd) {
-		this.macdBr = macd;
-	}
-
+	boolean opened = false;
+	BuySell bs;
+	
+	Date lastPosition = null;
+	
 	public void tick(Instrument i) {
-		if (i.getSymbol().equals(TQSymbol.BRQ5)) {
-			logger.debug("working on " + i.getSymbol());
+		if (i.getSymbol().equals(TQSymbol.BRQ5) /*|| i.getSymbol().equals(TQSymbol.RIU5)*/) {
+			
 			PriceType _pt = priceType;
 			CandleType _ct = candleType;	
 			
-			Holder<Date[], double[]> valuesBR = iBR.getCandleStorage().getCandleList(CandleType.CANDLE_16S).values(PriceType.CLOSE);
+			Holder<Date[], double[]> valuesBr = iBR.getCandleStorage().getCandleList(_ct).values(_pt);
+			Holder<Date[], double[]> valuesRI = iRI.getCandleStorage().getCandleList(_ct).values(_pt);
 			Holder<Date[], double[]> valuesSi = iSi.getCandleStorage().getCandleList(_ct).values(_pt);
-			macdBr.evaluate(valuesBR.getSecond(), valuesBR.getFirst());
+
+			macdBr.evaluate(valuesBr.getSecond(), valuesBr.getFirst());
+			macdRI.evaluate(valuesRI.getSecond(), valuesRI.getFirst());
 			macdSi.evaluate(valuesSi.getSecond(), valuesSi.getFirst());
+
+			double[] histBr = macdBr.getOutMACDHist();
+			double[] histRI = macdRI.getOutMACDHist();
+			double[] histSi = macdSi.getOutMACDHist();
 			
-			double[] histBR = macdBr.getOutMACDHist();
-			if (histBR.length > macdBr.getLookback()) {
-				if ((Math.signum(histBR[histBR.length-1]) != Math.signum(histBR[histBR.length-2]))
-						&& (Math.abs(histBR[histBR.length-2]) < Math.abs(histBR[histBR.length-3]))
-						&& (Math.signum(histBR[histBR.length-2]) == Math.signum(histBR[histBR.length-3]))
-						&& (Math.abs(histBR[histBR.length-1]) > 0.0005)
-						) {
-					BuySell bs;
-					if (Math.signum(histBR[histBR.length-1]) == -1) {
-						bs = BuySell.B;
+			if (	histBr.length > macdBr.getLookback() &&
+					histRI.length > macdRI.getLookback() &&
+					histSi.length > macdSi.getLookback() 
+					) {
+
+				StringBuilder sb = new StringBuilder();
+				sb.append("\ndate      :" + Utils.printArray(last(valuesBr.getFirst(), 20), "%10tR") + ", current = " + Utils.formatTime(getDateTime()) + " \n");					
+				sb.append("BR price  :" + Utils.printArray(last(valuesBr.getSecond(), 20), "%10.2f") + "\n");
+				sb.append("BR hist  :" + Utils.printArray(last(macdBr.getOutMACDHist(), 20), "%10.4f") + "\n");
+				sb.append("RI price  :" + Utils.printArray(last(valuesRI.getSecond(), 20), "%10.0f") + "\n");
+				sb.append("RI hist  :" + Utils.printArray(last(macdRI.getOutMACDHist(), 20), "%10.2f") + "\n");
+				sb.append("Si price  :" + Utils.printArray(last(valuesSi.getSecond(), 20), "%10.0f") + "\n");
+				sb.append("Si hist  :" + Utils.printArray(last(macdSi.getOutMACDHist(), 20), "%10.2f") + "\n");
+				
+
+				if (lastPosition != null && DateUtils.addMinutes(lastPosition, 2).after(getDateTime())) {
+					logger.debug("Not passed 2 minutes from last position = " + Utils.formatTime(lastPosition) + "  current = " + Utils.formatTime(getDateTime()));
+					return;
+				}
+				
+				logger.debug(sb.toString());
+
+				bs = null;
+				// 
+				double hist_br_const = 0.007;
+				if (i.getSymbol().equals(TQSymbol.BRQ5)) {
+					if (!opened) {
+						if (Math.signum(histBr[histBr.length-1]) == Math.signum(histBr[histBr.length-2]) &&
+							Math.abs(histBr[histBr.length-1]) > hist_br_const &&
+							Math.abs(histBr[histBr.length-2]) < Math.abs(histBr[histBr.length-1]) &&
+							Math.abs(histBr[histBr.length-3]) < Math.abs(histBr[histBr.length-2])
+								) {
+							logger.debug("hist > " + hist_br_const);
+							bs = (Math.signum(histBr[histBr.length-1]) == -1) ? BuySell.B : BuySell.S;
+							opened = true;
+						}
 					} else {
-						bs = BuySell.S;
+						
+						if (Math.signum(histBr[histBr.length-1]) == Math.signum(histBr[histBr.length-2]) &&
+								Math.abs(histBr[histBr.length-3]) > Math.abs(histBr[histBr.length-2]) &&
+								Math.abs(histBr[histBr.length-2]) > Math.abs(histBr[histBr.length-1]) &&
+								(Math.abs(histBr[histBr.length-2]) - Math.abs(histBr[histBr.length-1])) < 0.001
+								) {
+							bs = (Math.signum(histBr[histBr.length-1]) == -1) ? BuySell.B : BuySell.S;
+							opened = false;
+						} else
+							
+						if (Math.signum(histBr[histBr.length-1]) != Math.signum(histBr[histBr.length-2])) {
+							bs = (Math.signum(histBr[histBr.length-1]) == -1) ? BuySell.B : BuySell.S;
+							opened = false;
+						} else 							
+						
+						if (Math.signum(histSi[histSi.length-1]) == Math.signum(histSi[histSi.length-2]) &&
+								Math.abs(histSi[histSi.length-3]) < Math.abs(histSi[histSi.length-2]) &&
+								Math.abs(histSi[histSi.length-2]) > Math.abs(histSi[histSi.length-1])) {
+							bs = (Math.signum(histSi[histSi.length-1]) == -1) ? BuySell.B : BuySell.S;
+							opened = false;
+						}
 					}
-					signal(iSi, bs, valuesBR, valuesSi);
+				}
+				
+				if (bs == null && i.getSymbol().equals(TQSymbol.RIU5)) {
+					double[] hist = macdRI.getOutMACDHist(); 
+					if (Math.signum(hist[hist.length-1]) != Math.signum(hist[hist.length-2])
+							&& (Math.abs(hist[hist.length-3]) > Math.abs(hist[hist.length-2]))
+							&& (Math.abs(hist[hist.length-2]) > Math.abs(hist[hist.length-1]))
+							//&& (Math.abs(hist[hist.length-1]) > 0.001)
+							) {
+						logger.debug("simple ");
+						bs = (Math.signum(hist[hist.length-1]) == -1) ? BuySell.B : BuySell.S;
+					}
+				}
+				
+				if (bs == null) {
+					return;
+				}
+				
+				double priceSi = valuesSi.getSecond()[valuesSi.getSecond().length-1];
+				logger.info(Utils.formatTime(getDateTime()) + " DETECTED SIGNAL FROM " + i.getSymbol().getSeccode() + " ********************************************************** " + bs + " = " + priceSi);					
+				if (!logger.isDebugEnabled()) {
+					logger.info(sb.toString());
+				}
+				if (createSignal(iSi, bs, priceSi)) {
+					lastPosition = getDateTime();
+				} else {
+					logger.info("&&& NOT EXECUTED!");
+
+				}
+				logger.info("");			
+			} else {
+				logger.info("Not enough history length = " + macdBr.getOutMACDHist().length + " for lookback " + macdBr.getLookback());
+			}
+		}
+	}
+	
+	private BuySell checkCandleSignal(CandleList candleList) {
+		List<Candle> list = candleList.candleList();
+		int size = list.size();
+		if (size <= 2) {
+			return null;
+		}
+		Candle c1 = list.get(size-1);
+		Candle c2 = list.get(size-2);
+		Candle c3 = list.get(size-3);
+		BuySell bs = null;
+		if (c1.getCandleColor() == CandleColor.BLACK
+				&& c2.getCandleColor() == CandleColor.BLACK
+				&& c3.getCandleColor() == CandleColor.BLACK
+				&& c1.getClose() < c2.getClose()
+				&& c2.getClose() < c3.getClose()
+				&& ((c1.getClose() - c2.getClose()) < (c2.getClose() - c3.getClose())/3) 
+				) {
+			bs = BuySell.B;
+		}
+		if (c1.getCandleColor() == CandleColor.WHITE
+				&& c2.getCandleColor() == CandleColor.WHITE
+				&& c3.getCandleColor() == CandleColor.WHITE
+				&& c1.getClose() > c2.getClose()
+				&& c2.getClose() > c3.getClose()
+				&& ((c1.getClose() - c2.getClose()) < (c2.getClose() - c3.getClose())/3)
+				) {
+			bs = BuySell.S;
+		}
+		if (bs != null) {
+			Holder<Date[], double[]> values = candleList.values(PriceType.CLOSE, 10);
+			StringBuilder sb = new StringBuilder();
+			sb.append("Signal " + bs + " " + Utils.formatDate(getDateTime()) + " Price : " + values.getSecond()[values.getSecond().length-1] + "\n");
+			sb.append("date      :" + Utils.printArray(last(values.getFirst(), 10), "%7tR") + "\n");					
+			sb.append("Si price  :" + Utils.printArray(last(values.getSecond(), 10), "%7.0f") + "\n");
+			logger.info(sb.toString());
+		}
+		return bs;
+	}
+	
+	public void tickCandle(Instrument i, CandleList candleList, Candle candle) {
+		if (i.getSymbol().equals(TQSymbol.SiU5)) {
+			if (signalLock.tryLock()) {
+				try {
+					BuySell bs = checkCandleSignal(candleList);
+					if (bs != null) {
+						int	result = 0;
+						if (bs == BuySell.S) {
+							result = i.sell(quantity).getQuantity();
+						} else {
+							result = i.buy(quantity).getQuantity();
+						}
+						if (result > 0) {
+							Holder<Date[], double[]> data = candleList.values(PriceType.CLOSE);
+							double[] values = data.getSecond();
+							Date[] dates = data.getFirst();
+							
+							Signal s = new Signal(i.getSymbol(), getDateTime(), bs, values[values.length-1]);
+							List<Signal> list = signals.get(i.getSymbol());
+							if (list == null) {
+								list = new ArrayList<Signal>();
+								signals.put(i.getSymbol(), list);
+							}
+							list.add(s);	
+							StringBuilder sb = new StringBuilder();
+							sb.append("Signal EXECUTED " + bs + " " + Utils.formatDate(currentDate) + " Price : " + s.getPrice() + "\n");
+							logger.info(sb.toString());
+						}
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				} finally {
+					signalLock.unlock();
 				}
 			} else {
-				logger.debug("Not enough history length = " + histBR.length + " for lookback " + macdBr.getLookback());
+				logger.debug("Already locked for another buysell operation on " + i.getSymbol());
 			}
 		}
 	}
@@ -124,45 +283,29 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 	Lock signalLock = new ReentrantLock();
 
 	int quantity = 1;
-	boolean firstPos = true;
-	
-	private void createSignal(Instrument i, BuySell buySell, Holder<Date[], double[]> valuesBR, Holder<Date[], double[]> valuesSi) {
+
+	private boolean createSignal(Instrument i, BuySell buySell, double priceSi) {
 		if (signalLock.tryLock()) {
 			try {
-				double priceBR = valuesBR.getSecond()[valuesBR.getSecond().length-1];
-				double priceSi = valuesSi.getSecond()[valuesSi.getSecond().length-1];
-				logger.info("createSignal " +i.getSymbol() + " " + buySell + " BR = " + priceBR + ", Si = " + priceSi);
+				logger.info("try execute signal on " +i.getSymbol() + " " + buySell + " Si = " + priceSi);
 				
 				int result = 0;
 				if (buySell == BuySell.B) {
-					if (firstPos) {
-						result = i.buy(quantity).getQuantity();
-					} else {
-						result = i.buy(quantity).getQuantity();
-					}
-					
+					result = i.buy(quantity).getQuantity();
 				} else {
-					if (firstPos) {
-						result = i.sell(quantity).getQuantity();
-					} else {
-						result = i.sell(quantity).getQuantity();
-					}
+					result = i.sell(quantity).getQuantity();
 				}
 				if (result > 0) {
-					signals.put(i.getSymbol(), new Signal(i.getSymbol(), getDateTime(), buySell, priceBR));
-					
-					StringBuilder sb = new StringBuilder();
-					sb.append("\n");
-					sb.append("date      :" + Utils.printArray(last(valuesBR.getFirst(), 20), "%7tR") + "\n");
-					sb.append("Br prices :" + Utils.printArray(last(valuesBR.getSecond(), 20), "%7.2f") + "\n");
-					sb.append("BR hist   :" + Utils.printArray(last(macdBr.getOutMACDHist(), 20), "%7.4f") + "\n");
-					sb.append("Si price  :" + Utils.printArray(last(valuesSi.getSecond(), 20), "%7.0f") + "\n");
-					sb.append("Si hist   :" + Utils.printArray(last(macdSi.getOutMACDHist(), 20), "%7.2f") + "\n");
-					
-					logger.info("Executed " +i.getSymbol() +" signal " + Utils.formatDate(getDateTime()) + " " + buySell + " = " + quantity + " result = " + result);
-					logger.info(sb.toString());
+					Signal s = new Signal(i.getSymbol(), getDateTime(), buySell, priceSi);
+					List<Signal> list = signals.get(i.getSymbol());
+					if (list == null) {
+						list = new ArrayList<Signal>();
+						signals.put(i.getSymbol(), list);
+					}
+					list.add(s);
+					logger.warn(Utils.formatDate(getDateTime()) + " ****************************************** EXECUTED " +i.getSymbol() +" signal " + buySell + " = " + quantity + " result = " + result + ", price ???? = " + priceSi) ;
+					return true;
 				}
-				firstPos = false;
 			} catch (Exception e) {
 				logger.error(e);
 				e.printStackTrace();
@@ -172,27 +315,15 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 		} else {
 			logger.debug("Already locked for another buysell operation on " + i.getSymbol());
 		}
+		return false;
 	}
-	
-	HashMap<TQSymbol, Signal> signals = new HashMap<>();
-	
-	public void signal(Instrument i, BuySell buySell, Holder<Date[], double[]> valuesBR, Holder<Date[], double[]> valuesSi) {
-		logger.debug("signal " + i.getSymbol() + " " + buySell);
-		if (signals.size() == 0) {
-			createSignal(i, buySell, valuesBR, valuesSi);
-		} else {
-			if (signals.get(i.getSymbol()) != null && signals.get(i.getSymbol()).getBuySell() != buySell) {
-				createSignal(i, buySell, valuesBR, valuesSi);
-			}
-		}
 		
-	}
 
 	@Override
 	public void start(IAccount account) {
 		logger.debug("Prepare to start...");
 		this.account = account;
-		dataFeedContext.OnStart(new Instrument[] { iBR, iSi, iRI });
+		dataFeedContext.OnStart(new Instrument[] { iSi, iBR, iRI });
 		logger.debug("Started.");
 	}
 
@@ -216,9 +347,8 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 	@Override
 	public void onCandleClose(Instrument instrument, CandleList candleList, Candle candle) {
 		logger.debug("onCandleClose: " + instrument.getSymbol() + " " + candle.toString());
-		if (workOn == StrategyWorkOn.CandleClose) {
-			tick(instrument);
-		}
+		//tickCandle(instrument, candleList, candle);
+		tick(instrument);
 	}
 
 	@Override
@@ -230,9 +360,9 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 	@Override
 	public void onCandleChange(Instrument instrument, CandleList candleList, Candle candle) {
 //		System.out.println("onCandleChange: " + instrument.getSymbol() + " " + candle.toString());
-		if (workOn == StrategyWorkOn.CandleChange) {
+		/*if (workOn == StrategyWorkOn.CandleChange) {
 			tick(instrument);
-		}
+		}*/
 	}
 	
 
@@ -243,7 +373,7 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 
 	@Override
 	public CandleType[] getCandleTypes() {
-		return new CandleType[] { CandleType.CANDLE_16S, candleType };
+		return new CandleType[] { candleType };
 		//return CandleType.values();
 	}
 	
@@ -278,28 +408,32 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 
 	@Override
 	public String toString() {
-		return "STR fast= " + macdSi.getOptInFastPeriod() + ", slow= " + macdSi.getOptInSlowPeriod() + ", signal= " + macdSi.getOptInSignalPeriod() + " iWatch= " + (iBR != null ? iBR.getSymbol() : "null") + " iOper= " + (iSi != null ? iSi.getSymbol() : "null") + " " + workOn + " " +candleType + " " + StringUtils.leftPad(priceType.toString(), 15);
+		return "STR fast= " + slow + ", slow= " + fast + ", signal= " + signal + " iWatch= " + (iBR != null ? iBR.getSymbol() : "null") + " iOper= " + (iSi != null ? iSi.getSymbol() : "null") + " " + workOn + " " +candleType + " " + StringUtils.leftPad(priceType.toString(), 15);
 	}
 
 	@Override
 	public void closePositions() {
-		Map<TQSymbol, QuantityCost> positions = account.getPositions();
-		logger.debug("Close positions size " + positions.size());
-		for (TQSymbol symbol : positions.keySet()) {
-			logger.debug("Closing position " + symbol + " = " + positions.get(symbol));
-			Instrument i = getInstrument(symbol);
-			if (i != null) {
-				QuantityCost toSell = positions.get(symbol);
-				QuantityCost sold = i.sell(toSell.getQuantity());
-				if (sold.getQuantity() < toSell.getQuantity()) {
-					logger.error("Position cannot be closed! toSell = " + toSell + ",   sold = " + sold);
-					i.sell(toSell.getQuantity());
-				} else {
-					logger.debug("Closed " +symbol + "position " + sold);
+		if (signalLock.tryLock()) {
+			Map<TQSymbol, QuantityCost> positions = account.getPositions();
+			logger.debug("Close positions size " + positions.size());
+			for (TQSymbol symbol : positions.keySet()) {
+				logger.debug("Closing position " + symbol + " = " + positions.get(symbol));
+				Instrument i = getInstrument(symbol);
+				if (i != null) {
+					QuantityCost toSell = positions.get(symbol);
+					QuantityCost sold = i.sell(toSell.getQuantity());
+					if (sold.getQuantity() < toSell.getQuantity()) {
+						logger.error("Position cannot be closed! toSell = " + toSell + ",   sold = " + sold);
+						i.sell(toSell.getQuantity());
+					} else {
+						logger.debug("Closed " +symbol + "position " + sold);
+					}
+				} else{
+					throw new RuntimeException("Instrument " + symbol + " not found");
 				}
-			} else{
-				throw new RuntimeException("Instrument " + symbol + " not found");
 			}
+		} else {
+			logger.debug("Cannot close cause already locked");
 		}
 	}
 

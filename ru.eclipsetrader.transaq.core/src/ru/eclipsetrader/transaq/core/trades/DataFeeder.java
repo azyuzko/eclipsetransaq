@@ -12,6 +12,7 @@ import org.apache.commons.lang3.time.DateUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import ru.eclipsetrader.transaq.core.account.QuantityCost;
 import ru.eclipsetrader.transaq.core.account.SimpleAccount;
 import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
@@ -38,7 +39,7 @@ import ru.eclipsetrader.transaq.core.util.Utils;
 public class DataFeeder implements IDataFeedContext {
 	
 
-	static final double INITIAL_AMOUNT = 100000;
+	static final double INITIAL_AMOUNT = 300000;
 	
 	
 	Logger logger = LogManager.getLogger("DataFeeder");
@@ -46,7 +47,7 @@ public class DataFeeder implements IDataFeedContext {
 	Date fromDate;
 	Date toDate;
 
-	static int TICK_PERIOD = 1; // период тика в милисекундах
+	static int TICK_PERIOD = 10; // период тика в милисекундах
 	
 	ThreadLocal<SynchronousInstrumentEvent<List<Tick>>> ticksEvent = new ThreadLocal<SynchronousInstrumentEvent<List<Tick>>>() {
 		@Override
@@ -77,12 +78,15 @@ public class DataFeeder implements IDataFeedContext {
 	public DataFeeder(Date fromDate, Date toDate, TQSymbol[] symbols) {
 		this.fromDate = fromDate;
 		this.toDate = toDate;
-		logger.info("Loading trades");
+		logger.info("Loading trades...");
 		tickFeed = getTradeList(fromDate, toDate, symbols);
-		logger.info("Loading quotes");
+		logger.info("Loaded tickFeed " + tickFeed.size());
+		logger.info("Loading quotes...");
 		quoteFeed = getQuoteList(fromDate, toDate, symbols);
-		logger.info("Loading quotation");
+		logger.info("Loaded quoteFeed " + quoteFeed.size());
+		logger.info("Loading quotation...");
 		quotationFeed = getQuotationGapList(fromDate, toDate, symbols);	
+		logger.info("Loaded quotationFeed " + quotationFeed.size());
 	}
 		
 	public static ConcurrentSkipListMap<Long, List<TickTrade>> getTradeList(Date dateFrom, Date dateTo, TQSymbol[] symbols) {
@@ -138,10 +142,10 @@ public class DataFeeder implements IDataFeedContext {
 	
 	@Override
 	public List<Candle> getCandleList(TQSymbol symbol, CandleType candleType,
-			Date fromDate, int count) {
-		Date toDate = new Date(fromDate.getTime());
-		DateUtils.addDays(toDate, -1);
-		return TQCandleService.getInstance().getSavedCandles(symbol, candleType, fromDate, toDate);
+			Date toDate, int count) {
+		Date fromDate = DateUtils.addDays(toDate, -1);
+		// TODO return TQCandleService.getInstance().getSavedCandles(symbol, candleType, fromDate, toDate);
+		return new ArrayList<Candle>();
 	}
 	
 	@Override
@@ -166,7 +170,7 @@ public class DataFeeder implements IDataFeedContext {
 		synchronized (s) {
 			for (Instrument i : instruments) {
 				logger.debug("On start " + i.getSymbol() + " " + Integer.toHexString(i.hashCode()));
-				i.init();
+				i.init(fromDate);
 				logger.debug("ticksEvent.get() = " + ticksEvent.get());
 			}
 		}
@@ -181,6 +185,7 @@ public class DataFeeder implements IDataFeedContext {
 		
 		SimpleAccount sa = new SimpleAccount(INITIAL_AMOUNT, strategy);
 		
+		strategy.setDateTime(new Date(tickTime));
 		strategy.start(sa);
 		
 		logger.debug("Starting feed... ");

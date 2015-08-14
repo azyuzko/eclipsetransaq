@@ -74,7 +74,7 @@ public class TQInstrumentService implements ITQInstrumentService {
 				List<TQSymbol> list = new ArrayList<TQSymbol>();
 				for (Instrument i : instruments) {
 					list.add(i.getSymbol());
-					i.init();
+					i.init(new Date());
 				}
 				
 				// На старте запускаем подписку
