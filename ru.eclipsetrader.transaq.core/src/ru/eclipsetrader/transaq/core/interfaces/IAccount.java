@@ -24,6 +24,12 @@ public interface IAccount {
 	 * @return
 	 */
 	Map<TQSymbol, QuantityCost> getPositions();
+	
+	/**
+	 * Вернуть начальные позиции по счету
+	 * @return
+	 */
+	Map<TQSymbol, QuantityCost> getInitialPositions();
 
 	/**
 	 * Купить контракты

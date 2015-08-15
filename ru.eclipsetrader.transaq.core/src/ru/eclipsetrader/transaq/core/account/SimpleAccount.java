@@ -28,6 +28,8 @@ public class SimpleAccount implements IAccount {
 
 	IDateTimeSupplier dateTimeSupplier;
 	
+	Map<TQSymbol, QuantityCost> initialPositions = new HashMap<>();
+	
 	// holder = кол-во и размер ГО
 	Map<TQSymbol, QuantityCost> positions = new HashMap<>();
 	
@@ -37,12 +39,30 @@ public class SimpleAccount implements IAccount {
 		this(free, null);
 	}
 	
+	public SimpleAccount(double free, IDateTimeSupplier dateTimeSupplier, Map<TQSymbol, QuantityCost> positions) {
+		this(free, dateTimeSupplier);
+		this.initialPositions.putAll(positions);
+		this.positions.putAll(positions);
+	}
+	
 	public SimpleAccount(double free, IDateTimeSupplier dateTimeSupplier) {
 		logger.debug("Create SimpleAccount with " + free + " cash");
 		this.dateTimeSupplier = dateTimeSupplier;
 		this.initialFree = free;
 		this.free = free;
 	}
+	
+	@Override
+	public Map<TQSymbol, QuantityCost> getInitialPositions() {
+		return initialPositions;
+	}
+	
+
+	@Override
+	public Map<TQSymbol, QuantityCost> getPositions() {
+		return positions;
+	}
+
 	
 	private AccountOperation createOperation(BuySell buySell, int quantity, double cost) {
 		AccountOperation operation = new AccountOperation(buySell, currentDate(), quantity, cost);
@@ -228,13 +248,6 @@ public class SimpleAccount implements IAccount {
 		}
 		return sb.toString();
 	}
-	
-
-	@Override
-	public Map<TQSymbol, QuantityCost> getPositions() {
-		return positions;
-	}
-
 
 	@Override
 	public QuantityCost close(TQSymbol symbol, double price) {

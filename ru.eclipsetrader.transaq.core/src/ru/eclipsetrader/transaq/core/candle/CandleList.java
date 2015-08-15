@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.commons.lang3.time.DateUtils;
@@ -41,6 +42,10 @@ public class CandleList {
 	
 	public List<Candle> candleList() {
 		return new ArrayList<>(map.values());
+	}
+	
+	public Map<Date, Candle> candleMap() {
+		return map;
 	}
 	
 	public CandleList(CandleType candleType){

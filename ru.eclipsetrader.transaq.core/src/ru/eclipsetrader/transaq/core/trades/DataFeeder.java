@@ -2,11 +2,15 @@ package ru.eclipsetrader.transaq.core.trades;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.logging.log4j.LogManager;
@@ -16,7 +20,6 @@ import ru.eclipsetrader.transaq.core.account.QuantityCost;
 import ru.eclipsetrader.transaq.core.account.SimpleAccount;
 import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
-import ru.eclipsetrader.transaq.core.candle.TQCandleService;
 import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.event.IInstrumentEvent;
 import ru.eclipsetrader.transaq.core.event.SynchronousInstrumentEvent;
@@ -39,7 +42,7 @@ import ru.eclipsetrader.transaq.core.util.Utils;
 public class DataFeeder implements IDataFeedContext {
 	
 
-	static final double INITIAL_AMOUNT = 300000;
+	static final double INITIAL_AMOUNT = 100000;
 	
 	
 	Logger logger = LogManager.getLogger("DataFeeder");
@@ -74,19 +77,82 @@ public class DataFeeder implements IDataFeedContext {
 	ConcurrentSkipListMap<Long, List<Quote>> quoteFeed;
 	ConcurrentSkipListMap<Long, List<SymbolGapMap>> quotationFeed;
 
+	class QuotesTask implements Callable<ConcurrentSkipListMap<Long, List<Quote>>> {
+		Date fromDate;
+		Date toDate;
+		TQSymbol[] symbols;
+		QuotesTask (Date fromDate, Date toDate, TQSymbol[] symbols) {
+			this.fromDate = fromDate;
+			this.toDate = toDate;
+			this.symbols = symbols;
+		}
+		@Override
+		public ConcurrentSkipListMap<Long, List<Quote>> call()
+				throws Exception {
+			logger.info("Loading quotes from " + Utils.formatDate(fromDate) + " to " + Utils.formatDate(toDate) + "...");
+			ConcurrentSkipListMap<Long, List<Quote>> result = getQuoteList(fromDate, toDate, symbols);
+			logger.info("Loaded quoteFeed from " + Utils.formatDate(fromDate) + " to " + Utils.formatDate(toDate) + " " + result.size());
+			return result;
+		}
+	}
 	
-	public DataFeeder(Date fromDate, Date toDate, TQSymbol[] symbols) {
+	public DataFeeder(final Date fromDate, final Date toDate, final TQSymbol[] symbols) {
 		this.fromDate = fromDate;
 		this.toDate = toDate;
-		logger.info("Loading trades...");
-		tickFeed = getTradeList(fromDate, toDate, symbols);
-		logger.info("Loaded tickFeed " + tickFeed.size());
-		logger.info("Loading quotes...");
-		quoteFeed = getQuoteList(fromDate, toDate, symbols);
-		logger.info("Loaded quoteFeed " + quoteFeed.size());
-		logger.info("Loading quotation...");
-		quotationFeed = getQuotationGapList(fromDate, toDate, symbols);	
-		logger.info("Loaded quotationFeed " + quotationFeed.size());
+		
+		ExecutorService es = Executors.newFixedThreadPool(5);
+		
+		Future<ConcurrentSkipListMap<Long, List<TickTrade>>> tradesTask = es.submit(new Callable<ConcurrentSkipListMap<Long, List<TickTrade>>>() {
+			@Override
+			public ConcurrentSkipListMap<Long, List<TickTrade>> call()
+					throws Exception {
+				logger.info("Loading trades...");
+				ConcurrentSkipListMap<Long, List<TickTrade>> result = getTradeList(fromDate, toDate, symbols);
+				logger.info("Loaded tickFeed " + result.size());
+				return result;
+			}
+		});
+		
+		Date tmpDate = new Date((fromDate.getTime() + toDate.getTime())/2);
+		QuotesTask qt = new QuotesTask(fromDate, toDate, symbols);
+		QuotesTask qt1 = new QuotesTask(fromDate, tmpDate, symbols);
+		QuotesTask qt2 = new QuotesTask(tmpDate, toDate, symbols);
+		
+		Future<ConcurrentSkipListMap<Long, List<Quote>>> quotesTask1 = es.submit(qt1);
+		Future<ConcurrentSkipListMap<Long, List<Quote>>> quotesTask2 = es.submit(qt2);
+		
+		Future<ConcurrentSkipListMap<Long, List<SymbolGapMap>>> quotationTask = es.submit(new Callable<ConcurrentSkipListMap<Long, List<SymbolGapMap>>>() {
+			@Override
+			public ConcurrentSkipListMap<Long, List<SymbolGapMap>> call()
+					throws Exception {
+				logger.info("Loading quotation...");
+				ConcurrentSkipListMap<Long, List<SymbolGapMap>> result = getQuotationGapList(fromDate, toDate, symbols);	
+				logger.info("Loaded quotationFeed " + result.size());
+				return result;
+			}
+		});
+		
+		try {
+			long start = System.currentTimeMillis();
+			tickFeed = tradesTask.get();
+			ConcurrentSkipListMap<Long, List<Quote>> quoteFeed1 = quotesTask1.get();
+			ConcurrentSkipListMap<Long, List<Quote>> quoteFeed2 = quotesTask2.get();
+			quoteFeed = new ConcurrentSkipListMap<>();
+			quoteFeed.putAll(quoteFeed1);
+			quoteFeed.putAll(quoteFeed2);
+			quotationFeed = quotationTask.get();
+			long end = System.currentTimeMillis();
+			
+			if (quoteFeed.size() != (quoteFeed1.size() + quoteFeed2.size())) {
+				throw new RuntimeException("Wrong quotes size");
+			}
+			
+			logger.info("Load complete in " + (end - start)/1000 + " sec");
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		} finally {
+			es.shutdown();
+		}
 	}
 		
 	public static ConcurrentSkipListMap<Long, List<TickTrade>> getTradeList(Date dateFrom, Date dateTo, TQSymbol[] symbols) {
@@ -183,7 +249,9 @@ public class DataFeeder implements IDataFeedContext {
 		
 		logger.debug("Starting feed context = " + Integer.toHexString(strategy.hashCode()) + " from " + Utils.formatDate(fromDate) + " to " + Utils.formatDate(toDate));
 		
-		SimpleAccount sa = new SimpleAccount(INITIAL_AMOUNT, strategy);
+		HashMap<TQSymbol, QuantityCost> initPositions = new HashMap<>();
+		initPositions.put(TQSymbol.SiU5, new QuantityCost(1, 0));
+		SimpleAccount sa = new SimpleAccount(INITIAL_AMOUNT, strategy, initPositions);
 		
 		strategy.setDateTime(new Date(tickTime));
 		strategy.start(sa);
@@ -234,9 +302,9 @@ public class DataFeeder implements IDataFeedContext {
 			prevTickTime = tickTime;
 			tickTime += TICK_PERIOD;
 		}
+		strategy.closePositions();
 		strategy.stop();
 		logger.debug("Complete " + strategy);
-		
 		
 		// Remove threadlocals
 		quotationEvent.remove();

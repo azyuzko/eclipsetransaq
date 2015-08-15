@@ -65,7 +65,7 @@ public class StrategyTest {
 		Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
 		
 		Date fromDate = Utils.parseDate("13.08.2015 10:00:00.000");
-		Date toDate = Utils.parseDate("13.08.2015 23:35:00.000");
+		Date toDate = Utils.parseDate("13.08.2015 15:35:00.000");
 		
 		DataFeeder dataFeeder = new DataFeeder(fromDate, toDate, 
 				//TQSymbol.workingSymbolSet().toArray(new TQSymbol[0])); 
@@ -80,11 +80,11 @@ public class StrategyTest {
 		// create params
 		StrategyParamsType sp = new StrategyParamsType();
 		sp.setFast(12);
-		sp.setSlow(24);
+		sp.setSlow(26);
 		sp.setSignal(9);
 		sp.setPriceType(PriceType.CLOSE);
 		sp.setWorkOn(StrategyWorkOn.CandleClose);
-		sp.setCandleType(CandleType.CANDLE_61S);
+		sp.setCandleType(CandleType.CANDLE_1M);
 		
 		Strategy macd = new Strategy(dataFeeder, sp);
 		StrategyJob s = new StrategyJob(index++, macd, dataFeeder);

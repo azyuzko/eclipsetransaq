@@ -13,28 +13,26 @@ public class StrategyJob implements Callable<Holder<Double, String>> {
 	
 	Logger logger = LogManager.getLogger("StrategyJob");
 	
-	Strategy macd;
+	Strategy strategy;
 	DataFeeder dataFeeder;
 	int index;
 	
 	public StrategyJob(int index, Strategy macd, DataFeeder dataFeeder) {
 		this.index = index;
-		this.macd = macd;
+		this.strategy = macd;
 		this.dataFeeder = dataFeeder;
 	}
 
 	@Override
 	public Holder<Double, String> call() {
 	
-		dataFeeder.feed(macd);
-
-		macd.closePositions();
-
-		IAccount account = macd.getAccount();			
+		dataFeeder.feed(strategy);
+		
+		IAccount account = strategy.getAccount();
 		Double free = account.getFree();
-		String desc = String.format("%d FREE: %f %s: %s", index, free, macd.toString(), account.toString());
+		String desc = String.format("%d FREE: %f %s: %s", index, free, strategy.toString(), account.toString());
 		logger.info("Complete " + desc );
-		this.macd = null;
+		this.strategy = null;
 		return new Holder<Double, String>(free, desc);
 	}
 	
