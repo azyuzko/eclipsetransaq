@@ -64,68 +64,36 @@ public class StrategyTest {
 		
 		Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
 		
-		Date fromDate = Utils.parseDate("10.08.2015 19:00:00.000");
-		Date toDate = Utils.parseDate("10.08.2015 20:35:00.000");
+		Date fromDate = Utils.parseDate("17.08.2015 10:00:00.000");
+		Date toDate = Utils.parseDate("17.08.2015 17:35:00.000");
 		
 		DataFeeder dataFeeder = new DataFeeder(fromDate, toDate, 
 				//TQSymbol.workingSymbolSet().toArray(new TQSymbol[0])); 
-		 new TQSymbol[] {TQSymbol.SiU5, TQSymbol.BRQ5});
+		 new TQSymbol[] {TQSymbol.SiU5, TQSymbol.BRU5, TQSymbol.RIU5});
 		
-		ExecutorService service = Executors.newFixedThreadPool(2);
+		ExecutorService service = Executors.newFixedThreadPool(1);
 
 		List<Future<Holder<Double, String>>> lr = new ArrayList<>();
 		
-		List<Holder<TQSymbol, TQSymbol>> symbolList = new ArrayList<Holder<TQSymbol,TQSymbol>>();
-		
-		
-		for (TQSymbol key : TQSymbol.workingSymbolSet()) {
-			for (TQSymbol value : TQSymbol.workingSymbolSet()) {
-				if (!key.equals(value) && !value.equals(TQSymbol.RTSI) && !value.equals(TQSymbol.RTS2)) {
-					//symbolList.add(new Holder<TQSymbol, TQSymbol>(key, value));
-				}
-			}
-		}
-		
-		//symbolList.add(new Holder<TQSymbol, TQSymbol>(TQSymbol.SiU5, null));
-		symbolList.add(new Holder<TQSymbol, TQSymbol>(TQSymbol.BRQ5, TQSymbol.SiU5));
 		System.out.println("Data loaded..");
 		int index = 0;
-		for (int fast = 6; fast <= 6; fast++) {
-			for (int slow = 12; slow <= 12; slow++) {
-				for (int signal = 9; signal <= 9; signal++) {
-					for (Holder<TQSymbol, TQSymbol> symbols : symbolList) {
-						for (StrategyWorkOn workOn : new StrategyWorkOn[] {StrategyWorkOn.CandleClose} ) {
-							for (CandleType candleType : new CandleType[] {
-									//CandleType.CANDLE_15S,// CandleType.CANDLE_20S, CandleType.CANDLE_30S, 
-									CandleType.CANDLE_16S//, CandleType.CANDLE_21S, CandleType.CANDLE_31S, 
-									//CandleType.CANDLE_17S
-									, CandleType.CANDLE_22S
-									} ) {
-								for (PriceType priceType : new PriceType[] {
-										PriceType.CLOSE//, PriceType.WEIGHTED_CLOSE,
-										//PriceType.VOLUME_WEIGHTED, PriceType.TYPICAL, PriceType.MED
-										}) {
-									// create params
-									StrategyParamsType sp = new StrategyParamsType();
-									sp.setFast(fast);
-									sp.setSlow(slow);
-									sp.setSignal(signal);
-									sp.setPriceType(priceType);
-									sp.setWorkOn(workOn);
-									sp.setCandleType(candleType);
-									
-									Strategy macd = new Strategy(dataFeeder, sp);
-									StrategyJob s = new StrategyJob(index++, macd, dataFeeder);
-									Future<Holder<Double, String>> fut = service.submit(s);
-									lr.add(fut);
-								}
-							}
-						}
-					}
-				}
-			}
-		}
+		// create params
+		StrategyParamsType sp = new StrategyParamsType();
+		sp.setFast(12);
+		sp.setSlow(26);
+		sp.setSignal(9);
+		sp.setPriceType(PriceType.CLOSE);
+		sp.setWorkOn(StrategyWorkOn.CandleClose);
+		sp.setCandleType(CandleType.CANDLE_1M);
+		sp.setShortCandleType(CandleType.CANDLE_20S);
 		
+		// sp.stochF_optInFastK_Period = 
+		
+		Strategy macd = new Strategy(dataFeeder, sp);
+		StrategyJob s = new StrategyJob(index++, macd, dataFeeder);
+		Future<Holder<Double, String>> fut = service.submit(s);
+		lr.add(fut);
+
 		Logger logger = LogManager.getLogger("StrategyTest");
 		logger.info("****** Jobs size = " + lr.size());
 

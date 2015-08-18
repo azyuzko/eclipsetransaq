@@ -1,16 +1,17 @@
 package ru.eclipsetrader.transaq.core.candle;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import com.sun.org.apache.regexp.internal.recompile;
 
 import ru.eclipsetrader.transaq.core.model.PriceType;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
@@ -38,6 +39,14 @@ public class CandleList {
 	private CandleType candleType;
 	
 	//TODO refactor private Event<CandleList> onCandleListChange = new Event<CandleList>("CandleList.onCandleListChange");
+	
+	public List<Candle> candleList() {
+		return new ArrayList<>(map.values());
+	}
+	
+	public Map<Date, Candle> candleMap() {
+		return map;
+	}
 	
 	public CandleList(CandleType candleType){
 		super();
@@ -76,6 +85,18 @@ public class CandleList {
 			}
 			Date[] dates = map.keySet().toArray(new Date[count]);
 			return new Holder<Date[], double[]>(dates, values);
+		}
+	}
+	
+	public Date[] dates() {
+		return dates(map.size());
+	}
+	
+	public Date[] dates(int count) {
+		synchronized (map) {
+			count = Math.min(count, map.size());
+			Date[] dates = map.keySet().toArray(new Date[count]);
+			return dates;
 		}
 	}
 	

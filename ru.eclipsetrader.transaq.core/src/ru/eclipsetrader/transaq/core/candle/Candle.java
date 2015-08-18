@@ -83,22 +83,21 @@ public class Candle {
 			}
 			return full / getVolume();
 		}
-		case LAST_1SEC_CLOSE: {
-			double full = 0;
-			int volume = 0;
-			for (Date tickDate : ticks.keySet()) {
-				for (Holder<Double, Integer> x : ticks.get(tickDate)) {
-					full += x.getFirst() * x.getSecond();
-					volume += x.getSecond();
-				}
-			}
-			return full / volume;
-		}
 		default:
 			throw new UnimplementedException();
 		}
 	}
 	
+	public CandleColor getCandleColor() {
+		if (open > close) {
+			return CandleColor.BLACK;
+		} else if (open < close) {
+			return CandleColor.WHITE;
+		} else {
+			return CandleColor.NO_COLOR;
+		}
+	}
+
 	public Date getDate() {
 		return date;
 	}

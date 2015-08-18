@@ -103,6 +103,12 @@ public class TQAccountService implements ITQAccountService, Observer<Holder<Posi
 			System.err.println("Buy " + quantity);
 			return null;
 		}
+
+		@Override
+		public Map<TQSymbol, QuantityCost> getInitialPositions() {
+			// TODO Auto-generated method stub
+			return null;
+		}
 	};
 	
 	public IAccount getAccount(TQSymbol symbol) {

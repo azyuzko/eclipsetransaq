@@ -61,9 +61,9 @@ public class DataManager {
 	
 	final static String TICK_INSERT_SQL = "merge into ticks t1 using (select ? board, ? seccode, ? tradeno, ? time from dual) t2 "
 			+ "on (t1.board = t2.board and t1.seccode = t2.seccode and t1.time = t2.time and t1.tradeno = t2.tradeno) "
-			+ " when not matched then insert (server, board, seccode, tradeno, time, buysell, price, quantity, period, openinterest)"
-			+ " values (?, t2.board, t2.seccode, t2.tradeno, t2.time, ?, ?, ?, ?, ? )";
-	final static String TICK_SELECT_SQL = "select t.tradeno, t.time, t.board, t.seccode, t.buysell, t.price, t.quantity, t.period, t.openinterest"
+			+ " when not matched then insert (server, board, seccode, tradeno, time, buysell, price, quantity, period, openinterest, received)"
+			+ " values (?, t2.board, t2.seccode, t2.tradeno, t2.time, ?, ?, ?, ?, ?, ?)";
+	final static String TICK_SELECT_SQL = "select t.tradeno, t.time, t.board, t.seccode, t.buysell, t.price, t.quantity, t.period, t.openinterest, t.received"
 			+ " from ticks t where t.time between ? and ?";
 	final static String MAX_TICK_SQL = "select max(t.tradeno) from ticks t where t.board = ? and t.seccode = ? and t.time between ? and ?";
 	
@@ -98,15 +98,16 @@ public class DataManager {
 			stmt.setTimestamp(4, new Timestamp(fromDate.getTime()));
 			stmt.setTimestamp(5, new Timestamp(toDate.getTime()));
 			ResultSet rs = stmt.executeQuery();
-			if (rs.next()) {
+			while (rs.next()) {
 				Candle candle = new Candle();
 				candle.setDate(rs.getTimestamp(1));
 				candle.setOpen(rs.getDouble(2));
 				candle.setHigh(rs.getDouble(3));
 				candle.setLow(rs.getDouble(4));
-				candle.setHigh(rs.getDouble(5));
+				candle.setClose(rs.getDouble(5));
 				candle.setVolume(rs.getInt(6));
 				candle.setOi(rs.getInt(7));
+				result.add(candle);
 			}
 			rs.close();
 			stmt.close();
@@ -210,6 +211,7 @@ public class DataManager {
 					stmt.setNull(9, Types.VARCHAR);
 				}
 				stmt.setInt(10, tt.getOpeninterest());
+				stmt.setTimestamp(11, new Timestamp(tt.getReceived().getTime()));
 				stmt.addBatch();
 			}
 			stmt.executeBatch();
@@ -274,6 +276,7 @@ public class DataManager {
 					t.setPeriod(TradePeriod.valueOf(tradePeriod));
 				}
 				t.setOpeninterest(rs.getInt(9));
+				t.setReceived(rs.getTimestamp(10));
 				result.add(t);
 			}
 			rs.close();
@@ -631,7 +634,7 @@ public class DataManager {
 		
 		Date fromDate = Utils.parseDate("03.08.2015 09:30:00.000");
 		Date toDate = Utils.parseDate("03.08.2015 12:15:00.000");
-		TQSymbol[] symbols = new TQSymbol[] { TQSymbol.BRQ5, TQSymbol.SiU5, TQSymbol.BRU5} ;
+		TQSymbol[] symbols = new TQSymbol[] { TQSymbol.SiU5, TQSymbol.BRU5} ;
 		List<Quote> ql = getQuoteList(fromDate, toDate, symbols);
 		List<TickTrade> tl = getTickList(fromDate, toDate, symbols);
 		List<SymbolGapMap> gl = getQuotationGapList(fromDate, toDate, symbols);

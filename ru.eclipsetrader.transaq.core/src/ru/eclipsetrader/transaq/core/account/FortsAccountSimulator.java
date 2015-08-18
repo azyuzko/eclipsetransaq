@@ -354,5 +354,11 @@ public class FortsAccountSimulator implements IAccount {
 		throw new UnimplementedException();
 	}
 
+	@Override
+	public Map<TQSymbol, QuantityCost> getInitialPositions() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 
 }

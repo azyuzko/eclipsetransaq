@@ -60,11 +60,20 @@ public abstract class Tick extends ServerObject implements ITQTickTrade {
 	
 	public Tick() {
 		this(null);
+		received = new Date();
 	}
 
 	public Tick(String serverId) {
 		super(serverId);
 		received = new Date();
+	}
+	
+	public Date getReceived() {
+		return received;
+	}
+
+	public void setReceived(Date received) {
+		this.received = received;
 	}
 
 	public String getTradeno() {

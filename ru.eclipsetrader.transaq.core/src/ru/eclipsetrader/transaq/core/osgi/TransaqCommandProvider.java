@@ -185,9 +185,9 @@ public class TransaqCommandProvider implements CommandProvider {
 		}
 		
 		case "subscribeall": {
-			TQTickTradeService.getInstance().subscribeTicks(TQSymbol.workingSymbolSet());
+			TQTickTradeService.getInstance().subscribeAllTrades(TQSymbol.workingSymbolSet());
 			TQQuoteService.getInstance().subscribe(TQSymbol.workingSymbolSet());
-			TQQuotationService.getInstance().subscribe(TQSymbol.workingSymbolSet());
+			//TQQuotationService.getInstance().subscribe(TQSymbol.workingSymbolSet());
 			break;
 		}
 		
@@ -213,15 +213,13 @@ public class TransaqCommandProvider implements CommandProvider {
 		
 		case "start": {
 			
-			ci.execute("transaq subscribeall");
-			
 			StrategyParamsType sp = new StrategyParamsType();
-			sp.setFast(6);
-			sp.setSlow(12);
+			sp.setFast(12);
+			sp.setSlow(24);
 			sp.setSignal(9);
 			sp.setPriceType(PriceType.CLOSE);
 			sp.setWorkOn(StrategyWorkOn.CandleClose);
-			sp.setCandleType(CandleType.CANDLE_16S);
+			sp.setCandleType(CandleType.CANDLE_61S);
 			
 			Strategy s = new Strategy(TQInstrumentService.getInstance().getDefaultDataFeedContext(), sp);
 			
@@ -239,11 +237,11 @@ public class TransaqCommandProvider implements CommandProvider {
 		
 			String op = ci.nextArgument();
 			
-			IAccount account = TQAccountService.getInstance().getAccount(TQSymbol.BRQ5);
+			IAccount account = TQAccountService.getInstance().getAccount(TQSymbol.BRU5);
 			if (op.equals("buy")) {
-				account.buy(TQSymbol.BRQ5, 1, null);
+				account.buy(TQSymbol.BRU5, 1, null);
 			} else {
-				account.sell(TQSymbol.BRQ5, 1, null);
+				account.sell(TQSymbol.BRU5, 1, null);
 			}
 			
 			break;

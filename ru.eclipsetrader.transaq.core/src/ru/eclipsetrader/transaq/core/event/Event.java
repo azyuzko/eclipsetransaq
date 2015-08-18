@@ -11,7 +11,7 @@ import org.apache.logging.log4j.Logger;
 
 public class Event<T>  {
 	
-	public static int QUEUE_SIZE = 30;
+	public static int QUEUE_SIZE = 300;
 	public static int POOL_SIZE = 5;
 
 	Logger logger;
