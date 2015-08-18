@@ -88,6 +88,18 @@ public class CandleList {
 		}
 	}
 	
+	public Date[] dates() {
+		return dates(map.size());
+	}
+	
+	public Date[] dates(int count) {
+		synchronized (map) {
+			count = Math.min(count, map.size());
+			Date[] dates = map.keySet().toArray(new Date[count]);
+			return dates;
+		}
+	}
+	
 	/**
 	 * Отсекает голову у списка свечей до даты включительно
 	 * @param toDate дата тоже отсекается

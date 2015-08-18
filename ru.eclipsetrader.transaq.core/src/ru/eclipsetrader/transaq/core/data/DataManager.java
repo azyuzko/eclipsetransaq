@@ -104,7 +104,7 @@ public class DataManager {
 				candle.setOpen(rs.getDouble(2));
 				candle.setHigh(rs.getDouble(3));
 				candle.setLow(rs.getDouble(4));
-				candle.setHigh(rs.getDouble(5));
+				candle.setClose(rs.getDouble(5));
 				candle.setVolume(rs.getInt(6));
 				candle.setOi(rs.getInt(7));
 				result.add(candle);

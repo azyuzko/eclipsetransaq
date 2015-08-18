@@ -2,6 +2,8 @@ package ru.eclipsetrader.transaq.core.strategy;
 
 import java.lang.reflect.Field;
 
+import com.tictactec.ta.lib.MAType;
+
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.model.PriceType;
 import ru.eclipsetrader.transaq.core.model.StrategyWorkOn;
@@ -12,13 +14,14 @@ public class StrategyParamsType {
 	PriceType priceType;
 	StrategyWorkOn workOn;
 	CandleType candleType;
+	CandleType shortCandleType;
 	int fast;
 	int slow;
 	int signal;
 	
-	int fastSi;
-	int slowSi;
-	int signalSi;
+	int stochF_optInFastK_Period;
+	int stochF_optInFastD_Period;
+	MAType stochF_optInFastD_MAType;
 	
 	public StrategyParamsType()  {
 		
@@ -85,6 +88,14 @@ public class StrategyParamsType {
 
 	public void setSignal(int signal) {
 		this.signal = signal;
+	}
+
+	public CandleType getShortCandleType() {
+		return shortCandleType;
+	}
+
+	public void setShortCandleType(CandleType shortCandleType) {
+		this.shortCandleType = shortCandleType;
 	}
 
 	public static void main(String[] args) {

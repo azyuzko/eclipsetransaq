@@ -20,6 +20,7 @@ import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.candle.CandleList;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.indicators.MACD;
+import ru.eclipsetrader.transaq.core.indicators.StochasticFast;
 import ru.eclipsetrader.transaq.core.instruments.Instrument;
 import ru.eclipsetrader.transaq.core.interfaces.IAccount;
 import ru.eclipsetrader.transaq.core.interfaces.IProcessingContext;
@@ -58,7 +59,7 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 	public Strategy(IDataFeedContext dataFeedContext, StrategyParamsType params) {
 		super(params);
 		this.dataFeedContext = dataFeedContext;
-		this.iBR = new Instrument(TQSymbol.BRQ5, this, dataFeedContext);
+		this.iBR = new Instrument(TQSymbol.BRU5, this, dataFeedContext);
 		this.iSi = new Instrument(TQSymbol.SiU5, this, dataFeedContext);
 		this.iRI = new Instrument(TQSymbol.RIU5, this, dataFeedContext);
 	}
@@ -77,27 +78,49 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 			return currentDate;
 		}
 	}
-
-	StrategyPosition currentPosition = null;
+	
+	public StrategyPosition lastPosition(TQSymbol symbol) {
+		if (signals.size() > 0 && signals.get(symbol) != null && signals.get(symbol).size() > 0) {
+			return signals.get(symbol).get(signals.get(symbol).size()-1);
+		}
+		return null;
+	}
+	
+	public StrategyPosition currentOpenedPosition(TQSymbol symbol) {
+		StrategyPosition last = lastPosition(symbol);
+		if (last != null && last.closeDate == null) {
+			return last;
+		}
+		return null;
+	}
+	
+	public boolean hasOpenedPosition(TQSymbol symbol) {
+		return currentOpenedPosition(symbol) != null;
+	}
 	
 	double avg_corr = 0;
 	
 	public void tick(Instrument i) {
-		if (i.getSymbol().equals(TQSymbol.BRQ5) /*|| i.getSymbol().equals(TQSymbol.RIU5)*/) {
+		if (i.getSymbol().equals(TQSymbol.BRU5) /*|| i.getSymbol().equals(TQSymbol.RIU5)*/) {
+			TQSymbol sSiU5 = TQSymbol.SiU5;
 			
 			// 2 min wait after close position
-			List<StrategyPosition> ps = signals.get(TQSymbol.SiU5);
-			if (currentPosition == null && ps != null && ps.size() > 0 && ps.get(ps.size()-1).getCloseDate() != null &&
-					DateUtils.addMinutes(ps.get(ps.size()-1).getCloseDate(), 2).after(getDateTime())){
-				logger.info(Utils.formatDate(getDateTime()) + " 2 min wait after close position");
-				return;
+			if (!hasOpenedPosition(sSiU5)){
+				StrategyPosition lastPosition = lastPosition(sSiU5);
+				if (lastPosition != null &&	DateUtils.addMinutes(lastPosition.getCloseDate(), 2).after(getDateTime())){
+					logger.info(Utils.formatDate(getDateTime()) + " 2 min wait after close position");
+					return;
+				}
 			}
+			
 			PriceType _pt = priceType;
 			CandleType _ct = candleType;	
 			
 			Holder<Date[], double[]> valuesBr = iBR.getCandleStorage().getCandleList(_ct).values(_pt);
 			Holder<Date[], double[]> valuesRI = iRI.getCandleStorage().getCandleList(_ct).values(_pt);
 			Holder<Date[], double[]> valuesSi = iSi.getCandleStorage().getCandleList(_ct).values(_pt);
+			
+			StochasticFast sf = new StochasticFast(stochF_optInFastK_Period, stochF_optInFastD_Period, stochF_optInFastD_MAType);
 
 			macdBr.evaluate(valuesBr.getSecond(), valuesBr.getFirst());
 			macdRI.evaluate(valuesRI.getSecond(), valuesRI.getFirst());
@@ -127,15 +150,16 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 				
 				Double[] correlation = new Double[macdSi.getLookback()];
 				for (int index = valuesBr.getFirst().length-macdSi.getLookback(), x = 0; index < valuesBr.getFirst().length; index++, x++) {
-					correlation[x] = calcAllCorrelation(valuesBr.getSecond()[valuesBr.getSecond().length-1], valuesRI.getSecond()[valuesRI.getSecond().length-1], valuesSi.getSecond()[valuesSi.getSecond().length-1]);
+					correlation[x] = calcAllCorrelation(valuesBr.getSecond()[index], valuesRI.getSecond()[index], valuesSi.getSecond()[index]);
 				}
 				
 				sb.append("correlatio:" + Utils.printArray(last(correlation, last_count), "%10.0f") + "\n");
 				
 				// 
+				StrategyPosition currentPosition = currentOpenedPosition(sSiU5);
 				double hist_br_const = 0.001;
-				if (i.getSymbol().equals(TQSymbol.BRQ5)) {
-					if (currentPosition == null) {
+				if (i.getSymbol().equals(TQSymbol.BRU5)) {
+					if (!hasOpenedPosition(sSiU5)) {
 						
 						double brPrevLastDiff = valuesBr.getSecond()[valuesBr.getSecond().length-1] - valuesBr.getSecond()[valuesBr.getSecond().length-2];
 						if (Math.abs(brPrevLastDiff) >= 0.04) {
@@ -414,32 +438,27 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 
 	@Override
 	public void onTick(Instrument instrument, Tick tick) {
-		//System.out.println("onTick: " + instrument.getSymbol() + " " + tick.getTime());
 		
 	}
 
 	@Override
 	public void onQuotesChange(Instrument instrument, QuoteGlass quoteGlass) {
-		// System.out.println(instrument.getSymbol() + " on Quotes Change");
-	}
-
-	@Override
-	public void onCandleClose(Instrument instrument, CandleList candleList, Candle candle) {
-		tick(instrument);
-	}
-
-	@Override
-	public void onCandleOpen(Instrument instrument, CandleList candleList, Candle candle) {
-//		System.out.println("onCandleOpen: " + instrument.getSymbol() + " " + candle.toString());
 		
 	}
 
 	@Override
+	public void onCandleClose(Instrument instrument, CandleList candleList, Candle candle) {
+			tick(instrument);			
+	}
+
+	@Override
+	public void onCandleOpen(Instrument instrument, CandleList candleList, Candle candle) {
+	
+	}
+
+	@Override
 	public void onCandleChange(Instrument instrument, CandleList candleList, Candle candle) {
-//		System.out.println("onCandleChange: " + instrument.getSymbol() + " " + candle.toString());
-		/*if (workOn == StrategyWorkOn.CandleChange) {
-			tick(instrument);
-		}*/
+
 	}
 	
 

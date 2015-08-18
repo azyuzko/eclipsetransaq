@@ -25,7 +25,7 @@ public abstract class IndicatorFunction {
 	public static void normalizeArray(double[] outReal, int lookback) {
 		if (outReal != null && outReal.length > lookback) {
 			System.arraycopy(outReal, 0, outReal, lookback, outReal.length-lookback);
-			Arrays.fill(outReal, 0, lookback, outReal[lookback]);
+			Arrays.fill(outReal, 0, lookback, 0);
 		}
 	}
 	

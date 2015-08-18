@@ -15,12 +15,6 @@ import ru.eclipsetrader.transaq.core.interfaces.ITQKey;
 @Embeddable
 public class TQSymbol implements ITQKey, Serializable {
 	
-	public static TQSymbol BRQ5 = new TQSymbol(BoardType.FUT, "BRQ5"); // BR-8.15
-	
-	public static TQSymbol _1BQ5 = new TQSymbol(BoardType.FUT, "1BQ5"); // IBVS-8.15 на Индекс BOVESPA
-	public static TQSymbol _2BQ5 = new TQSymbol(BoardType.FUT, "2BQ5"); // SNSX-8.15 на Индекс SENSEX
-	public static TQSymbol _3BQ5 = new TQSymbol(BoardType.FUT, "3BQ5"); // HSIF-8.15 на Индекс Hang Seng
-	
 	public static TQSymbol BRU5 = new TQSymbol(BoardType.FUT, "BRU5"); // BR-9.15
 	public static TQSymbol SiU5 = new TQSymbol(BoardType.FUT, "SiU5"); // Si-9.15
 	public static TQSymbol EuU5 = new TQSymbol(BoardType.FUT, "EuU5"); // Eu-9.15
@@ -30,6 +24,9 @@ public class TQSymbol implements ITQKey, Serializable {
 	public static TQSymbol RSU5 = new TQSymbol(BoardType.FUT, "RSU5"); // RTSS-9.15
 	public static TQSymbol VIQ5 = new TQSymbol(BoardType.FUT, "VIQ5"); // RVI-8.15 Фьючерсный контракт на волатильность российского рынка
 	public static TQSymbol MXU5 = new TQSymbol(BoardType.FUT, "MXU5"); // MIX-9.15	
+
+	//public static TQSymbol _1BU5 = new TQSymbol(BoardType.FUT, "1BU5"); // IBVS-8.15 на Индекс BOVESPA
+	//public static TQSymbol _2BU5 = new TQSymbol(BoardType.FUT, "2BU5"); // SNSX-8.15 на Индекс SENSEX
 	public static TQSymbol _3BU5 = new TQSymbol(BoardType.FUT, "3BU5"); // HSIF-9.15 на Индекс Hang Seng
 	public static TQSymbol _4BU5 = new TQSymbol(BoardType.FUT, "4BU5"); // ALSI-9.15 на Индекс FTSE/JSE Top40
 	
@@ -58,7 +55,7 @@ public class TQSymbol implements ITQKey, Serializable {
 
 	public static TQSymbol RTSI = new TQSymbol(BoardType.INDEXR, "RTSI");
 	public static TQSymbol RTS2 = new TQSymbol(BoardType.INDEXR, "RTS2");
-	//public static TQSymbol MICEX = new TQSymbol(BoardType.INDEXR, "MICEX");
+//	public static TQSymbol MIX = new TQSymbol(BoardType.INDEXR, "MIX");
 	
 	public static List<TQSymbol> workingSymbolSet() {
 		ArrayList<TQSymbol> result = new ArrayList<TQSymbol>();

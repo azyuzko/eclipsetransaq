@@ -41,7 +41,9 @@ public class SimpleAccount implements IAccount {
 	
 	public SimpleAccount(double free, IDateTimeSupplier dateTimeSupplier, Map<TQSymbol, QuantityCost> positions) {
 		this(free, dateTimeSupplier);
-		this.initialPositions.putAll(positions);
+		for (TQSymbol s : positions.keySet()) {
+			this.initialPositions.put(s, new QuantityCost(positions.get(s).getQuantity(), positions.get(s).getCost()));
+		}
 		this.positions.putAll(positions);
 	}
 	

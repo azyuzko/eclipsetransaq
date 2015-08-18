@@ -64,12 +64,12 @@ public class StrategyTest {
 		
 		Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
 		
-		Date fromDate = Utils.parseDate("13.08.2015 10:00:00.000");
-		Date toDate = Utils.parseDate("13.08.2015 15:35:00.000");
+		Date fromDate = Utils.parseDate("17.08.2015 10:00:00.000");
+		Date toDate = Utils.parseDate("17.08.2015 17:35:00.000");
 		
 		DataFeeder dataFeeder = new DataFeeder(fromDate, toDate, 
 				//TQSymbol.workingSymbolSet().toArray(new TQSymbol[0])); 
-		 new TQSymbol[] {TQSymbol.SiU5, TQSymbol.BRQ5, TQSymbol.RIU5});
+		 new TQSymbol[] {TQSymbol.SiU5, TQSymbol.BRU5, TQSymbol.RIU5});
 		
 		ExecutorService service = Executors.newFixedThreadPool(1);
 
@@ -85,6 +85,9 @@ public class StrategyTest {
 		sp.setPriceType(PriceType.CLOSE);
 		sp.setWorkOn(StrategyWorkOn.CandleClose);
 		sp.setCandleType(CandleType.CANDLE_1M);
+		sp.setShortCandleType(CandleType.CANDLE_20S);
+		
+		// sp.stochF_optInFastK_Period = 
 		
 		Strategy macd = new Strategy(dataFeeder, sp);
 		StrategyJob s = new StrategyJob(index++, macd, dataFeeder);
