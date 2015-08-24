@@ -93,15 +93,15 @@ public class CandleStorage  {
 			candleList.processTickInCandle(tick, new CandleList.ICandleProcessContext() {
 				@Override
 				public void onCandleOpen(Candle candle) {
-					context.onCandleOpen(instrument, candleList, candle);
+					context.onCandleOpen(instrument.getSymbol(), candleList, candle);
 				}
 				@Override
 				public void onCandleClose(Candle candle) {
-					context.onCandleClose(instrument, candleList, candle);
+					context.onCandleClose(instrument.getSymbol(), candleList, candle);
 				}
 				@Override
 				public void onCandleChange(Candle candle) {
-					context.onCandleChange(instrument, candleList, candle);
+					context.onCandleChange(instrument.getSymbol(), candleList, candle);
 				}
 			});			
 		}

@@ -22,6 +22,8 @@ import javax.persistence.Transient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.tictactec.ta.lib.MAType;
+
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.model.PriceType;
 import ru.eclipsetrader.transaq.core.model.StrategyWorkOn;
@@ -65,7 +67,7 @@ public class StrategyTest {
 		Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
 		
 		Date fromDate = Utils.parseDate("17.08.2015 10:00:00.000");
-		Date toDate = Utils.parseDate("17.08.2015 17:35:00.000");
+		Date toDate = Utils.parseDate("18.08.2015 23:35:00.000");
 		
 		DataFeeder dataFeeder = new DataFeeder(fromDate, toDate, 
 				//TQSymbol.workingSymbolSet().toArray(new TQSymbol[0])); 
@@ -84,10 +86,12 @@ public class StrategyTest {
 		sp.setSignal(9);
 		sp.setPriceType(PriceType.CLOSE);
 		sp.setWorkOn(StrategyWorkOn.CandleClose);
-		sp.setCandleType(CandleType.CANDLE_1M);
-		sp.setShortCandleType(CandleType.CANDLE_20S);
+		sp.setCandleType(CandleType.CANDLE_15M);
+		sp.setShortCandleType(CandleType.CANDLE_1M);
 		
-		// sp.stochF_optInFastK_Period = 
+		sp.setStochF_optInFastD_MAType(MAType.Trima);
+		sp.setStochF_optInFastK_Period(25);
+		sp.setStochF_optInFastD_Period(4);
 		
 		Strategy macd = new Strategy(dataFeeder, sp);
 		StrategyJob s = new StrategyJob(index++, macd, dataFeeder);

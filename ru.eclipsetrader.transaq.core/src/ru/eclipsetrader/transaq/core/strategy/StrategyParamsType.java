@@ -23,6 +23,8 @@ public class StrategyParamsType {
 	int stochF_optInFastD_Period;
 	MAType stochF_optInFastD_MAType;
 	
+	
+	
 	public StrategyParamsType()  {
 		
 	}
@@ -40,6 +42,30 @@ public class StrategyParamsType {
 				}
 			}
 		}
+	}
+	
+	public int getStochF_optInFastK_Period() {
+		return stochF_optInFastK_Period;
+	}
+
+	public void setStochF_optInFastK_Period(int stochF_optInFastK_Period) {
+		this.stochF_optInFastK_Period = stochF_optInFastK_Period;
+	}
+
+	public int getStochF_optInFastD_Period() {
+		return stochF_optInFastD_Period;
+	}
+
+	public void setStochF_optInFastD_Period(int stochF_optInFastD_Period) {
+		this.stochF_optInFastD_Period = stochF_optInFastD_Period;
+	}
+
+	public MAType getStochF_optInFastD_MAType() {
+		return stochF_optInFastD_MAType;
+	}
+
+	public void setStochF_optInFastD_MAType(MAType stochF_optInFastD_MAType) {
+		this.stochF_optInFastD_MAType = stochF_optInFastD_MAType;
 	}
 
 	public PriceType getPriceType() {

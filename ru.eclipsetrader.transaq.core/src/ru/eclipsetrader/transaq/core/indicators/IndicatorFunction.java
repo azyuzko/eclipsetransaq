@@ -2,6 +2,8 @@ package ru.eclipsetrader.transaq.core.indicators;
 
 import java.util.Arrays;
 
+import org.eclipse.persistence.internal.libraries.antlr.runtime.misc.LookaheadStream;
+
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 import com.tictactec.ta.lib.Core;
@@ -11,14 +13,20 @@ import com.tictactec.ta.lib.MInteger;
 public abstract class IndicatorFunction {
 	
 	static Core core = new Core();
+	int lookback;
 	
 	@Override
 	public String toString() {
 		return "Indicator " + getClass().getSimpleName() + " (" + hashCode() + ")";
 	}
-	
+
+	public void normalizeArray(double[] outReal) {
+		normalizeArray(outReal, lookback);
+	}
+
 	/**
 	 * —двигает массив рассчитанных значений в сторону конца на lookback
+	 * Ќачало заполн€ет нул€ми
 	 * @param outReal
 	 * @param lookback
 	 */
@@ -27,6 +35,10 @@ public abstract class IndicatorFunction {
 			System.arraycopy(outReal, 0, outReal, lookback, outReal.length-lookback);
 			Arrays.fill(outReal, 0, lookback, 0);
 		}
+	}
+	
+	public int getLookback() {
+		return lookback;
 	}
 	
 	public static double[] createTestData() {

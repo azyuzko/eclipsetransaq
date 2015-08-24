@@ -253,11 +253,19 @@ public class SimpleAccount implements IAccount {
 
 	@Override
 	public QuantityCost close(TQSymbol symbol, double price) {
-		QuantityCost postition = positions.get(symbol);
-		if (postition == null || postition.getQuantity() == 0) {
-			return createOperation(BuySell.S, 0, 0);
+		QuantityCost position = positions.get(symbol);
+		QuantityCost initial = initialPositions.get(symbol);
+		int initialQuantity = initial != null ? initial.getQuantity() : 0;
+		int diff = 0;
+		if (position != null && position.getQuantity() != initialQuantity) {
+			diff = position.getQuantity() - initialQuantity;
 		}
-		return sell(symbol, postition.getQuantity(), price);
+		if (diff > 0) {
+			return sell(symbol, diff, price);
+		} else if (diff < 0) {
+			return buy(symbol, -diff, price);
+		}
+		return new QuantityCost(0, 0);
 	}
 	
 	public static void main(String[] args) {

@@ -238,6 +238,22 @@ public class Utils {
 		}
 	}
 
+	public static double[] sumArray(double[] a1, double[] a2) {
+		double[] result = new double[a1.length];
+		for (int i = 0; i < a1.length; i++) {
+			result[i] = a1[i] + a2[i];
+		}
+		return result;
+	}
+
+	public static double[] minusArray(double[] a1, double[] a2) {
+		double[] result = new double[a1.length];
+		for (int i = 0; i < a1.length; i++) {
+			result[i] = a1[i] - a2[i];
+		}
+		return result;
+	}
+
 	public static String printArray(double[] data) {
 		return printArray(data, null);
 	}

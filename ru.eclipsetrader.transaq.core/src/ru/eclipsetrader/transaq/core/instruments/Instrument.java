@@ -139,19 +139,19 @@ public class Instrument implements Closeable {
 	public void updateQuotes(List<Quote> quotes) {
 		logger.debug("Update quotes " + symbol);
 		glass.update(quotes);
-		context.onQuotesChange(this, glass);
+		context.onQuotesChange(symbol, glass);
 	}
 	
 	public void updateQuotations(List<SymbolGapMap> list) {
 		quotation.applyQuotationGap(list);
-		context.onQuotationsChange(this, quotation);
+		context.onQuotationsChange(symbol, quotation);
 	}
 		
 	public void processTrade(Tick tick) {
 		logger.debug("Process trade " + symbol + " " + tick.getSeccode());
 		// добавим сделку в график свечей
 		candleStorage.processTrade(tick);
-		context.onTick(this, tick);
+		context.onTick(symbol, tick);
 	}
 
 	public QuantityCost buy(int quantity) {

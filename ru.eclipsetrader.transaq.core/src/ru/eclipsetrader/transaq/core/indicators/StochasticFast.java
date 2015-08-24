@@ -1,16 +1,24 @@
 package ru.eclipsetrader.transaq.core.indicators;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import ru.eclipsetrader.transaq.core.account.QuantityCost;
 import ru.eclipsetrader.transaq.core.account.SimpleAccount;
 import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.candle.CandleList;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.data.DataManager;
-import ru.eclipsetrader.transaq.core.model.BoardType;
+import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.PriceType;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
+import ru.eclipsetrader.transaq.core.strategy.StrategyPosition;
+import ru.eclipsetrader.transaq.core.util.Holder;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 import com.tictactec.ta.lib.MAType;
@@ -23,7 +31,7 @@ import com.tictactec.ta.lib.MInteger;
  */
 public class StochasticFast extends IndicatorFunction {
 
-	int lookback;
+
 	
 	int optInFastK_Period = 5;
 	int optInFastD_Period = 3;
@@ -63,10 +71,6 @@ public class StochasticFast extends IndicatorFunction {
 		core.stochF(startIdx, endIdx, inHigh, inLow, inClose, optInFastK_Period, optInFastD_Period, optInFastD_MAType, outBegIdx, outNBElement, outFastK, outFastD);
 		normalizeArray(outFastK, lookback);
 		normalizeArray(outFastD, lookback);
-	}
-
-	public int getLookback() {
-		return lookback;
 	}
 
 	public double[] getInHigh() {
@@ -120,58 +124,102 @@ public class StochasticFast extends IndicatorFunction {
 	public double[] getOutFastD() {
 		return outFastD;
 	}
-
-	public static void simpleStochFTest(CandleList cl, SimpleAccount sa) {
+	
+	public static String simpleStochFTest(CandleList cl, SimpleAccount sa, StochasticFast sf) {
+		TQSymbol symbol = TQSymbol.SiU5;
 		
-		StochasticFast sf = new StochasticFast();
 		sf.evaluate(cl);
-		
 		Date[] dates = cl.dates();
+				
+		double[] close = cl.values(PriceType.CLOSE).getSecond();
+		double[] fastK = sf.getOutFastK();
+		double[] fastD = sf.getOutFastD();
+		double[] diff = Utils.minusArray(fastK, fastD);
+		
+		StringBuilder sb = new StringBuilder();
+		
+		StrategyPosition position = null;
 		
 		for (int i = 0; i < dates.length-1; i++) {
-			System.out.println(Utils.formatDate(dates[i]) + " - " + sf.getOutFastD()[i] + " " + sf.getOutFastK()[i]);
+			if (fastD[i] > 0 && fastK[i] > 0) {
+				
+				BuySell bs = null;
+				if ((position == null || position.getBuySell() == BuySell.S) && fastK[i] < 15) {
+					if (sa.buy(symbol, 1, close[i]).getQuantity() > 0) {
+						position = new StrategyPosition(symbol, BuySell.B);
+					};
+				}
+				
+				if ((position == null || position.getBuySell() == BuySell.B) && fastK[i] > 85) {
+					if (sa.sell(symbol, 1, close[i]).getQuantity() > 0) {
+						position = new StrategyPosition(symbol, BuySell.S);
+					}
+				}
+				
+				if (position != null) {
+					if (position.getBuySell() == BuySell.B) {
+						if (diff[i] > 20) {
+							if (sa.sell(symbol, 1, close[i]).getQuantity() > 0) {
+								bs = BuySell.S;
+								position = null;
+							}							
+						}
+					}
+
+				}
+
+				String s = String.format(
+						"\n %s :  %5.2f  %5.2f  %5.2f  %5.2f %s",
+						Utils.formatDate(dates[i]),
+						close[i],
+						sf.getOutFastK()[i],
+						sf.getOutFastD()[i],
+						diff[i],
+						bs != null ? String.valueOf(bs) : "");
+				sb.append(s);
+			}
 		}
 		
+		sa.close(symbol, close[close.length-1]);
+		
+		return sb.toString();		
 	}
 	
 	public static void main(String[] args) {
 
-		Date fromDate = Utils.parseDate("10.08.2015 00:00:00.000");
-		Date toDate = Utils.parseDate("19.08.2015 00:00:00.000");
+		Date fromDate = Utils.parseDate("16.08.2015 00:00:00.000");
+		Date toDate = Utils.parseDate("18.08.2015 20:00:00.000");
 
 		CandleType candleType = CandleType.CANDLE_15M;
-		List<Candle> candles = DataManager.getCandles(new TQSymbol(
-				BoardType.FUT, "SiU5"), candleType, fromDate, toDate);
+		TQSymbol symbol = TQSymbol.SiU5;
+		List<Candle> candles = DataManager.getCandles(symbol, candleType, fromDate, toDate);
 		CandleList cl = new CandleList(candleType);
 		cl.appendCandles(candles);
-
-		StochasticFast sf = new StochasticFast();
-
-		sf.evaluate(cl);
 		
-		double[] inHigh = sf.getInHigh();
-		double[] inLow = sf.getInLow();
-		double[] inClose = sf.getInClose();
-
-		Date[] dates = cl.dates();
-
-		StringBuilder sb = new StringBuilder();
-		sb.append("\n" + "dates     :"
-				+ Utils.printArray(dates, "%1$2tm-%1$2td%1$6tR") + "\n");
-		sb.append("high      :" + Utils.printArray(inHigh, "%11.2f") + "\n");
-		sb.append("low       :" + Utils.printArray(inLow, "%11.2f") + "\n");
-		sb.append("close     :" + Utils.printArray(inClose, "%11.2f") + "\n");
-		sb.append("slowK     :" + Utils.printArray(sf.getOutFastK(), "%11.4f") + "\n");
-		sb.append("slowD     :" + Utils.printArray(sf.getOutFastD(), "%11.4f") + "\n");
-		sb.append("dates = " + dates.length + "\n");
-		sb.append("outBegIdx = " + sf.getOutBegIdx() + "\n");
-		sb.append("outNBElement = " + sf.getOutNBElement() + "\n");
-		sb.append("lookback = " + sf.getLookback() + "\n");
-
-		System.out.println(sb.toString());
-		
-		SimpleAccount sa = new SimpleAccount(100000.0);
-		simpleStochFTest(cl, sa);
+		List<Holder<Double, String>> res = new ArrayList<Holder<Double,String>>();
+		int optInFastK_Period = 25;
+		int optInFastD_Period = 4;
+		//for (MAType optInFastD_MAType : MAType.values()) {
+		MAType optInFastD_MAType = MAType.Trima;
+		Map<TQSymbol, QuantityCost> initial = new HashMap<>();
+		initial.put(symbol, new QuantityCost(1, 0));
+		SimpleAccount sa = new SimpleAccount(100000.0, null, initial);
+		StochasticFast stochasticFast = new StochasticFast(optInFastK_Period, optInFastD_Period, optInFastD_MAType);
+		String stochResult = simpleStochFTest(cl, sa, stochasticFast);
+		String sRes = String.format("K = %d,  D = %d, %s Free: %f %s\n", optInFastK_Period, optInFastD_Period, String.valueOf(optInFastD_MAType), sa.getFree(), stochResult);
+		res.add(new Holder<Double, String>(sa.getFree(), sRes));
+		//}
+		Collections.sort(res, new Comparator<Holder<Double, String>>() {
+			@Override
+			public int compare(Holder<Double, String> o1,
+					Holder<Double, String> o2) {
+				return Double.compare(o1.getFirst(), o2.getFirst());
+			}
+		});
+	
+		for (Holder<Double, String> h : res) {
+			System.out.println(h.getSecond());
+		}
 		
 	}
 

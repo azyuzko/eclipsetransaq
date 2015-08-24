@@ -28,7 +28,7 @@ public class Candle {
 	// все тики свечи лежат в этой структуре
 	// используется для расчета других типов цен
 	TreeMap<Date, List<Holder<Double, Integer>>> ticks = new TreeMap<Date, List<Holder<Double, Integer>>>();
-	
+
 	public void processTick(Tick tick) {
 		Date date = tick.getTime();
 		double tickPrice = tick.getPrice();

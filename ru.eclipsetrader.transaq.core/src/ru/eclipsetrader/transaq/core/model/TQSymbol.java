@@ -22,7 +22,7 @@ public class TQSymbol implements ITQKey, Serializable {
 	
 	public static TQSymbol RIU5 = new TQSymbol(BoardType.FUT, "RIU5"); // RTS-9.15
 	public static TQSymbol RSU5 = new TQSymbol(BoardType.FUT, "RSU5"); // RTSS-9.15
-	public static TQSymbol VIQ5 = new TQSymbol(BoardType.FUT, "VIQ5"); // RVI-8.15 ‘ьючерсный контракт на волатильность российского рынка
+	public static TQSymbol VIQ5 = new TQSymbol(BoardType.FUT, "VIU5"); // RVI-9.15 ‘ьючерсный контракт на волатильность российского рынка
 	public static TQSymbol MXU5 = new TQSymbol(BoardType.FUT, "MXU5"); // MIX-9.15	
 
 	//public static TQSymbol _1BU5 = new TQSymbol(BoardType.FUT, "1BU5"); // IBVS-8.15 на »ндекс BOVESPA

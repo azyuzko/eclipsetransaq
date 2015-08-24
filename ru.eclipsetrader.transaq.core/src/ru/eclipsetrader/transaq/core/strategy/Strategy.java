@@ -15,6 +15,8 @@ import org.apache.commons.lang3.time.DateUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.tictactec.ta.lib.MAType;
+
 import ru.eclipsetrader.transaq.core.account.QuantityCost;
 import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.candle.CandleList;
@@ -44,10 +46,15 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 	public Instrument iRI;
 	public Instrument iSi;
 
-	MACD macdBr = new MACD(fast, slow, signal);
-	MACD macdRI = new MACD(fast, slow, signal);
-	MACD macdSi = new MACD(fast, slow, signal);
+	MACD macdBr;
+	MACD macdRI;
+	MACD macdSi;
 
+	StochasticFast sfBr;
+	StochasticFast sfRI;
+	StochasticFast sfSi;
+
+	
 	IDataFeedContext dataFeedContext;
 	IAccount account;
 	Date currentDate = null;
@@ -62,6 +69,14 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 		this.iBR = new Instrument(TQSymbol.BRU5, this, dataFeedContext);
 		this.iSi = new Instrument(TQSymbol.SiU5, this, dataFeedContext);
 		this.iRI = new Instrument(TQSymbol.RIU5, this, dataFeedContext);
+		
+		this.macdBr = new MACD(fast, slow, signal);
+		this.macdRI = new MACD(fast, slow, signal);
+		this.macdSi = new MACD(fast, slow, signal);
+		
+		this.sfBr = new StochasticFast(stochF_optInFastK_Period, stochF_optInFastD_Period, stochF_optInFastD_MAType);
+		this.sfRI = new StochasticFast(stochF_optInFastK_Period, stochF_optInFastD_Period, stochF_optInFastD_MAType);
+		this.sfSi = new StochasticFast(stochF_optInFastK_Period, stochF_optInFastD_Period, stochF_optInFastD_MAType);
 	}
 
 	@Override
@@ -100,10 +115,10 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 	
 	double avg_corr = 0;
 	
-	public void tick(Instrument i) {
-		if (i.getSymbol().equals(TQSymbol.BRU5) /*|| i.getSymbol().equals(TQSymbol.RIU5)*/) {
-			TQSymbol sSiU5 = TQSymbol.SiU5;
-			
+	public void tick(TQSymbol symbol) {
+		TQSymbol sSiU5 = TQSymbol.SiU5;
+		TQSymbol sBRU5 = TQSymbol.BRU5;
+		if (symbol.equals(sSiU5)) {
 			// 2 min wait after close position
 			if (!hasOpenedPosition(sSiU5)){
 				StrategyPosition lastPosition = lastPosition(sSiU5);
@@ -119,9 +134,8 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 			Holder<Date[], double[]> valuesBr = iBR.getCandleStorage().getCandleList(_ct).values(_pt);
 			Holder<Date[], double[]> valuesRI = iRI.getCandleStorage().getCandleList(_ct).values(_pt);
 			Holder<Date[], double[]> valuesSi = iSi.getCandleStorage().getCandleList(_ct).values(_pt);
-			
-			StochasticFast sf = new StochasticFast(stochF_optInFastK_Period, stochF_optInFastD_Period, stochF_optInFastD_MAType);
 
+			
 			macdBr.evaluate(valuesBr.getSecond(), valuesBr.getFirst());
 			macdRI.evaluate(valuesRI.getSecond(), valuesRI.getFirst());
 			macdSi.evaluate(valuesSi.getSecond(), valuesSi.getFirst());
@@ -130,12 +144,28 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 			double[] histRI = macdRI.getOutMACDHist();
 			double[] histSi = macdSi.getOutMACDHist();
 			
+
+			sfBr.evaluate(iBR.getCandleStorage().getCandleList(candleType));
+			double[] sfKBr = sfBr.getOutFastK();
+			double[] sfDBr = sfBr.getOutFastD();
+
+			sfRI.evaluate(iRI.getCandleStorage().getCandleList(candleType));
+			double[] sfKRI = sfRI.getOutFastK();
+			double[] sfDRI = sfRI.getOutFastD();
+
+			sfSi.evaluate(iSi.getCandleStorage().getCandleList(candleType));
+			double[] sfKSi = sfSi.getOutFastK();
+			double[] sfDSi = sfSi.getOutFastD();
+			double[] sfKDSi_diff = Utils.minusArray(sfKSi, sfDSi);
+			
+
 			BuySell signalOpen = null;
 			boolean needClose = false;
 
 			if (	histBr.length > macdBr.getLookback() &&
 					histRI.length > macdRI.getLookback() &&
-					histSi.length > macdSi.getLookback() 
+					histSi.length > macdSi.getLookback() &&
+					sfKBr.length > sfBr.getLookback()
 					) {
 
 				int last_count = 10;
@@ -143,97 +173,73 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 				sb.append("\ndate      :" + Utils.printArray(last(valuesBr.getFirst(), last_count), "%10tR") + ", current = " + Utils.formatTime(getDateTime()) + " \n");					
 				sb.append("BR price  :" + Utils.printArray(last(valuesBr.getSecond(), last_count), "%10.2f") + "\n");
 				sb.append("BR hist   :" + Utils.printArray(last(macdBr.getOutMACDHist(), last_count), "%10.4f") + "\n");
+				sb.append("BR fast K :" + Utils.printArray(last(sfKBr, last_count), "%10.4f") + "\n");
+				sb.append("BR fast D :" + Utils.printArray(last(sfDBr, last_count), "%10.4f") + "\n");
+				sb.append("---\n");
 				sb.append("RI price  :" + Utils.printArray(last(valuesRI.getSecond(), last_count), "%10.0f") + "\n");
 				sb.append("RI hist   :" + Utils.printArray(last(macdRI.getOutMACDHist(), last_count), "%10.2f") + "\n");
+				sb.append("RI fast K :" + Utils.printArray(last(sfKRI, last_count), "%10.4f") + "\n");
+				sb.append("RI fast D :" + Utils.printArray(last(sfDRI, last_count), "%10.4f") + "\n");
+				sb.append("---\n");
 				sb.append("Si price  :" + Utils.printArray(last(valuesSi.getSecond(), last_count), "%10.0f") + "\n");
 				sb.append("Si hist   :" + Utils.printArray(last(macdSi.getOutMACDHist(), last_count), "%10.2f") + "\n");
-				
-				Double[] correlation = new Double[macdSi.getLookback()];
-				for (int index = valuesBr.getFirst().length-macdSi.getLookback(), x = 0; index < valuesBr.getFirst().length; index++, x++) {
-					correlation[x] = calcAllCorrelation(valuesBr.getSecond()[index], valuesRI.getSecond()[index], valuesSi.getSecond()[index]);
-				}
-				
-				sb.append("correlatio:" + Utils.printArray(last(correlation, last_count), "%10.0f") + "\n");
+				sb.append("Si fast K :" + Utils.printArray(last(sfKSi, last_count), "%10.4f") + "\n");
+				sb.append("Si fast D :" + Utils.printArray(last(sfDSi, last_count), "%10.4f") + "\n");
+				sb.append("Si fast KD:" + Utils.printArray(last(sfKDSi_diff, last_count), "%10.4f") + "\n");
 				
 				// 
 				StrategyPosition currentPosition = currentOpenedPosition(sSiU5);
-				double hist_br_const = 0.001;
-				if (i.getSymbol().equals(TQSymbol.BRU5)) {
-					if (!hasOpenedPosition(sSiU5)) {
-						
-						double brPrevLastDiff = valuesBr.getSecond()[valuesBr.getSecond().length-1] - valuesBr.getSecond()[valuesBr.getSecond().length-2];
-						if (Math.abs(brPrevLastDiff) >= 0.04) {
-							System.err.println("brPrevLastDiff >= 0.04");
-							signalOpen = brPrevLastDiff < 0 ? BuySell.B : BuySell.S;
-						} /*else 
-						
-						if  ( 
-						Math.signum(histBr[histBr.length-1]) != Math.signum(histBr[histBr.length-2]) &&
-							Math.abs(histBr[histBr.length-1]) > hist_br_const &&
-							Math.abs(histBr[histBr.length-3]) > Math.abs(histBr[histBr.length-2])
-							// correlation[correlation.length-1] >= 1339
-								) {
-							
-							System.err.println("OPEN hist > " + hist_br_const);
-							signalOpen = (Math.signum(histBr[histBr.length-1]) == -1) ? BuySell.B : BuySell.S;
-							int count = 0;
-							double sum = 0;
-							for (int x = 0; x < correlation.length-2; x++) {
-								sum += correlation[x];
-								count++;
+				if (!hasOpenedPosition(sSiU5)) {
+					if (   (sfDSi[sfDSi.length-1] > 80)
+						|| (sfKSi[sfKSi.length-1] > 90)) {
+						if (sfKSi[sfKSi.length-1] > sfKSi[sfKSi.length-2]) {
+							signalOpen = BuySell.S;
+						}
+					} else 
+						if ((sfDSi[sfDSi.length-1] < 20)
+							|| (sfKSi[sfKSi.length-1] < 10)) {
+							if (sfKSi[sfKSi.length-1] < sfKSi[sfKSi.length-2]) {
+								signalOpen = BuySell.B;
 							}
-							avg_corr = sum / count;
-						}*/
-					} else {
-						
-						System.err.println(String.format("%s %10.0f %10.2f %10.0f",
-								Utils.formatTime(valuesSi.getFirst()[valuesSi.getFirst().length-1]),
-								valuesSi.getSecond()[valuesSi.getSecond().length-1],
-								macdSi.getOutMACDHist()[macdSi.getOutMACDHist().length-1],
-								correlation[correlation.length-1]));
-						
-						/*							
-						if (Math.signum(histBr[histBr.length-1]) != Math.signum(histBr[histBr.length-2]) && // !
-							Math.abs(histBr[histBr.length-3]) > Math.abs(histBr[histBr.length-2]) &&
-							Math.abs(histBr[histBr.length-2]) > Math.abs(histBr[histBr.length-1]) &&
-							Math.abs(histBr[histBr.length-1]) > 0.001
-							) {
-							logger.info("******* Close by BR hist diff sign!");
-							signal = openedPosition.getFirst().getOpposited();
-						} else*/
-
-						double planProfit = currentPosition.getPlanProfit(valuesSi.getSecond()[valuesSi.getSecond().length-1]);
-						if (planProfit < - 10.0) {
-							logger.info("******* Close STOP LOSS = " + planProfit);							
-							needClose = true;
-						}
-						
-						if (Math.signum(histSi[histSi.length-1]) == Math.signum(histSi[histSi.length-2]) &&
-								Math.abs(histSi[histSi.length-3]) < Math.abs(histSi[histSi.length-2]) &&
-								Math.abs(histSi[histSi.length-2]) > Math.abs(histSi[histSi.length-1]) &&
-								( (currentPosition.getBuySell() == BuySell.B && valuesSi.getSecond()[valuesSi.getSecond().length-1] < valuesSi.getSecond()[valuesSi.getSecond().length-2])
-								||	(currentPosition.getBuySell() == BuySell.S && valuesSi.getSecond()[valuesSi.getSecond().length-1] > valuesSi.getSecond()[valuesSi.getSecond().length-2]))
-								) {
-							logger.info("******* Close by BR hist Si!");
-							needClose = true;
-						}
-						
-						/*
-						if (avg_corr != 0 && Math.abs(Math.round(correlation[correlation.length-1] - avg_corr)) < 2) {
-							logger.info("******* Close correlation[correlation.length-1] = " + correlation[correlation.length-1]);							
-							needClose = true;
-							avg_corr = 0;
-						}*/
 					}
+					
+				} else {
+					
+					System.err.println(String.format("%s  %10.0f  %10.2f  %10.2f  %10.2f  %10.2f",
+							Utils.formatTime(valuesSi.getFirst()[valuesSi.getFirst().length-1]),
+							valuesSi.getSecond()[valuesSi.getSecond().length-1],
+							macdSi.getOutMACDHist()[macdSi.getOutMACDHist().length-1],
+							sfDSi[sfDSi.length-1],
+							sfKSi[sfKSi.length-1],
+							sfKDSi_diff[sfKDSi_diff.length-1]
+							));
+					
+					double planProfit = currentPosition.getPlanProfit(valuesSi.getSecond()[valuesSi.getSecond().length-1]);
+					if (planProfit < - 50.0) {
+						logger.info("******* Close STOP LOSS = " + planProfit);							
+						needClose = true;
+					}
+					
+					if (Math.signum(histSi[histSi.length-1]) == Math.signum(histSi[histSi.length-2]) &&
+							Math.abs(histSi[histSi.length-3]) < Math.abs(histSi[histSi.length-2]) &&
+							Math.abs(histSi[histSi.length-2]) > Math.abs(histSi[histSi.length-1]) &&
+							( (currentPosition.getBuySell() == BuySell.B && valuesSi.getSecond()[valuesSi.getSecond().length-1] < valuesSi.getSecond()[valuesSi.getSecond().length-2])
+							||	(currentPosition.getBuySell() == BuySell.S && valuesSi.getSecond()[valuesSi.getSecond().length-1] > valuesSi.getSecond()[valuesSi.getSecond().length-2]))
+							) {
+						logger.info("******* Close by BR hist Si!");
+						needClose = true;
+					}
+
 				}
+				
+				//if (!logger.isDebugEnabled()) {
+				logger.info(sb.toString());
+				//}
 
 				if (signalOpen == null && !needClose) {
 					return;
 				}
 				
-				if (!logger.isDebugEnabled()) {
-					logger.info(sb.toString());
-				}
 				if (signalOpen != null) {
 					currentPosition = openPosition(iSi, signalOpen);
 					if (currentPosition == null) {
@@ -249,7 +255,7 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 				logger.info("");			
 				logger.info("");			
 			} else {
-				logger.info("Not enough history length = " + macdBr.getOutMACDHist().length + " for lookback " + macdBr.getLookback());
+				logger.info(Utils.formatDate(getDateTime()) + " Not enough history length = " + macdBr.getOutMACDHist().length + " for lookback " + macdBr.getLookback());
 			}
 		}
 	}
@@ -437,33 +443,33 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 
 
 	@Override
-	public void onTick(Instrument instrument, Tick tick) {
+	public void onTick(TQSymbol symbol, Tick tick) {
 		
 	}
 
 	@Override
-	public void onQuotesChange(Instrument instrument, QuoteGlass quoteGlass) {
+	public void onQuotesChange(TQSymbol symbol, QuoteGlass quoteGlass) {
 		
 	}
 
 	@Override
-	public void onCandleClose(Instrument instrument, CandleList candleList, Candle candle) {
-			tick(instrument);			
+	public void onCandleClose(TQSymbol symbol, CandleList candleList, Candle candle) {
+		tick(symbol);			
 	}
 
 	@Override
-	public void onCandleOpen(Instrument instrument, CandleList candleList, Candle candle) {
+	public void onCandleOpen(TQSymbol symbol, CandleList candleList, Candle candle) {
 	
 	}
 
 	@Override
-	public void onCandleChange(Instrument instrument, CandleList candleList, Candle candle) {
+	public void onCandleChange(TQSymbol symbol, CandleList candleList, Candle candle) {
 
 	}
 	
 
 	@Override
-	public void onQuotationsChange(Instrument instrument, Quotation quotation) {
+	public void onQuotationsChange(TQSymbol symbol, Quotation quotation) {
 		
 	}
 
