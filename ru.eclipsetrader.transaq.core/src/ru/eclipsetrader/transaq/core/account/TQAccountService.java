@@ -7,15 +7,12 @@ import java.util.Map;
 import ru.eclipsetrader.transaq.core.Constants;
 import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.event.Observer;
-import ru.eclipsetrader.transaq.core.exception.UnimplementedException;
-import ru.eclipsetrader.transaq.core.instruments.Instrument;
 import ru.eclipsetrader.transaq.core.interfaces.IAccount;
 import ru.eclipsetrader.transaq.core.interfaces.ITQPosition;
 import ru.eclipsetrader.transaq.core.interfaces.ITQSecurity;
 import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.PositionType;
-import ru.eclipsetrader.transaq.core.model.QuoteGlass;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.FortsMoneyPosition;
 import ru.eclipsetrader.transaq.core.model.internal.FortsPosition;
@@ -26,6 +23,7 @@ import ru.eclipsetrader.transaq.core.orders.OrderRequest;
 import ru.eclipsetrader.transaq.core.orders.TQOrderTradeService;
 import ru.eclipsetrader.transaq.core.services.ITQAccountService;
 import ru.eclipsetrader.transaq.core.util.Holder;
+import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class TQAccountService implements ITQAccountService, Observer<Holder<PositionType,Map<String,String>>> {
 	
@@ -51,18 +49,10 @@ public class TQAccountService implements ITQAccountService, Observer<Holder<Posi
 	IAccount fortsAccount = new IAccount() {
 		
 		@Override
-		public QuantityCost sell(TQSymbol symbol, int quantity,
-				QuoteGlass quoteGlass) {
-			System.err.println("Sell1 " + quantity);
+		public QuantityCost sell(TQSymbol symbol, int quantity) {
 			OrderRequest or = OrderRequest.createByMarketRequest(symbol, BuySell.S, quantity);
 			Order order = TQOrderTradeService.getInstance().createOrder(or);
 			return new QuantityCost(order.getQuantity(), order.getPrice());
-		}
-		
-		@Override
-		public QuantityCost sell(TQSymbol symbol, int quantity, double price) {
-			System.err.println("Sell2 " + quantity);
-			return null;
 		}
 		
 		@Override
@@ -91,17 +81,10 @@ public class TQAccountService implements ITQAccountService, Observer<Holder<Posi
 		}
 		
 		@Override
-		public QuantityCost buy(TQSymbol symbol, int quantity, QuoteGlass quoteGlass) {
-			System.err.println("Buy " + quantity);
+		public QuantityCost buy(TQSymbol symbol, int quantity) {
 			OrderRequest or = OrderRequest.createByMarketRequest(symbol, BuySell.B, quantity);
 			Order order = TQOrderTradeService.getInstance().createOrder(or);
 			return new QuantityCost(order.getQuantity(), order.getPrice());
-		}
-		
-		@Override
-		public QuantityCost buy(TQSymbol symbol, int quantity, double price) {
-			System.err.println("Buy " + quantity);
-			return null;
 		}
 
 		@Override

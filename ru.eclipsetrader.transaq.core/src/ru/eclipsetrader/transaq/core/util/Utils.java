@@ -27,6 +27,8 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import ru.eclipsetrader.transaq.core.orders.DiffMap;
+
 public class Utils {
 	
 	private static Logger logger = LogManager.getFormatterLogger(Utils.class);
@@ -34,6 +36,37 @@ public class Utils {
 	private static SimpleDateFormat sdfDateTime = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss.SSS");
 	private static SimpleDateFormat sdfTime = new SimpleDateFormat("HH:mm:ss");
 	private static SAXParserFactory fb = SAXParserFactory.newInstance();
+	
+	/**
+	 * Делает merge двух объектов и возвращает список старых/новых значений
+	 * @param mergeTo
+	 * @param mergeFrom
+	 * @return атрибут - старое/новое значение
+	 */
+	public static <T> DiffMap mergeObjects(T mergeTo, T mergeFrom) {
+		DiffMap map = new DiffMap();
+		 if (mergeTo != null && mergeFrom != null) {
+			 try {
+				 for (Field f : mergeTo.getClass().getDeclaredFields()) {
+					 f.setAccessible(true);
+					 Object oldValue = f.get(mergeTo);
+					 Object newValue = f.get(mergeFrom);
+					 if ( (oldValue != null && !oldValue.equals(newValue)) ||
+						  (oldValue == null && newValue != null) ){
+						 if (f.getName().toLowerCase().contains("callback")) { // колбэки не мерджим
+							 continue;
+						 }
+						 f.set(mergeTo, newValue);
+						 map.put(f.getName(), oldValue, newValue);
+					 }
+				 }
+			 } catch (Exception e) {
+				 e.printStackTrace();
+			 }
+		 }
+		 
+		 return map;
+	}
 	
 	public static String getMemoryDetails() {
 		StringBuilder sb = new StringBuilder();
@@ -83,6 +116,26 @@ public class Utils {
 			logger.error("Cannot parse <%s> date", value, e);
 			return null;
 		}
+	}
+	
+	/**
+	 * Парсит время в формате <00:02:30.000>
+	 * @param guardtime
+	 * @return возвращает время в секундах
+	 */
+	public static int parseGuardTime(String guardtime) {
+		try {
+			Calendar c = Calendar.getInstance();
+			c.setTime(sdfTime.parse(guardtime));
+			return c.get(Calendar.SECOND) + c.get(Calendar.MINUTE)*60 + c.get(Calendar.HOUR) * 3600;
+		} catch (ParseException e) {
+			e.printStackTrace();
+			return 0;
+		}
+	}
+	
+	public static String formatGuardTime(int seconds) {
+		 return String.format("%02d:%02d:%02d.000", seconds/3600, (seconds%3600)/60, (seconds%60));
 	}
 	
 	private static void appendProperties(Object object, Class<?> class_, StringBuilder sb) throws IllegalArgumentException, IllegalAccessException {
@@ -285,7 +338,19 @@ public class Utils {
 	
 	public static void main(String[] args) {
 		/*Order o = new Order();
-		System.out.println(generateStub(o));*/
-		System.out.println(Utils.parseDate("31.07.2015 23:49:57.000"));
+		System.out.println(generateStub(o));
+		//System.out.println(Utils.parseDate("31.07.2015 23:49:57.000"));
+		StopOrder so1 = new StopOrder();
+		StopOrder so2 = new StopOrder();
+		so1.setAlltradeno(null);
+		so2.setAlltradeno(2L);
+		so1.setBuysell(BuySell.B);
+		so2.setBuysell(BuySell.S);
+		Map<String, Holder<Object, Object>> map = createDiffMap(so1, so2);
+		for (String key : map.keySet()) {
+			System.out.println(key + ": " + map.get(key));
+		}*/
+		System.out.println(parseGuardTime("00:02:30.000"));
+		System.out.println(formatGuardTime(45));
 	}
 }

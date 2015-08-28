@@ -3,6 +3,8 @@ package ru.eclipsetrader.transaq.core.model.internal;
 import javax.persistence.Entity;
 import javax.persistence.Table;
 
+import ru.eclipsetrader.transaq.core.util.Utils;
+
 @Table(name="trades")
 @Entity(name="Trade")
 public class Trade extends Tick  {
@@ -19,6 +21,15 @@ public class Trade extends Tick  {
 	double currentpos;
 	
 	int items;
+	
+	public String getTradeDesc() {
+		return buysell + " " + getSymbol() + " " + tradeno + " " + orderno + " " + price +" " + quantity;
+	}
+	
+	@Override
+	public String toString() {
+		return Utils.toString(this);
+	}
 
 	public int getItems() {
 		return items;

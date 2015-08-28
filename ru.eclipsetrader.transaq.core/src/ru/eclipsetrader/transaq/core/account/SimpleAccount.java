@@ -11,11 +11,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import ru.eclipsetrader.transaq.core.interfaces.IAccount;
-import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.QuoteGlass;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
-import ru.eclipsetrader.transaq.core.trades.IDataFeedContext;
 import ru.eclipsetrader.transaq.core.trades.IDateTimeSupplier;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
@@ -27,6 +25,7 @@ public class SimpleAccount implements IAccount {
 	double free;
 
 	IDateTimeSupplier dateTimeSupplier;
+	IPricingFeeder pricingFeeder;
 	
 	Map<TQSymbol, QuantityCost> initialPositions = new HashMap<>();
 	
@@ -35,16 +34,14 @@ public class SimpleAccount implements IAccount {
 	
 	List<AccountOperation> operations = new ArrayList<AccountOperation>();
 	
-	public SimpleAccount(double free) {
-		this(free, null);
-	}
-	
 	public SimpleAccount(double free, IDateTimeSupplier dateTimeSupplier, Map<TQSymbol, QuantityCost> positions) {
 		this(free, dateTimeSupplier);
-		for (TQSymbol s : positions.keySet()) {
-			this.initialPositions.put(s, new QuantityCost(positions.get(s).getQuantity(), positions.get(s).getCost()));
+		if (positions != null) {
+			for (TQSymbol s : positions.keySet()) {
+				this.initialPositions.put(s, new QuantityCost(positions.get(s).getQuantity(), positions.get(s).getCost()));
+			}
+			this.positions.putAll(positions);
 		}
-		this.positions.putAll(positions);
 	}
 	
 	public SimpleAccount(double free, IDateTimeSupplier dateTimeSupplier) {
@@ -65,7 +62,14 @@ public class SimpleAccount implements IAccount {
 		return positions;
 	}
 
-	
+	public IPricingFeeder getPricingFeeder() {
+		return pricingFeeder;
+	}
+
+	public void setPricingFeeder(IPricingFeeder pricingFeeder) {
+		this.pricingFeeder = pricingFeeder;
+	}
+
 	private AccountOperation createOperation(BuySell buySell, int quantity, double cost) {
 		AccountOperation operation = new AccountOperation(buySell, currentDate(), quantity, cost);
 		if (quantity > 0) {
@@ -101,6 +105,23 @@ public class SimpleAccount implements IAccount {
 	}
 
 	@Override
+	public QuantityCost buy(TQSymbol symbol, int quantity) {
+		QuoteGlass quoteGlass = pricingFeeder.getQuoteGlass(symbol);
+		if (quoteGlass != null) {
+			return buy(symbol, quantity, quoteGlass);
+		} else {
+			double price = pricingFeeder.buyPrice();
+			return buy(symbol, quantity, price);
+		}
+	}
+	
+	/**
+	 * Покупка по указанной цене
+	 * @param symbol
+	 * @param quantity
+	 * @param price
+	 * @return
+	 */
 	public QuantityCost buy(TQSymbol symbol, int quantity, double price) {
 		if (logger.isDebugEnabled()) {
 			logger.debug("buy " + symbol + " quantity = " + quantity + ", price = " + price);
@@ -127,7 +148,6 @@ public class SimpleAccount implements IAccount {
 	 * @param symbol
 	 * @param priceMap
 	 */
-	@Override
 	public QuantityCost buy(TQSymbol symbol, int quantity, QuoteGlass quoteGlass) {
 		
 		if (logger.isDebugEnabled()) {
@@ -168,6 +188,16 @@ public class SimpleAccount implements IAccount {
 	}
 
 	@Override
+	public QuantityCost sell(TQSymbol symbol, int quantity) {
+		QuoteGlass quoteGlass = pricingFeeder.getQuoteGlass(symbol);
+		if (quoteGlass != null) {
+			return sell(symbol, quantity, quoteGlass);
+		} else {
+			double price = pricingFeeder.buyPrice();
+			return sell(symbol, quantity, price);
+		}
+	}
+
 	public QuantityCost sell(TQSymbol symbol, int quantity, double price) {
 		if (logger.isDebugEnabled()) {
 			logger.debug("sell " + symbol + " quantity = " + quantity + ", price = " + price);
@@ -188,8 +218,7 @@ public class SimpleAccount implements IAccount {
 		}
 		return createOperation(BuySell.S, quantity, current_cost);
 	}
-	
-	@Override
+
 	public QuantityCost sell(TQSymbol symbol, int quantity, QuoteGlass quoteGlass) {
 		
 		if (logger.isDebugEnabled()) {
@@ -269,32 +298,7 @@ public class SimpleAccount implements IAccount {
 	}
 	
 	public static void main(String[] args) {
-		SimpleAccount sa = new SimpleAccount(1000);
-		TQSymbol s1 = new TQSymbol(BoardType.FUT, "SiU5");
-		TQSymbol s2 = new TQSymbol(BoardType.FUT, "BRQ5");
-		System.out.println("buy = " + sa.buy(s1, 15, 100.0));
-		System.out.println("sell = " + sa.sell(s1, 10, 120));
-		System.out.println("sell = " + sa.sell(s1, 8, 100));
-		System.out.println(sa);		
 		
-		System.out.println("----");
-		sa = new SimpleAccount(1000);
-		QuoteGlass qg = new QuoteGlass();
-		qg.getSellStack().put(60.0, 2);
-		qg.getSellStack().put(55.0, 2);
-		qg.getSellStack().put(50.0, 1);
-		
-		qg.getBuyStack().put(45.0, 1);
-		qg.getBuyStack().put(40.0, 2);
-		qg.getBuyStack().put(50.0, 2);
-		
-		System.out.println(sa);		
-		System.out.println("buy = " + sa.buy(s1, 5, qg));
-		
-		System.out.println(sa);		
-		System.out.println("sell = " + sa.sell(s1, 4, qg));
-		System.out.println(sa.initialFree);				
-		System.out.println(sa.free);
 	}
 
 

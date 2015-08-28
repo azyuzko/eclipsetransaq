@@ -17,6 +17,9 @@
 		<class>ru.eclipsetrader.transaq.core.model.internal.FortsMoneyPosition</class>
 		<class>ru.eclipsetrader.transaq.core.model.internal.Trade</class>
 		<class>ru.eclipsetrader.transaq.core.model.internal.Order</class>
+		<class>ru.eclipsetrader.transaq.core.model.internal.StopOrder</class>
+		<class>ru.eclipsetrader.transaq.core.model.internal.StopLoss</class>
+		<class>ru.eclipsetrader.transaq.core.model.internal.TakeProfit</class>
 		<class>ru.eclipsetrader.transaq.core.model.BaseFortsContract</class>
 		<class>ru.eclipsetrader.transaq.core.model.BaseFortsMoney</class>
 		<class>ru.eclipsetrader.transaq.core.model.internal.TickTrade</class>
@@ -24,7 +27,7 @@
 		<exclude-unlisted-classes>false</exclude-unlisted-classes>
 		<properties>
 			<property name="eclipselink.jdbc.batch-writing" value="Oracle-JDBC"/>
-			<property name="javax.persistence.jdbc.url" value="jdbc:oracle:thin:@zar-w7:1521:A"/>
+			<property name="javax.persistence.jdbc.url" value="jdbc:oracle:thin:@localhost:1521:A"/>
 			<property name="javax.persistence.jdbc.user" value="tq4j"/>
 			<property name="javax.persistence.jdbc.password" value="temptemp_1"/>
 			<property name="javax.persistence.jdbc.driver" value="oracle.jdbc.OracleDriver"/>

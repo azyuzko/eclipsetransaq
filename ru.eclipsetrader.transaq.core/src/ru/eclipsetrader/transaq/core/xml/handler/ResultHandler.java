@@ -35,6 +35,9 @@ public class ResultHandler extends DefaultHandler {
 			if (attributes.getIndex("transactionid") > -1) {
 				commandResult.setTransactionId(attributes.getValue("transactionid"));
 			}
+			if (attributes.getIndex("diff") > -1) {
+				commandResult.setDiff(Integer.valueOf(attributes.getValue("diff")));
+			}
 			objectStack.push(commandResult);
 			break;
 		}

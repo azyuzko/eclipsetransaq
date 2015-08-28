@@ -187,39 +187,6 @@ public class StochasticFast extends IndicatorFunction {
 	
 	public static void main(String[] args) {
 
-		Date fromDate = Utils.parseDate("16.08.2015 00:00:00.000");
-		Date toDate = Utils.parseDate("18.08.2015 20:00:00.000");
-
-		CandleType candleType = CandleType.CANDLE_15M;
-		TQSymbol symbol = TQSymbol.SiU5;
-		List<Candle> candles = DataManager.getCandles(symbol, candleType, fromDate, toDate);
-		CandleList cl = new CandleList(candleType);
-		cl.appendCandles(candles);
-		
-		List<Holder<Double, String>> res = new ArrayList<Holder<Double,String>>();
-		int optInFastK_Period = 25;
-		int optInFastD_Period = 4;
-		//for (MAType optInFastD_MAType : MAType.values()) {
-		MAType optInFastD_MAType = MAType.Trima;
-		Map<TQSymbol, QuantityCost> initial = new HashMap<>();
-		initial.put(symbol, new QuantityCost(1, 0));
-		SimpleAccount sa = new SimpleAccount(100000.0, null, initial);
-		StochasticFast stochasticFast = new StochasticFast(optInFastK_Period, optInFastD_Period, optInFastD_MAType);
-		String stochResult = simpleStochFTest(cl, sa, stochasticFast);
-		String sRes = String.format("K = %d,  D = %d, %s Free: %f %s\n", optInFastK_Period, optInFastD_Period, String.valueOf(optInFastD_MAType), sa.getFree(), stochResult);
-		res.add(new Holder<Double, String>(sa.getFree(), sRes));
-		//}
-		Collections.sort(res, new Comparator<Holder<Double, String>>() {
-			@Override
-			public int compare(Holder<Double, String> o1,
-					Holder<Double, String> o2) {
-				return Double.compare(o1.getFirst(), o2.getFirst());
-			}
-		});
-	
-		for (Holder<Double, String> h : res) {
-			System.out.println(h.getSecond());
-		}
 		
 	}
 

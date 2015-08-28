@@ -38,7 +38,7 @@ public class TQSymbol implements ITQKey, Serializable {
 	public static TQSymbol SVU5 = new TQSymbol(BoardType.FUT, "SVU5"); // SILV-9.15
 	public static TQSymbol AUU5 = new TQSymbol(BoardType.FUT, "AUU5"); // AUDU-9.15
 	
-	public static TQSymbol BRV5 = new TQSymbol(BoardType.FUT, "BRV5"); // BR-10.15
+//	public static TQSymbol BRV5 = new TQSymbol(BoardType.FUT, "BRV5"); // BR-10.15
 
 //	public static TQSymbol USD000000TOD = new TQSymbol(BoardType.CETS, "USD000000TOD"); // USD Tod
 //	public static TQSymbol USD000UTSTOM = new TQSymbol(BoardType.CETS, "USD000UTSTOM"); // USD Tom

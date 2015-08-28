@@ -11,7 +11,6 @@ import ru.eclipsetrader.transaq.core.interfaces.IFortsQuotesSupplier;
 import ru.eclipsetrader.transaq.core.model.BaseFortsContract;
 import ru.eclipsetrader.transaq.core.model.BaseFortsMoney;
 import ru.eclipsetrader.transaq.core.model.BuySell;
-import ru.eclipsetrader.transaq.core.model.QuoteGlass;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Order;
 
@@ -204,13 +203,13 @@ public class FortsAccountSimulator implements IAccount {
 	 * @param symbol
 	 * @param quantity
 	 */
-	public QuantityCost buy(TQSymbol symbol, int quantity, double price) {
+	public QuantityCost buy(TQSymbol symbol, int quantity) {
 		log("Buy: " + symbol + " quantity:" + quantity);
 		lockBuy(symbol, quantity);
 		return buyLocked(symbol, quantity);
 	}
 	
-	public QuantityCost sell(TQSymbol symbol, int quantity, double price) {
+	public QuantityCost sell(TQSymbol symbol, int quantity) {
 		log("Sell: " + symbol + " quantity:" + quantity);
 		lockSell(symbol, quantity);
 		return sellLocked(symbol, quantity);
@@ -334,15 +333,6 @@ public class FortsAccountSimulator implements IAccount {
 		
 	}
 
-	@Override
-	public QuantityCost buy(TQSymbol symbol, int quantity, QuoteGlass quoteGlass) {
-		throw new UnimplementedException();
-	}
-
-	@Override
-	public QuantityCost sell(TQSymbol symbol, int quantity, QuoteGlass quoteGlass) {
-		throw new UnimplementedException();
-	}
 
 	@Override
 	public Map<TQSymbol, QuantityCost> getPositions() {

@@ -8,12 +8,17 @@ import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+import javax.persistence.Transient;
 
 import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.OrderConditionType;
 import ru.eclipsetrader.transaq.core.model.OrderStatus;
+import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.UnfilledType;
+import ru.eclipsetrader.transaq.core.orders.DiffMap;
+import ru.eclipsetrader.transaq.core.orders.ICancelOrderCallback;
+import ru.eclipsetrader.transaq.core.orders.IExecuteOrderCallback;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 @Table(name="orders")
@@ -71,12 +76,71 @@ public class Order extends ServerObject {
 	OrderConditionType cond_type;
 	Double cond_value;
 	
+	@Transient
+	ICancelOrderCallback cancelOrderCallback;
+	
+	@Transient
+	IExecuteOrderCallback executeOrderCallback;
+	
 	public Order() {
 		super(null);
 	}
 	
 	public Order(String serverId) {
 		super(serverId);		
+	}
+
+	public ICancelOrderCallback getCancelOrderCallback() {
+		return cancelOrderCallback;
+	}
+
+	public void setCancelOrderCallback(ICancelOrderCallback cancelOrderCallback) {
+		this.cancelOrderCallback = cancelOrderCallback;
+	}
+
+	public IExecuteOrderCallback getExecuteOrderCallback() {
+		return executeOrderCallback;
+	}
+
+	public void setExecuteOrderCallback(IExecuteOrderCallback executeOrderCallback) {
+		this.executeOrderCallback = executeOrderCallback;
+	}
+
+	public void notifyChanges(Order newOrder) {
+		synchronized (this) {
+			// сохраним старые статусы ордеров 
+			OrderStatus currentStatus = this.getStatus();
+			OrderStatus newStatus = newOrder.getStatus();
+			// сделаем merge нового ордера в старый
+			DiffMap diff = Utils.mergeObjects(this, newOrder);
+			if (cancelOrderCallback != null) {
+				if (newStatus == OrderStatus.cancelled) {
+					cancelOrderCallback.onOrderCancelled(this);
+				} else {
+					cancelOrderCallback.onOrderCancelFailed(this);
+				}
+				cancelOrderCallback = null;
+			}
+			if (executeOrderCallback != null) {
+				if (newStatus == OrderStatus.matched) {
+					executeOrderCallback.onOrderExecute(this);
+				}
+				executeOrderCallback = null;
+			}
+		}
+	}
+
+	public String getOrderDesc() {
+		return buysell + " " + getSymbol() + " " + transactionid + " " + orderno + " " +status + (result != null && !result.isEmpty() ? " "+result : "");
+	}
+
+	public TQSymbol getSymbol() {
+		return new TQSymbol(board, seccode);
+	}
+	
+	@Override
+	public String toString() {
+		return Utils.toString(this);
 	}
 
 	public String createNewCondOrder() {

@@ -12,7 +12,6 @@ import ru.eclipsetrader.transaq.core.model.BaseFortsContract;
 @IdClass(FortsPositionId.class)
 public class FortsPosition extends BaseFortsContract {
 
-	Integer secid;
 	@Id
 	String seccode;
 	@Id
@@ -26,6 +25,8 @@ public class FortsPosition extends BaseFortsContract {
 	Double sellspotlimit;
 	Double netto;
 	Double kgo;
+	
+	Integer secid;
 	
 	public FortsPosition() {
 		this(null);
@@ -81,14 +82,6 @@ public class FortsPosition extends BaseFortsContract {
 
 	public void setKgo(Double kgo) {
 		this.kgo = kgo;
-	}
-
-	public Integer getSecid() {
-		return secid;
-	}
-
-	public void setSecid(Integer secid) {
-		this.secid = secid;
 	}
 
 	public Integer getMarket() {

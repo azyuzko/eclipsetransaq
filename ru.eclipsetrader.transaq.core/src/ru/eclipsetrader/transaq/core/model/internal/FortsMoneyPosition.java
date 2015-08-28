@@ -1,9 +1,7 @@
 package ru.eclipsetrader.transaq.core.model.internal;
 
-import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
-import javax.persistence.IdClass;
 import javax.persistence.Table;
 
 import ru.eclipsetrader.transaq.core.interfaces.ITQKey;
@@ -11,16 +9,12 @@ import ru.eclipsetrader.transaq.core.model.BaseFortsMoney;
 
 @Entity
 @Table(name="fortsmoney_position")
-@IdClass(FortsMoneyPositionId.class)
 public class FortsMoneyPosition extends BaseFortsMoney implements ITQKey {
 
 	@Id
 	String client;
-	@Id
 	Integer market;
 	String shortname;
-	@Column(name="CURR")
-
 	
 	@Override
 	public String getKey() {
@@ -60,5 +54,4 @@ public class FortsMoneyPosition extends BaseFortsMoney implements ITQKey {
 		this.shortname = shortname;
 	}
 
-	
 }

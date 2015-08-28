@@ -2,28 +2,50 @@ package ru.eclipsetrader.transaq.core.model.internal;
 
 import java.util.Date;
 
+import javax.persistence.Embedded;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+
+import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.OrderStatus;
+import ru.eclipsetrader.transaq.core.model.TQSymbol;
+import ru.eclipsetrader.transaq.core.util.Utils;
 
+@Entity
+@Table(name="StopOrders")
 public class StopOrder  {
 
-	String transactionid;
 	String activeorderno;
-	Integer secid;
-	String board;
+	@Id
+	String transactionid;
+	@Enumerated(EnumType.STRING)
+	BoardType board;
 	String seccode;
 	String client;
+	@Enumerated(EnumType.STRING)
 	BuySell buysell;
 	String canceller;
 	Long alltradeno;
+	@Temporal(TemporalType.TIMESTAMP)
 	Date validbefore;
 	String author;
+	@Temporal(TemporalType.TIMESTAMP)
 	Date accepttime;
 	Long linkedorderno;
+	@Temporal(TemporalType.TIMESTAMP)
 	Date expdate;
+	@Enumerated(EnumType.STRING)
 	OrderStatus status;
 
+	@Embedded
 	StopLoss stopLoss;
+	@Embedded
 	TakeProfit takeProfit;
 	
 	public StopOrder() {
@@ -32,6 +54,15 @@ public class StopOrder  {
 	
 	public StopOrder(String transactionId) {
 		this.transactionid = transactionId;
+	}
+	
+	public TQSymbol getSymbol() {
+		return new TQSymbol(board, seccode);
+	}
+	
+	@Override
+	public String toString() {
+		return Utils.toString(this);
 	}
 
 	public String getTransactionid() {
@@ -50,19 +81,11 @@ public class StopOrder  {
 		this.activeorderno = activeorderno;
 	}
 
-	public Integer getSecid() {
-		return secid;
-	}
-
-	public void setSecid(Integer secid) {
-		this.secid = secid;
-	}
-
-	public String getBoard() {
+	public BoardType getBoard() {
 		return board;
 	}
 
-	public void setBoard(String board) {
+	public void setBoard(BoardType board) {
 		this.board = board;
 	}
 

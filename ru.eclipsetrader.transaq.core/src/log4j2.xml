@@ -26,9 +26,7 @@
 		<logger name="XMLTrace"	level="error" />
 		<logger name="Instrument"	level="info" />
 		<logger name="DataFeeder"	level="info" />		
-		<logger name="Strategy"	level="info">
-			<!-- AppenderRef ref="StrategyLogger" /-->
-		</logger>
+		<logger name="Strategy"	level="info"/>
 		<Root level="info">
 			<AppenderRef ref="Console" />
 			

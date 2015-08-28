@@ -8,6 +8,7 @@ public class CommandResult {
 	String message;
 	
 	String transactionId;
+	Integer diff;
 
 	public boolean isSuccess() {
 		return success;
@@ -31,6 +32,14 @@ public class CommandResult {
 
 	public void setTransactionId(String transactionId) {
 		this.transactionId = transactionId;
+	}
+
+	public Integer getDiff() {
+		return diff;
+	}
+
+	public void setDiff(Integer diff) {
+		this.diff = diff;
 	}
 
 	public String toString() {

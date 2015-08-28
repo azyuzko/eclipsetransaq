@@ -29,8 +29,6 @@ public class CandleList {
 
 	public static interface ICandleProcessContext {
 		void onCandleClose(Candle candle);
-		void onCandleOpen(Candle candle);
-		void onCandleChange(Candle candle);
 	}
 	
 	// TreeMap<Date,Candle> map = new TreeMap<Date, Candle>(); // ConcurrentSkipListMap
@@ -280,12 +278,8 @@ public class CandleList {
 				topCandle = new Candle();
 				topCandle.setDate(newTime);
 				putCandle(topCandle);
-				candleProcessContext.onCandleOpen(topCandle);
 			}
-	
 			topCandle.processTick(tick);		
-			candleProcessContext.onCandleChange(topCandle);
-			
 		}
 		
 	}

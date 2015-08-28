@@ -12,14 +12,17 @@ import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.candle.TQCandleService;
 import ru.eclipsetrader.transaq.core.instruments.TQInstrumentService;
-import ru.eclipsetrader.transaq.core.interfaces.IAccount;
 import ru.eclipsetrader.transaq.core.interfaces.ITransaqServer;
+import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.PriceType;
 import ru.eclipsetrader.transaq.core.model.StrategyWorkOn;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
+import ru.eclipsetrader.transaq.core.model.UnfilledType;
 import ru.eclipsetrader.transaq.core.model.internal.Order;
 import ru.eclipsetrader.transaq.core.model.internal.Security;
 import ru.eclipsetrader.transaq.core.model.internal.Trade;
+import ru.eclipsetrader.transaq.core.orders.OrderCallback;
+import ru.eclipsetrader.transaq.core.orders.OrderRequest;
 import ru.eclipsetrader.transaq.core.orders.TQOrderTradeService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuotationService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuoteService;
@@ -211,6 +214,10 @@ public class TransaqCommandProvider implements CommandProvider {
 			break;
 		}
 		
+		case "servtime" : {
+			break;
+		}
+		
 		case "start": {
 			
 			StrategyParamsType sp = new StrategyParamsType();
@@ -234,16 +241,9 @@ public class TransaqCommandProvider implements CommandProvider {
 		}
 		
 		case "test": {
-		
-			String op = ci.nextArgument();
-			
-			IAccount account = TQAccountService.getInstance().getAccount(TQSymbol.BRU5);
-			if (op.equals("buy")) {
-				account.buy(TQSymbol.BRU5, 1, null);
-			} else {
-				account.sell(TQSymbol.BRU5, 1, null);
-			}
-			
+			OrderRequest or = OrderRequest.createRequest(TQSymbol.EDU5, BuySell.S, 1.1271, 1).setUnfilled(UnfilledType.PutInQueue);
+			Order o = TQOrderTradeService.getInstance().createOrder(or);
+			ci.println("result = " + o);
 			break;
 		}
 

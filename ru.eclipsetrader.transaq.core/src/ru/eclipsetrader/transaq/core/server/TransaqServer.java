@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import javax.xml.parsers.SAXParser;
 
+import org.apache.commons.lang3.time.DateUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.xml.sax.InputSource;
@@ -31,6 +32,7 @@ import ru.eclipsetrader.transaq.core.interfaces.ITransaqServer;
 import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
 import ru.eclipsetrader.transaq.core.model.ConnectionStatus;
 import ru.eclipsetrader.transaq.core.model.Message;
+import ru.eclipsetrader.transaq.core.model.internal.CommandResult;
 import ru.eclipsetrader.transaq.core.model.internal.Server;
 import ru.eclipsetrader.transaq.core.model.internal.ServerSession;
 import ru.eclipsetrader.transaq.core.model.internal.ServerStatus;
@@ -60,6 +62,8 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 	
 	private ServerSession session;
 	private Server server;
+	
+	int timeDiff = 0; // разница межжу 
 	
 	private boolean wasInitialized = false;
 
@@ -135,6 +139,7 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 		
 		eventHolder.onPositionChange.addObserver(TQAccountService.getInstance());
 		eventHolder.onOrderReceive.addObserver(TQOrderTradeService.getInstance().getOrderObserver());
+		eventHolder.onStopOrderReceive.addObserver(TQOrderTradeService.getInstance().getStopOrderObserver());
 		
 		eventHolder.onTradeChange.addObserver(TQOrderTradeService.getInstance().getTradeObserver());
 		eventHolder.onTickTradeChange.addObserver(TQTickTradeService.getInstance().getTickObserver());
@@ -170,6 +175,11 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 				session.setConnected(new Date());
 				session.setDisconnected(null);
 				session.setError(null);
+				// получим разницу по времени с сервером
+				CommandResult crDiff = TransaqLibrary.SendCommand(Command.GET_SERVTIME_DIFFERENCE);
+				if (crDiff.isSuccess() && crDiff.getDiff() != null) {
+					timeDiff = crDiff.getDiff();
+				}
 				DataManager.merge(session);
 				onConnectEstablished.notifyObservers(this);
 			} else if (session.getStatus() == ConnectionStatus.DISCONNECTED) {
@@ -311,6 +321,11 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 	
 	public void callUpdateStatus() {
 		TransaqLibrary.SendCommand(Command.SERVER_STATUS);
+	}
+	
+	@Override
+	public Date getServerTime() {
+		return DateUtils.addSeconds(new Date(), timeDiff);
 	}
 
 	@Override

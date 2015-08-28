@@ -13,17 +13,10 @@ public static void main(String[] args) {
 		//System.out.println(DateUtils.ceiling(dt1, Calendar.MINUTE));
 
 		ICandleProcessContext candleProcessContext = new ICandleProcessContext() {
-			@Override
-			public void onCandleOpen(Candle candle) {
-				//System.out.println("Open " + candle);
-			}
+
 			@Override
 			public void onCandleClose(Candle candle) {
 				//System.out.println("Close " + candle);
-			}
-			@Override
-			public void onCandleChange(Candle candle) {
-				//System.out.println("Change " + candle);
 			}
 		};
 

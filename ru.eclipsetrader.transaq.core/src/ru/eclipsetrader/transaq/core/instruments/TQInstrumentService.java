@@ -4,12 +4,10 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import ru.eclipsetrader.transaq.core.account.TQAccountService;
 import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.candle.TQCandleService;
 import ru.eclipsetrader.transaq.core.event.InstrumentEvent;
-import ru.eclipsetrader.transaq.core.interfaces.IAccount;
 import ru.eclipsetrader.transaq.core.model.Quote;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.SymbolGapMap;

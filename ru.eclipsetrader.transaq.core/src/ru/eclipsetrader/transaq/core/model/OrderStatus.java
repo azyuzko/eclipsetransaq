@@ -17,7 +17,11 @@ public enum OrderStatus {
 	wait, // Не наступило время активации
 	watching, // Ожидает наступления условия
 	
-	tp_executed, // ?????? 
 	sl_executed,
-	tp_forwarding;
+	sl_guardtime,
+	sl_forwarding,
+	tp_executed,
+	tp_guardtime,
+	tp_forwarding,
+	linkwait;
 }

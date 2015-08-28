@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
+	<classpathentry exported="true" kind="lib" path="lib/ojdbc6_g.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
 	<classpathentry kind="src" path="src">
@@ -11,7 +12,6 @@
 	<classpathentry exported="true" kind="lib" path="lib/jna.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/log4j-api-2.3.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/log4j-core-2.3.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/ojdbc6.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/eclipselink.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/javax.persistence_2.1.0.v201304241213.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/commons-lang3-3.4.jar"/>

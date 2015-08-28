@@ -3,7 +3,6 @@ package ru.eclipsetrader.transaq.core.interfaces;
 import java.util.Map;
 
 import ru.eclipsetrader.transaq.core.account.QuantityCost;
-import ru.eclipsetrader.transaq.core.model.QuoteGlass;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 
 public interface IAccount {
@@ -32,38 +31,21 @@ public interface IAccount {
 	Map<TQSymbol, QuantityCost> getInitialPositions();
 
 	/**
-	 * Купить контракты
+	 * Купить контракты по рынку
 	 * @param symbol
 	 * @param quantity
 	 * @return  кол-во и сумма реально купленных
 	 */
-	QuantityCost buy(TQSymbol symbol, int quantity, double price);
+	QuantityCost buy(TQSymbol symbol, int quantity);
 
-	/**
-	 * Купить из стакана
-	 * @param symbol
-	 * @param quantity
-	 * @param quoteGlass
-	 * @return кол-во и сумма реально купленных
-	 */
-	QuantityCost buy(TQSymbol symbol, int quantity, QuoteGlass quoteGlass);
 	
 	/**
-	 * Продать контракты
+	 * Продать контракты  по рынку
 	 * @param symbol
 	 * @param quantity
 	 * @return кол-во и сумма реально проданных
 	 */
-	QuantityCost sell(TQSymbol symbol, int quantity, double price);
-	
-	/**
-	 * Продать из стакана
-	 * @param symbol
-	 * @param quantity
-	 * @param quoteGlass
-	 * @return кол-во и сумма реально проданных
-	 */
-	QuantityCost sell(TQSymbol symbol, int quantity, QuoteGlass quoteGlass);
+	QuantityCost sell(TQSymbol symbol, int quantity);
 	
 	/**
 	 * Закрыть позицию

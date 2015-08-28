@@ -9,7 +9,6 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 import ru.eclipsetrader.transaq.core.event.Event;
-import ru.eclipsetrader.transaq.core.exception.UnimplementedException;
 import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.OrderStatus;
@@ -50,23 +49,27 @@ public class OrderHandler extends DefaultHandler {
 		case order:
 			processingType = ProcessingType.ORDER;
 			transactionId = attributes.getValue("transactionid");
-			currentOrder = TQOrderTradeService.getInstance().getOrderById(transactionId);
+			/*currentOrder = TQOrderTradeService.getInstance().getOrderById(transactionId);
 			if (currentOrder == null) {
 				logger.info("Order with transactionId = " + transactionId + " not found. Creating new one..");
 				currentOrder = new Order();
 				currentOrder.setTransactionid(transactionId);
-			}
+			}*/
+			currentOrder = new Order();
+			currentOrder.setTransactionid(transactionId);
 			break;
 			
 		case stoporder:
 			processingType = ProcessingType.STOP_ORDER;
 			transactionId = attributes.getValue("transactionid");
-			currentStopOrder = TQOrderTradeService.getInstance().getStopOrderById(transactionId);
+			/*currentStopOrder = TQOrderTradeService.getInstance().getStopOrderById(transactionId);
 			if (currentStopOrder == null) {
 				logger.info("StopOrder with transactionId = " + transactionId + " not found. Creating new one..");
 				currentStopOrder = new StopOrder();
 				currentStopOrder.setTransactionid(transactionId);
-			}
+			}*/
+			currentStopOrder = new StopOrder();
+			currentStopOrder.setTransactionid(transactionId);
 			break;
 		case stoploss:
 			processingType = ProcessingType.STOP_LOSS;
@@ -159,8 +162,8 @@ public class OrderHandler extends DefaultHandler {
 				
 				switch (QNAME.valueOf(element)) {
 				case activeorderno:	currentStopOrder.setActiveorderno(value); break;
-				case secid:	currentStopOrder.setSecid(Integer.valueOf(value)); break;
-				case board:	currentStopOrder.setBoard(value); break;
+				case secid:	break;
+				case board:	currentStopOrder.setBoard(BoardType.valueOf(value)); break;
 				case seccode:	currentStopOrder.setSeccode(value); break;
 				case client:	currentStopOrder.setClient(value); break;
 				case buysell:	currentStopOrder.setBuysell(BuySell.valueOf(value)); break;
@@ -182,7 +185,7 @@ public class OrderHandler extends DefaultHandler {
 				switch (QNAME.valueOf(element)) {
 				case usecredit:  stopLoss.setUsecredit(value); break;
 				case activationprice: stopLoss.setActivationprice(Double.valueOf(value)); break;
-				case guardtime:	stopLoss.setGuardtime(Utils.parseDate(value)); break;
+				case guardtime:	stopLoss.setGuardtime(Utils.parseGuardTime(value)); break;
 				case brokerref:	stopLoss.setBrokerref(value); break;
 				case quantity:	stopLoss.setQuantity(value); break; // 100%
 				case orderprice:	stopLoss.setOrderprice(Double.valueOf(value)); break;
@@ -195,7 +198,7 @@ public class OrderHandler extends DefaultHandler {
 				TakeProfit takeProfit = currentStopOrder.getTakeProfit();
 				switch (QNAME.valueOf(element)) {
 				case activationprice:	takeProfit.setActivationprice(Double.valueOf(value)); break;
-				case guardtime:	takeProfit.setGuardtime(Utils.parseDate(value)); break;
+				case guardtime:	takeProfit.setGuardtime(Utils.parseGuardTime(value)); break;
 				case brokerref:	takeProfit.setBrokerref(value); break;
 				case quantity:	takeProfit.setQuantity(value); break;
 				case extremum:	takeProfit.setExtremum(Double.valueOf(value)); break;

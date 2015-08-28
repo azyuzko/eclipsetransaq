@@ -6,6 +6,7 @@ import ru.eclipsetrader.transaq.core.datastorage.TQClientService;
 import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.UnfilledType;
+import ru.eclipsetrader.transaq.core.model.internal.Order;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class OrderRequest {
@@ -21,6 +22,8 @@ public class OrderRequest {
 	private boolean usecredit;
 	private boolean nosplit;
 	private Date expdate;
+	
+	private Order order; // созданный по запросу ордер
 	
 	private OrderRequest(TQSymbol symbol, BuySell bs, int quantity) {
 		this.symbol = symbol;
@@ -40,20 +43,30 @@ public class OrderRequest {
 		return orderRequest;
 	}
 
+	public Order getOrder() {
+		return order;
+	}
+
+	public void setOrder(Order order) {
+		this.order = order;
+	}
+
 	public TQSymbol getSymbol() {
 		return symbol;
 	}
 
-	public void setSymbol(TQSymbol symbol) {
+	public OrderRequest setSymbol(TQSymbol symbol) {
 		this.symbol = symbol;
+		return this;
 	}
 
 	public int getHidden() {
 		return hidden;
 	}
 
-	public void setHidden(int hidden) {
+	public OrderRequest setHidden(int hidden) {
 		this.hidden = hidden;
+		return this;		
 	}
 
 	public double getPrice() {
@@ -110,64 +123,73 @@ public class OrderRequest {
 		return buysell;
 	}
 
-	public void setBuysell(BuySell buysell) {
+	public OrderRequest setBuysell(BuySell buysell) {
 		this.buysell = buysell;
+		return this;		
 	}
 
 	public boolean isByMarket() {
 		return byMarket;
 	}
 
-	public void setByMarket(boolean byMarket) {
+	public OrderRequest setByMarket(boolean byMarket) {
 		this.byMarket = byMarket;
+		return this;		
 	}
 
 	public String getBrokerref() {
 		return brokerref;
 	}
 
-	public void setBrokerref(String brokerref) {
+	public OrderRequest setBrokerref(String brokerref) {
 		this.brokerref = brokerref;
+		return this;		
 	}
 
 	public UnfilledType getUnfilled() {
 		return unfilled;
 	}
 
-	public void setUnfilled(UnfilledType unfilled) {
+	public OrderRequest setUnfilled(UnfilledType unfilled) {
 		this.unfilled = unfilled;
+		return this;		
 	}
 
 	public boolean isUsecredit() {
 		return usecredit;
 	}
 
-	public void setUsecredit(boolean usecredit) {
+	public OrderRequest setUsecredit(boolean usecredit) {
 		this.usecredit = usecredit;
+		return this;		
 	}
 
 	public boolean isNosplit() {
 		return nosplit;
 	}
 
-	public void setNosplit(boolean nosplit) {
+	public OrderRequest setNosplit(boolean nosplit) {
 		this.nosplit = nosplit;
+		return this;		
 	}
 
 	public Date getExpdate() {
 		return expdate;
 	}
 
-	public void setExpdate(Date expdate) {
+	public OrderRequest setExpdate(Date expdate) {
 		this.expdate = expdate;
+		return this;		
 	}
 
-	public void setPrice(double price) {
+	public OrderRequest setPrice(double price) {
 		this.price = price;
+		return this;		
 	}
 
-	public void setQuantity(int quantity) {
+	public OrderRequest setQuantity(int quantity) {
 		this.quantity = quantity;
+		return this;		
 	}
 
 

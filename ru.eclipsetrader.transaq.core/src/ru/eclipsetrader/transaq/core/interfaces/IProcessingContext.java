@@ -15,8 +15,6 @@ public interface IProcessingContext extends IDateTimeSupplier {
 	void onTick(TQSymbol symbol, Tick tick);
 	void onQuotesChange(TQSymbol symbol, QuoteGlass quoteGlass);
 	void onCandleClose(TQSymbol symbol, CandleList candleList, Candle closedCandle);
-	void onCandleOpen(TQSymbol symbol, CandleList candleList, Candle openedCandle);
-	void onCandleChange(TQSymbol symbol, CandleList candleList, Candle changedCandle);
 	void onQuotationsChange(TQSymbol symbol, Quotation quotation);
 	
 	CandleType[] getCandleTypes();

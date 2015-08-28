@@ -530,25 +530,25 @@ public class DataManager {
 				em.getTransaction().rollback();
 			}
 			e.printStackTrace();
-			throw e;
 		}
 	}
 		
-	public static <T> T merge(T t) {
+	public static <T> void merge(T t) {
 		EntityManager em = tlsEm.get();
 		try {
 			em.getTransaction().begin();
-			t = em.merge(t);
+			synchronized (t) {
+				em.merge(t);				
+			}
 			em.flush();
 			em.getTransaction().commit();
 		} catch (PersistenceException e) {
 			e.printStackTrace();
 			throw e;
 		}
-		return t;	
 	}
 	
-	public static <T> T get(Class<T> class_, String id) {
+	public static <T> T get(Class<T> class_, Object id) {
 		EntityManager em = tlsEm.get();
 		return em.find(class_, id);
 	}

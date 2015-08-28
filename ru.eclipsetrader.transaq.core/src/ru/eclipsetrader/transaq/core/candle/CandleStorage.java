@@ -6,16 +6,17 @@ import java.util.TreeMap;
 
 import ru.eclipsetrader.transaq.core.instruments.Instrument;
 import ru.eclipsetrader.transaq.core.interfaces.IProcessingContext;
+import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
 
 public class CandleStorage  {
 	
 	IProcessingContext context;
-	Instrument instrument;
+	TQSymbol symbol;
 	private TreeMap<CandleType, CandleList> storage = new TreeMap<>(CandleType.comparator);
 
-	public CandleStorage(Instrument instrument, IProcessingContext context) {
-		this.instrument = instrument;
+	public CandleStorage(TQSymbol symbol, IProcessingContext context) {
+		this.symbol = symbol;
 		this.context = context;
 		if (context != null) {
 			for (CandleType candleType : context.getCandleTypes()) {
@@ -92,16 +93,8 @@ public class CandleStorage  {
 		for (final CandleList candleList : storage.values()) {
 			candleList.processTickInCandle(tick, new CandleList.ICandleProcessContext() {
 				@Override
-				public void onCandleOpen(Candle candle) {
-					context.onCandleOpen(instrument.getSymbol(), candleList, candle);
-				}
-				@Override
 				public void onCandleClose(Candle candle) {
-					context.onCandleClose(instrument.getSymbol(), candleList, candle);
-				}
-				@Override
-				public void onCandleChange(Candle candle) {
-					context.onCandleChange(instrument.getSymbol(), candleList, candle);
+					context.onCandleClose(symbol, candleList, candle);
 				}
 			});			
 		}

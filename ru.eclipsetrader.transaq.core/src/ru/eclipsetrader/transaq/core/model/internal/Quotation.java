@@ -4,6 +4,8 @@ import java.lang.reflect.Field;
 import java.util.Date;
 import java.util.List;
 
+import javax.persistence.SynchronizationType;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -58,13 +60,12 @@ public class Quotation {
 	double theoreticalprice; // Теоретическая цена
 	
 	public Quotation(){
-		this(null, null);
+
 	}
 	
-	public Quotation(BoardType boardType, String seccode) {
-		this.board = boardType;
-		this.seccode = seccode;
-		TQSymbol symbol = new TQSymbol(boardType, seccode);
+	public Quotation(TQSymbol symbol) {
+		this.board = symbol.getBoard();
+		this.seccode = symbol.getSeccode();
 		logger = LogManager.getLogger("Quotation."+symbol.toString());
 		logger.debug("Quotation for " + symbol +" created");
 	}

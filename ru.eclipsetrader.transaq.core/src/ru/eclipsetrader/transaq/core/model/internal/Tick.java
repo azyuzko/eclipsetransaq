@@ -15,6 +15,7 @@ import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.TradePeriod;
+import ru.eclipsetrader.transaq.core.server.TransaqServer;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 @MappedSuperclass
@@ -30,7 +31,7 @@ public abstract class Tick extends ServerObject implements ITQTickTrade {
 	Date time;
 	
 	@Temporal(TemporalType.TIMESTAMP)
-	Date received;
+	Date received = new Date();
 	
 	double price;
 	int quantity;
@@ -60,12 +61,17 @@ public abstract class Tick extends ServerObject implements ITQTickTrade {
 	
 	public Tick() {
 		this(null);
-		received = new Date();
 	}
 
 	public Tick(String serverId) {
 		super(serverId);
-		received = new Date();
+		if (TransaqServer.getInstance() != null) {
+			received = TransaqServer.getInstance().getServerTime();
+		}
+	}
+	
+	public TQSymbol getSymbol() {
+		return symbol;
 	}
 	
 	public Date getReceived() {

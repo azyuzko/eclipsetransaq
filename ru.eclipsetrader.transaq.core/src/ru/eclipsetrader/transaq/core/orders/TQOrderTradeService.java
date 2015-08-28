@@ -10,7 +10,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import ru.eclipsetrader.transaq.core.data.DataManager;
+import ru.eclipsetrader.transaq.core.event.InstrumentEvent;
 import ru.eclipsetrader.transaq.core.event.Observer;
+import ru.eclipsetrader.transaq.core.exception.UnimplementedException;
 import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
 import ru.eclipsetrader.transaq.core.model.OrderStatus;
 import ru.eclipsetrader.transaq.core.model.internal.CommandResult;
@@ -18,67 +20,98 @@ import ru.eclipsetrader.transaq.core.model.internal.Order;
 import ru.eclipsetrader.transaq.core.model.internal.StopOrder;
 import ru.eclipsetrader.transaq.core.model.internal.Trade;
 import ru.eclipsetrader.transaq.core.services.ITQOrderTradeService;
+import ru.eclipsetrader.transaq.core.util.Holder;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class TQOrderTradeService implements ITQOrderTradeService {
+	
+	public enum RequestType {
+		CancelOrder,
+		MoveOrder
+	}
 
 	Logger logger = LogManager.getLogger(TQOrderTradeService.class);
 	
 	private static long TIMEOUT = 1000 * 30;
 
-	// список отправленных НА БИРЖУ запросов
+	// список отправленных НА БИРЖУ запросов на создание заявки
 	// ключ - transactionId
-	Map<String, OrderRequest> requests = Collections.synchronizedMap(new HashMap<String, OrderRequest>());
-	
-	// ключ - transactionId
+	Map<String, Holder<OrderRequest, ICreateOrderCallback>> createRequests = Collections.synchronizedMap(new HashMap<String, Holder<OrderRequest, ICreateOrderCallback>>());
+
+	// ключ - orderNo
 	private Map<String, Order> orders = Collections.synchronizedMap(new HashMap<String, Order>());
 	
+	// private Map<Order, IOrderCallback> orderCallbacks = Collections.synchronizedMap(new WeakHashMap<Order, IOrderCallback>());
+	
+	// ключ - transactionId
 	private Map<String, StopOrder> stopOrders = Collections.synchronizedMap(new HashMap<String, StopOrder>());
 	
 	// ключ - tradeno
 	private Map<String, Trade> trades = Collections.synchronizedMap(new HashMap<String, Trade>());
 	
+	InstrumentEvent<Order> newOrderEvent = new InstrumentEvent<>("New Order Monitor Event");
+	InstrumentEvent<StopOrder> newStopOrderEvent = new InstrumentEvent<>("New StopOrder Monitor Event");
+	InstrumentEvent<Trade> newTradeEvent = new InstrumentEvent<>("New Trade Monitor Event");
+
 	Observer<Order> orderObserver = new Observer<Order>() {
 		@Override
 		public void update(Order order) {
-			logger.info("Received order " + order.getOrderno() + " transactionId = " + order.getTransactionid());
-
-			if (logger.isTraceEnabled()) {
-				logger.trace(Utils.toString(order));
+			String orderno = order.getOrderno();
+			String transactionid = order.getTransactionid();
+			logger.info("Received order " + order.getOrderDesc());
+			if (transactionid != null) {
+				// найдем его запрос
+				 Holder<OrderRequest, ICreateOrderCallback> orderRequestHolder = createRequests.get(transactionid);
+				if (orderRequestHolder != null) {
+					// удалим запрос
+					createRequests.remove(transactionid);
+					// получим его callback
+					ICreateOrderCallback callback = orderRequestHolder.getSecond();
+					// оповестим
+					if (order.getOrderno().equals("0")) {
+						logger.warn("Received empty order : " + order.getOrderDesc());
+						callback.onOrderCreateError(order, order.getResult());
+					} else {
+						callback.onOrderCreated(order);
+						// посмотрим, есть ли у нас этот ордер
+						Order currentOrder = orders.get(orderno);
+						if (currentOrder != null) {
+							logger.warn("Something wrong! currentOrder must be null here");
+						}
+						orders.put(orderno, order);
+						DataManager.merge(order);
+						return;
+					}
+				}
 			}
 			
-			if (order.getTransactionid() != null) {
-				// найдем его запрос
-				OrderRequest orderRequest = requests.get(order.getTransactionid());
-				if (orderRequest != null) {
-					
-					// положим запрос в map
-					put(order);	
-					
-					// оповестим, что пришел запрос
-					synchronized (orderRequest) {
-						orderRequest.notifyAll();						
-					}
-					
-					// удалим запрос
-					requests.remove(order.getTransactionid());
-					
-				} else {
-					logger.info("Order request for " + order.getTransactionid() + " not found. May be request from previous session");
-				}
+			// посмотрим, есть ли у нас этот ордер
+			Order currentOrder = orders.get(orderno);
+			
+			if (currentOrder == null) {
+				// такого ордера нет, оповестим заинтересованных
+				orders.put(orderno, order);
+				DataManager.merge(order);
+				newOrderEvent.notifyObservers(order.getSymbol(), order);
 			} else {
-				logger.info("Order " + order.getOrderno()  + " has no transactionId. May be order came from another Transaq server");
+				currentOrder.notifyChanges(order);
+				DataManager.merge(currentOrder);
 			}
-						
-			DataManager.merge(order);
+			
 		}
 	};
 	
 	Observer<Trade> tradeObserver = new Observer<Trade>() {
 		@Override
 		public void update(Trade trade) {
-			logger.info("Received trade = " + trade.getTradeno() + " orderno = " + trade.getOrderno());
-			put(trade);	
+			logger.info("Received trade = " + trade.getTradeDesc());
+			if (trade.getTradeno() == null) {
+				throw new IllegalArgumentException("Cannot put trade without tradeno!");
+			}
+			Trade old = trades.put(trade.getTradeno(), trade);
+			if (old != null) {
+				logger.warn("Something wrong! old trade must be null here");
+			}
 			DataManager.merge(trade);
 		}
 	};
@@ -87,8 +120,9 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 		
 		@Override
 		public void update(StopOrder stopOrder) {
-			logger.info("Received stop order = " + stopOrder.getActiveorderno() + " transactionId = " + stopOrder.getTransactionid());
+			logger.info("Received stop order " +  Utils.toString(stopOrder).replace("\n", ""));
 			put(stopOrder);
+			DataManager.merge(stopOrder);
 		}
 		
 	};
@@ -101,51 +135,28 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 		return tradeObserver;
 	}
 	
+	public Observer<StopOrder> getStopOrderObserver() {
+		return stopOrderObserver;
+	}
+	
 	static TQOrderTradeService instance;
 	public static TQOrderTradeService getInstance() {
 		if (instance == null) {
 			instance = new TQOrderTradeService();
 		}
 		return instance;
-	}
+	}	
 	
-	public void putOrderList(List<Order> orderList) {
-		for (Order order : orderList) {
-			put(order);
-		}
-	}
-	
-	public void put(Order order) {
-		if (order.getTransactionid() == null) {
-			// dont push orders without transactionId
-			return;
-		}
-		orders.put(order.getTransactionid(), order);
-		DataManager.merge(order);
-	}
-	
-	public void put(StopOrder stopOrder) {
+	public StopOrder put(StopOrder stopOrder) {
 		if (stopOrder.getTransactionid() == null) {
 			// dont push orders without transactionId
-			return;
+			return null;
 		}
-		stopOrders.put(stopOrder.getTransactionid(), stopOrder);
+		StopOrder old = stopOrders.put(stopOrder.getTransactionid(), stopOrder);
 		DataManager.merge(stopOrder);
+		return old;
 	}
 	
-	public void putTradeList(List<Trade> tradeList){
-		for (Trade trade : tradeList) {
-			put(trade);
-		}
-	}
-	
-	public void put(Trade trade) {
-		if (trade.getTradeno() == null) {
-			throw new IllegalArgumentException("Cannot put trade without tradeno!");
-		}
-		trades.put(trade.getTradeno(), trade);
-		DataManager.merge(trade);
-	}
 
 	@Override
 	public List<Order> getOrders() {
@@ -170,10 +181,12 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 	
 	@Override
 	public Order getOrderByServerNo(String orderno) {
-		for (Order order : orders.values()) {
-			if (order.getOrderno().equals(orderno)) {
-				return order;
-			}
+		synchronized (orders) {
+			for (Order order : orders.values()) {
+				if (order.getOrderno().equals(orderno)) {
+					return order;
+				}
+			}			
 		}
 		return null;
 	}
@@ -189,48 +202,130 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 	}
 
 	@Override
-	public Order createOrder(OrderRequest orderRequest) {
+	public Order createOrder(final OrderRequest orderRequest) {
+		synchronized (orderRequest) {
+			logger.warn(orderRequest.getSymbol() + " Create new order "  + orderRequest.getBuysell());
+			createOrderAsync(orderRequest, new OrderCallback() {
+				@Override
+				public void onOrderCreated(Order order) {
+					synchronized (orderRequest) {
+						super.onOrderCreated(order);
+						logger.debug("received response order " + order.getOrderno());
+						// положим его в запрос
+						orderRequest.setOrder(order);
+						// оповестим, что пришел ответ
+						orderRequest.notifyAll();						
+					}
+				}
+				@Override
+				public void onOrderCreateError(Order order, String error) {
+					synchronized (orderRequest) {
+						super.onOrderCreateError(order, error);
+						// положим его в запрос
+						orderRequest.setOrder(order);
+						// оповестим, что пришел ответ
+						orderRequest.notifyAll();						
+					}
+				}
+			});
+			try {
+				logger.debug("begin wait for server response");
+				orderRequest.wait(TIMEOUT);
+				return orderRequest.getOrder();
+			} catch (InterruptedException e) {
+				logger.error(e.getMessage(), e);
+				return null;
+			}			
+		}
+		 
+	}
+	
+	@Override
+	public void createOrderAsync(OrderRequest orderRequest, ICreateOrderCallback callback) {
 		String command = orderRequest.createNewOrderCommand();
 		synchronized (orderRequest) {
 			logger.warn(orderRequest.getSymbol() + " Create new "  + orderRequest.getBuysell() + " order: " + command);
 			CommandResult result = TransaqLibrary.SendCommand(command);
 			if (result.getTransactionId() == null || result.getTransactionId().isEmpty()) {
-				throw new RuntimeException("Null transactionId was returned");
+				callback.onTransaqError(result);
+				return;
 			}
-			requests.put(result.getTransactionId(), orderRequest);
-			try {
-				logger.debug("begin wait for server response");
-				orderRequest.wait(TIMEOUT);
-				Order order = getOrderById(result.getTransactionId());
-				if (order != null) {
-					logger.debug("received response order " + order.getOrderno());
-				} else {
-					logger.warn("received EMPTY response order!!!");
-				}
-				return order;
-			} catch (InterruptedException e) {
-				System.err.println("TIMEOUT EXCEPTION while waiting for order " + result.getTransactionId() +" from callback");
-				throw new RuntimeException(e);
-			}			
+			createRequests.put(result.getTransactionId(), new Holder<OrderRequest, ICreateOrderCallback>(orderRequest, callback));			
 		}
 	}
 
 	@Override
-	public String cancelOrder(String transactionId) {
-		logger.warn("Perform order cancelling:" + transactionId);
-		String command = "<command id=\"cancelorder\"><transactionid>" + transactionId +"</transactionid></command>";
+	public Order cancelOrder(String orderno) {
+		throw new UnimplementedException();
+	}
+	
+	@Override
+	public void cancelOrder(String orderno, ICancelOrderCallback callback) {
+		logger.info("Perform order cancelling:" + orderno);
+		Order order = orders.get(orderno);
+		synchronized (order) {
+			if (order != null) {
+				String command = "<command id=\"cancelorder\"><transactionid>" + order.getTransactionid() +"</transactionid></command>";
+				CommandResult result = TransaqLibrary.SendCommand(command);
+				if (!result.isSuccess()) {
+					if (callback != null) {
+						callback.onTransaqError(result);
+					}
+				} else {
+					if (callback != null) {
+						order.setCancelOrderCallback(callback);
+					}
+				}
+			} else {
+				if (callback != null) {
+					callback.onError("Order not found = " + orderno);
+				}
+			}			
+		}
+	}
+
+	
+	/**
+	 * Передвинуть ордер
+	 * moveflag = 
+	 * 0: не менять количество;
+	 * 1: изменить количество;
+	 * 2: при несовпадении количества с текущим – снять заявку.
+	 * @param transactionId
+	 * @param newPrice
+	 * @param quantity
+	 * @return
+	 */
+	
+	@Override
+	public CommandResult moveOrderQuantity(String transactionId, double newPrice, int quantity) {
+		String command = 
+			  "<command id=\"moveorder\">"
+			+ "<transactionid>" + transactionId + "</transactionid>"
+			+ "<price>" + newPrice + "</price>"
+			+ "<moveflag>1</moveflag>"
+			+ "<quantity>" + quantity + "</quantity>"
+			+ "</command>";
+			CommandResult result = TransaqLibrary.SendCommand(command);
+			return result;
+	}
+	
+	@Override
+	public CommandResult moveOrder(String transactionId, double newPrice) {
+		String command = 
+		  "<command id=\"moveorder\">"
+		+ "<transactionid>" + transactionId + "</transactionid>"
+		+ "<price>" + newPrice + "</price>"
+		+ "<moveflag>0</moveflag>"
+		+ "<quantity>0</quantity>"
+		+ "</command>";
 		CommandResult result = TransaqLibrary.SendCommand(command);
-		if (result.isSuccess()) {
-			return result.getTransactionId();
-		} else {
-			throw new RuntimeException(result.getMessage());
-		}		
+		return result;
 	}
 
 	@Override
 	public StopOrder getStopOrderById(String transactionId) {
-		// TODO Auto-generated method stub
-		return null;
+		return stopOrders.get(transactionId);
 	}
 	
 }
