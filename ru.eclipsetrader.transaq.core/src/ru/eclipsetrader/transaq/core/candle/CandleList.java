@@ -13,7 +13,9 @@ import org.apache.commons.lang3.time.DateUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import ru.eclipsetrader.transaq.core.event.ListObserver;
 import ru.eclipsetrader.transaq.core.model.PriceType;
+import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
 import ru.eclipsetrader.transaq.core.util.Holder;
 import ru.eclipsetrader.transaq.core.util.Utils;
@@ -25,19 +27,40 @@ import ru.eclipsetrader.transaq.core.util.Utils;
  */
 public class CandleList {
 	
+	int maxSize = 200; // макс.количество свечей в списке
+	
 	Logger logger = LogManager.getLogger("CandleList");
-
-	public static interface ICandleProcessContext {
-		void onCandleClose(Candle candle);
-	}
 	
-	// TreeMap<Date,Candle> map = new TreeMap<Date, Candle>(); // ConcurrentSkipListMap
+	TQSymbol symbol;
+	CandleType candleType;
+	ICandleProcessContext candleProcessContext;
+	
 	ConcurrentSkipListMap<Date,Candle> map = new ConcurrentSkipListMap<Date, Candle>();
+	
+	public ListObserver<Tick> tickObserver = new ListObserver<Tick>() {
+		@Override
+		public void update(List<Tick> list) {
+			if (logger.isDebugEnabled()) {
+				logger.debug("iTickObserver " + list.get(0).getSeccode() + "  size = " + list.size() + " " + Utils.formatTime(list.get(0).getTime()) + " -- " + Utils.formatTime(list.get(list.size()-1).getTime()) );
+			}
+			for (Tick tick : list) {
+				processTickInCandle(tick);
+			}
+		}
+	};
+	
+	public ListObserver<Tick> getTickObserver() {
+		return tickObserver;
+	}
 
-	private CandleType candleType;
-	
-	//TODO refactor private Event<CandleList> onCandleListChange = new Event<CandleList>("CandleList.onCandleListChange");
-	
+	public ICandleProcessContext getCandleProcessContext() {
+		return candleProcessContext;
+	}
+
+	public void setCandleProcessContext(ICandleProcessContext candleProcessContext) {
+		this.candleProcessContext = candleProcessContext;
+	}
+
 	public List<Candle> candleList() {
 		return new ArrayList<>(map.values());
 	}
@@ -46,14 +69,22 @@ public class CandleList {
 		return map;
 	}
 	
-	public CandleList(CandleType candleType){
-		super();
-		this.candleType = candleType;
-		// System.out.println("CandleList " + candleType + " created..");
+	public int getMaxSize() {
+		return maxSize;
 	}
 	
-	public CandleList(CandleType candleType, Collection<Candle> candles) {
-		this(candleType);
+	public void setMaxSize(int maxSize) {
+		this.maxSize = maxSize;
+	}
+	
+	public CandleList(TQSymbol symbol, CandleType candleType){
+		this.symbol = symbol;
+		this.candleType = candleType;
+		logger.debug(symbol + " CandleList " + candleType + " created..");
+	}
+	
+	public CandleList(TQSymbol symbol, CandleType candleType, Collection<Candle> candles) {
+		this(symbol, candleType);
 		appendCandles(candles);
 	}
 	
@@ -147,9 +178,9 @@ public class CandleList {
 	public void appendCandles(Collection<Candle> candles) {
 		synchronized (map) {
 			if (candles != null) {
-				// System.out.println("appendCandles size = " + candles.size() + " to " + candleType);
+				logger.debug(symbol + " appendCandles size = " + candles.size() + " to " + candleType);
 				for (Candle candle : candles) {
-					map.put(candle.getDate(), candle);
+					putCandle(candle);
 				}
 			}			
 		}
@@ -157,7 +188,10 @@ public class CandleList {
 	
 	public void putCandle(Candle candle) {
 		synchronized (map) {
-			map.put(candle.getDate(), candle);			
+			map.put(candle.getDate(), candle);
+			if (map.size() > maxSize) {
+				map.remove(map.firstKey());
+			}
 		}
 	}
 	
@@ -204,19 +238,51 @@ public class CandleList {
 			int ms_mod = (int) (ms_delta % (size * 1000));
 			return DateUtils.addMilliseconds(toDate, -ms_mod);
 		}
-		
-		
-		/*
-		// Проверим, можно ли полученный результат еще дополнить одной свечей до базы
-		if (DateUtils.addSeconds(result, candleType.getSeconds()).after(DateUtils.ceiling(result, candleType.getCalendarBase())) ) {
-			// нельзя дополнить
-			// 21:47:56.145 CandleType.CANDLE_11S вернет 21:47:44.000
-			// т.к., 21:47:55.000 еще одной свечей дополнить нельзя
-			return DateUtils.addSeconds(result, -candleType.getSeconds());
-		} else {
-			return result;
-		}*/
 	}
+
+
+	
+	public void processTickInCandle(Tick tick) {
+		synchronized (map) {
+			if (tick.getTime() == null) {
+				throw new IllegalArgumentException("trade.getTime() is null");
+			}
+			Candle topCandle = getLastCandle(); // если свечей нет, вернет null
+			
+			Date newTime = new Date(0); // minimal date
+			
+			if (topCandle != null) {
+				newTime = new Date(topCandle.getDate().getTime() + (candleType.getSeconds()) * 1000 ); // перешагнули за размер свечи
+				
+			}
+			
+			if (tick.getTime().after(newTime)) {
+				
+				newTime = CandleList.closestCandleStartTime(tick.getTime(), candleType);
+				
+				if (topCandle != null && candleProcessContext != null) {
+					candleProcessContext.onCandleClose(symbol, this, topCandle);
+				}
+				
+				logger.debug("New candle starting from " + Utils.formatDate(newTime));
+				topCandle = new Candle();
+				topCandle.setDate(newTime);
+				putCandle(topCandle);
+			}
+			topCandle.processTick(tick);		
+		}
+		
+	}
+	
+	@Override
+	public String toString() {
+		StringBuilder sb= new StringBuilder();
+		for (Date date : map.navigableKeySet()) {
+			sb.append(map.get(date).toString()); sb.append("\n");
+		}
+		return sb.toString();
+	}
+	
 	
 	public static void main(String[] args) {
 		
@@ -250,49 +316,5 @@ public class CandleList {
 		System.out.println(cl.toString());*/
 		
 	}
-
-	
-	public void processTickInCandle(Tick tick, ICandleProcessContext candleProcessContext) {
-		synchronized (map) {
-			if (tick.getTime() == null) {
-				throw new IllegalArgumentException("trade.getTime() is null");
-			}
-			Candle topCandle = getLastCandle(); // если свечей нет, вернет null
-			
-			Date newTime = new Date(0); // minimal date
-			
-			if (topCandle != null) {
-				newTime = new Date(topCandle.getDate().getTime() + (candleType.getSeconds()) * 1000 ); // перешагнули за размер свечи
-				
-			}
-			
-			if (tick.getTime().after(newTime)) {
-				
-				newTime = CandleList.closestCandleStartTime(tick.getTime(), candleType);
-				
-				if (topCandle != null) {
-					candleProcessContext.onCandleClose(topCandle);
-				}
-				
-				// System.out.println("New candle starting from " + Utils.formatDate(newTime));
-				topCandle = new Candle();
-				topCandle.setDate(newTime);
-				putCandle(topCandle);
-			}
-			topCandle.processTick(tick);		
-		}
-		
-	}
-	
-	@Override
-	public String toString() {
-		StringBuilder sb= new StringBuilder();
-		for (Date date : map.navigableKeySet()) {
-			sb.append(map.get(date).toString()); sb.append("\n");
-		}
-		return sb.toString();
-	}
-	
-
 	
 }

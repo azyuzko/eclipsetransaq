@@ -56,6 +56,10 @@ public class StopOrder  {
 		this.transactionid = transactionId;
 	}
 	
+	public String getStopOrderDesc() {
+		return buysell + " " + getSymbol() + " " + transactionid + " " + linkedorderno + " " +status ;
+	}
+	
 	public TQSymbol getSymbol() {
 		return new TQSymbol(board, seccode);
 	}

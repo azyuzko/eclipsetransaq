@@ -7,7 +7,7 @@ import java.util.Map;
 
 import ru.eclipsetrader.transaq.core.data.DatabaseManager;
 import ru.eclipsetrader.transaq.core.event.ListObserver;
-import ru.eclipsetrader.transaq.core.instruments.TQInstrumentService;
+import ru.eclipsetrader.transaq.core.instruments.TQDataFeed;
 import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.SymbolGapMap;
@@ -33,7 +33,7 @@ public class TQQuotationService implements ITQQuotationService {
 		public void update(List<SymbolGapMap> quotationGapList) {
 			Map<TQSymbol, List<SymbolGapMap>> gapMap = createMap(quotationGapList); // разложим гэпы по инструментам
 			for (TQSymbol symbol : gapMap.keySet()) {
-				TQInstrumentService.getInstance().getQuotationGapListEvent().notifyObservers(symbol, gapMap.get(symbol));
+				TQDataFeed.getInstance().getQuotationGapsFeeder().notifyObservers(symbol, gapMap.get(symbol));
 			}
 			DatabaseManager.writeQuotations(quotationGapList);
 		}

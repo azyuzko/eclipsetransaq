@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -16,10 +15,8 @@ import org.apache.logging.log4j.Logger;
 import ru.eclipsetrader.transaq.core.account.QuantityCost;
 import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.candle.CandleList;
-import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.indicators.MACD;
 import ru.eclipsetrader.transaq.core.indicators.StochasticFast;
-import ru.eclipsetrader.transaq.core.instruments.Instrument;
 import ru.eclipsetrader.transaq.core.interfaces.IAccount;
 import ru.eclipsetrader.transaq.core.interfaces.IProcessingContext;
 import ru.eclipsetrader.transaq.core.model.BuySell;
@@ -27,20 +24,28 @@ import ru.eclipsetrader.transaq.core.model.PriceType;
 import ru.eclipsetrader.transaq.core.model.QuoteGlass;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Quotation;
-import ru.eclipsetrader.transaq.core.model.internal.Tick;
 import ru.eclipsetrader.transaq.core.trades.IDataFeedContext;
 import ru.eclipsetrader.transaq.core.trades.IFeedContext;
 import ru.eclipsetrader.transaq.core.util.Holder;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
-public class Strategy extends StrategyParamsType implements IProcessingContext, IStrategy {
+import com.tictactec.ta.lib.MAType;
+
+public class Strategy implements IProcessingContext {
 	
 	HashMap<TQSymbol, List<StrategyPosition>> signals = new HashMap<>();
 
 	Logger logger = LogManager.getLogger("Strategy");
 
-	public Instrument i;
-
+	TQSymbol SiU5 = TQSymbol.SiU5;
+	
+	int fast = 9;
+	int slow = 16;
+	int signal = 9;
+	
+	int stochF_optInFastK_Period = 25;
+	int stochF_optInFastD_Period = 4;
+	MAType stochF_optInFastD_MAType = MAType.Trima;
 	
 	MACD macd;
 
@@ -54,16 +59,14 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 
 	int quantity = 1;
 	
-	public Strategy(StrategyParamsType params) {
-		super(params);
+	public Strategy() {
 		this.macd = new MACD(fast, slow, signal);
 		this.sf = new StochasticFast(stochF_optInFastK_Period, stochF_optInFastD_Period, stochF_optInFastD_MAType);
 	}
 			
-	public Strategy(IDataFeedContext dataFeedContext, StrategyParamsType params) {
-		this(params);
+	public Strategy(IDataFeedContext dataFeedContext) {
+		this();
 		this.feedContext = dataFeedContext;
-		this.i = new Instrument(TQSymbol.SiU5, this, dataFeedContext);
 	}
 
 	@Override
@@ -103,26 +106,22 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 	double avg_corr = 0;
 	
 	public void tick(TQSymbol symbol, CandleList candleList, Candle candle) {
-		TQSymbol sSiU5 = TQSymbol.SiU5;
-		if (symbol.equals(sSiU5)) {
+		if (symbol.equals(SiU5)) {
 			// 2 min wait after close position
-			if (!hasOpenedPosition(sSiU5)){
-				StrategyPosition lastPosition = lastPosition(sSiU5);
+			if (!hasOpenedPosition(SiU5)){
+				StrategyPosition lastPosition = lastPosition(SiU5);
 				if (lastPosition != null &&	DateUtils.addMinutes(lastPosition.getCloseDate(), 2).after(getDateTime())){
 					logger.info(Utils.formatDate(getDateTime()) + " 2 min wait after close position");
 					return;
 				}
 			}
 			
-			PriceType _pt = priceType;
-			CandleType _ct = candleType;	
-			
-			Holder<Date[], double[]> valuesBr = i.getCandleStorage().getCandleList(_ct).values(_pt);
+			Holder<Date[], double[]> valuesBr = candleList.values(PriceType.CLOSE);
 			macd.evaluate(valuesBr.getSecond(), valuesBr.getFirst());
 			
 			double[] hist = macd.getOutMACDHist();		
 			
-			sf.evaluate(i.getCandleStorage().getCandleList(candleType));
+			sf.evaluate(candleList);
 			double[] sfK = sf.getOutFastK();
 			double[] sfD = sf.getOutFastD();
 			
@@ -145,8 +144,8 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 				sb.append("---\n");
 				
 				// 
-				StrategyPosition currentPosition = currentOpenedPosition(sSiU5);
-				if (!hasOpenedPosition(sSiU5)) {
+				StrategyPosition currentPosition = currentOpenedPosition(SiU5);
+				if (!hasOpenedPosition(SiU5)) {
 					if (   (sfD[sfD.length-1] > 80)
 						|| (sfK[sfK.length-1] > 90)) {
 						if (sfK[sfK.length-1] > sfK[sfK.length-2]) {
@@ -189,7 +188,7 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 				}
 				
 				if (signalOpen != null) {
-					currentPosition = openPosition(i, signalOpen);
+					currentPosition = openPosition(symbol, signalOpen);
 					if (currentPosition == null) {
 						logger.info("Position cannot be open");
 					}
@@ -217,30 +216,30 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 		return ArrayUtils.subarray(values, values.length - lastCount, values.length);
 	}
 	
-	private StrategyPosition openPosition(Instrument i, BuySell buySell) {
+	private StrategyPosition openPosition(TQSymbol symbol, BuySell buySell) {
 		if (signalLock.tryLock()) {
 			try {
 				QuantityCost result = null;
 				if (buySell == BuySell.B) {
-					result = i.buy(quantity);
+					result = account.buy(symbol, quantity);
 				} else {
-					result = i.sell(quantity);
+					result = account.sell(symbol, quantity);
 				}
 				if (result.getQuantity() > 0) {
-					StrategyPosition sp = new StrategyPosition(i.getSymbol(), buySell);
+					StrategyPosition sp = new StrategyPosition(symbol, buySell);
 					sp.setOpenDate(getDateTime());
 					sp.setOpenCost(result.getCost());
 					sp.setQuantity(result.getQuantity());
-					List<StrategyPosition> list = signals.get(i.getSymbol());
+					List<StrategyPosition> list = signals.get(symbol);
 					if (list == null) {
 						list = new ArrayList<StrategyPosition>();
-						signals.put(i.getSymbol(), list);
+						signals.put(symbol, list);
 					}
 					list.add(sp);
-					logger.warn(Utils.formatDate(getDateTime()) + " ****************************************** OPENED POSITION " +i.getSymbol() +" signal " + buySell + " = " + quantity + " result = " + result) ;
+					logger.warn(Utils.formatDate(getDateTime()) + " ****************************************** OPENED POSITION " +symbol+" signal " + buySell + " = " + quantity + " result = " + result) ;
 					return sp;
 				} else {
-					logger.info("Position NOT OPENED on " +i.getSymbol() + " " + buySell);
+					logger.info("Position NOT OPENED on " +symbol + " " + buySell);
 				}
 			} catch (Exception e) {
 				logger.error(e);
@@ -249,60 +248,22 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 				signalLock.unlock();
 			}
 		} else {
-			logger.debug("Already locked for another buysell operation on " + i.getSymbol());
+			logger.debug("Already locked for another buysell operation on " + symbol);
 		}
 		return null;
 	}
 	
 	private boolean closePosition(StrategyPosition strategyPosition) {
-		if (signalLock.tryLock()) {
-			try {
-				QuantityCost result = null;
-				if (strategyPosition.getBuySell() == BuySell.B) {
-					result = getInstrument(strategyPosition.getSymbol()).sell(strategyPosition.getQuantity());
-				} else {
-					result = getInstrument(strategyPosition.getSymbol()).buy(strategyPosition.getQuantity());
-				}
-				
-				if (result.getQuantity() > 0) {
-					if (result.getQuantity() != strategyPosition.getQuantity()) {
-						logger.warn("Position not fully closed!");
-					}
-					strategyPosition.setCloseDate(getDateTime());
-					strategyPosition.setCloseCost(result.getCost());
-					String log = "CLOSED " + strategyPosition;
-					if (strategyPosition.getProfit() < 0) {
-						// logger.error(log);
-						System.err.println(log);
-					} else {
-						logger.warn(log) ;
-					}
-					return true;
-				} else {
-					logger.info("SIGNAL NOT EXECUTED on " +strategyPosition);
-				}
-				
-			} catch (Exception e) {
-				logger.error(e);
-				e.printStackTrace();
-			} finally {
-				signalLock.unlock();
-			}
-		} else {
-			logger.debug("Already locked for another buysell operation on " + strategyPosition.getSymbol());
-		}
-		return false;
+		account.close(SiU5, 10.0);
+		return true;
 	}
 
-	@Override
 	public void start(IAccount account) {
 		logger.debug("Prepare to start...");
 		this.account = account;
-		feedContext.OnStart(new Instrument[] { i });
 		logger.debug("Started.");
 	}
 
-	@Override
 	public void stop() {
 		logger.debug("Stopped");
 		
@@ -327,14 +288,8 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 		}
 	}
 
-
 	@Override
-	public void onTick(TQSymbol symbol, Tick tick) {
-		
-	}
-
-	@Override
-	public void onQuotesChange(TQSymbol symbol, QuoteGlass quoteGlass) {
+	public void onQuotesChange(QuoteGlass quoteGlass) {
 		
 	}
 
@@ -348,66 +303,6 @@ public class Strategy extends StrategyParamsType implements IProcessingContext, 
 		
 	}
 
-	@Override
-	public CandleType[] getCandleTypes() {
-		return new CandleType[] { candleType };
-	}
-	
-
-	@Override
-	public TQSymbol[] getSymbols() {
-		return new TQSymbol[] {i.getSymbol() } ;
-	}
-
-
-	@Override
-	public IProcessingContext getProcessingContext() {
-		return this;
-	}
-
-	@Override
-	public Instrument getInstrument(TQSymbol symbol) {
-		if (symbol.equals(i.getSymbol())) {
-			return i;
-		} 
-		return null;
-	}
-
-	@Override
-	public void closePositions() {
-		if (signalLock.tryLock()) {
-			Map<TQSymbol, QuantityCost> positions = account.getPositions();
-			logger.debug("Close positions size " + positions.size());
-			for (TQSymbol symbol : getSymbols()) {
-				QuantityCost position = positions.get(symbol);
-				QuantityCost initial = account.getInitialPositions().get(symbol);
-				if (initial == null) {
-					initial = new QuantityCost(0, 0);
-				}
-				Instrument i = getInstrument(symbol);
-				if (position != null) {
-					logger.debug("Closing position " + symbol + " = " + position);
-					if (position.getQuantity() == initial.getQuantity()) {
-						continue;
-					} else if (position.getQuantity() > initial.getQuantity()) {
-						i.sell(position.getQuantity() - initial.getQuantity());
-					} else if (position.getQuantity() == 0) {
-						i.buy(initial.getQuantity());
-					}
-					logger.debug("Closed " +symbol + "position ");
-				} else if (initial != null) {
-					i.buy(initial.getQuantity());
-				}
-			}
-		} else {
-			logger.debug("Cannot close cause already locked");
-		}
-	}
-
-	@Override
-	public IAccount getAccount() {
-		return account;
-	}
 
 
 	

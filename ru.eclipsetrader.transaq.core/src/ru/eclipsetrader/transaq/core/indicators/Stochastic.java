@@ -152,10 +152,10 @@ public class Stochastic extends IndicatorFunction {
 		Date fromDate = Utils.parseDate("10.08.2015 00:00:00.000");
 		Date toDate = Utils.parseDate("19.08.2015 00:00:00.000");
 
+		TQSymbol symbol = new TQSymbol(BoardType.FUT, "SiU5");
 		CandleType candleType = CandleType.CANDLE_15M;
-		List<Candle> candles = DataManager.getCandles(new TQSymbol(
-				BoardType.FUT, "SiU5"), candleType, fromDate, toDate);
-		CandleList cl = new CandleList(candleType);
+		List<Candle> candles = DataManager.getCandles(symbol, candleType, fromDate, toDate);
+		CandleList cl = new CandleList(symbol, candleType);
 		cl.appendCandles(candles);
 
 		Stochastic s = new Stochastic();

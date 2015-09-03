@@ -18,6 +18,8 @@ import ru.eclipsetrader.transaq.core.model.TradePeriod;
 import ru.eclipsetrader.transaq.core.server.TransaqServer;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
+import com.google.common.base.MoreObjects;
+
 @MappedSuperclass
 public abstract class Tick extends ServerObject implements ITQTickTrade {
 
@@ -43,20 +45,13 @@ public abstract class Tick extends ServerObject implements ITQTickTrade {
 	
 	@Override
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(symbol);
-		sb.append(" ");
-		sb.append(tradeno);
-		sb.append(" ");
-		sb.append(Utils.formatDate(time));
-		sb.append(" ");
-		sb.append(buysell);
-		sb.append(" ");
-		sb.append(price);
-		sb.append(" ");
-		sb.append(quantity);
-		return sb.toString();
-
+		return MoreObjects.toStringHelper(this)
+			.addValue(symbol)
+			.addValue(tradeno)
+			.addValue(Utils.formatDate(time))
+			.addValue(buysell)
+			.addValue(price)
+			.addValue(quantity).toString();
 	}
 	
 	public Tick() {
@@ -69,6 +64,7 @@ public abstract class Tick extends ServerObject implements ITQTickTrade {
 			received = TransaqServer.getInstance().getServerTime();
 		}
 	}
+
 	
 	public TQSymbol getSymbol() {
 		return symbol;

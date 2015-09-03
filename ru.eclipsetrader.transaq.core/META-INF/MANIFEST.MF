@@ -18,7 +18,8 @@ Bundle-ClassPath: lib/jna-platform.jar,
  lib/javax.persistence_2.1.0.v201304241213.jar,
  lib/commons-lang3-3.4.jar,
  lib/commons-collections4-4.0.jar,
- lib/ojdbc6_g.jar
+ lib/ojdbc6_g.jar,
+ lib/guava-18.0.jar
 Bundle-NativeCode: 
  /win32-x86/txmlconnector.dll;processor=x86
  /win32-x86-64/txmlconnector64.dll;processor=x86_64  

@@ -6,6 +6,10 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import ru.eclipsetrader.transaq.core.event.ListObserver;
+import ru.eclipsetrader.transaq.core.interfaces.IQuotesProcessingContext;
+import ru.eclipsetrader.transaq.core.util.Utils;
 /**
  * Стакан котировок
  * SortedMap<Цена, Кол-во> 
@@ -17,11 +21,43 @@ public class QuoteGlass {
 	
 	Logger logger = LogManager.getLogger("QuoteGlass");
 	
+	TQSymbol symbol;
+	
 	ConcurrentSkipListMap<Double, Integer> sellStack = new ConcurrentSkipListMap<Double, Integer>(); 
 	ConcurrentSkipListMap<Double, Integer> buyStack = new ConcurrentSkipListMap<Double, Integer>();
 	
-	public QuoteGlass() {
-		logger.debug("QuoteGlass created");
+	IQuotesProcessingContext quotesProcessingContext;
+	
+	ListObserver<Quote> iQuotesObserver = new ListObserver<Quote>() {
+		@Override
+		public void update(List<Quote> list) {
+			if (logger.isDebugEnabled()) {
+				logger.debug("iQuotesObserver " + list.get(0).getSeccode() + "  size = " + list.size() + " " + Utils.formatTime(list.get(0).getTime()) + " -- " + Utils.formatTime(list.get(list.size()-1).getTime()) );
+			}
+			updateQuotes(list);
+		}
+	};
+	
+	public ListObserver<Quote> getQuotesObserver() {
+		return iQuotesObserver;
+	}
+	
+	public QuoteGlass(TQSymbol symbol) {
+		logger.debug("QuoteGlass for " + symbol + "created");
+		this.symbol = symbol;
+	}
+	
+	public IQuotesProcessingContext getQuotesProcessingContext() {
+		return quotesProcessingContext;
+	}
+
+	public void setQuotesProcessingContext(
+			IQuotesProcessingContext quotesProcessingContext) {
+		this.quotesProcessingContext = quotesProcessingContext;
+	}
+
+	public TQSymbol getSymbol() {
+		return symbol;
 	}
 
 	public ConcurrentSkipListMap<Double, Integer> getSellStack() {
@@ -107,13 +143,16 @@ public class QuoteGlass {
 	 * Обновляет стакан на основе котировок с сервера
 	 * @param quotes
 	 */
-	public void update(List<Quote> quotes) {
+	public void updateQuotes(List<Quote> quotes) {
 		for (Quote quote : quotes) {
-			update(quote);
+			updateQuotes(quote);
+		}
+		if (quotesProcessingContext != null) {
+			quotesProcessingContext.onQuotesChange(this);
 		}
 	}
 	
-	public void update(Quote quote) {
+	public void updateQuotes(Quote quote) {
 		synchronized (this) {
 			if (quote.getSource() != null) {
 				throw new RuntimeException("Field source not implemented yet in QuoteGlass");
@@ -158,23 +197,24 @@ public class QuoteGlass {
 	}
 	
 	public static void main(String[] args) {
-		QuoteGlass qg = new QuoteGlass();
-		qg.sellStack.put(50.0, 3);
+		QuoteGlass qg = new QuoteGlass(TQSymbol.BRU5);
 		qg.sellStack.put(53.5, 2);
+		qg.sellStack.put(50.0, 3);
 		qg.sellStack.put(55.7, 5);
 
-		qg.buyStack.put(45.0, 3);
 		qg.buyStack.put(42.5, 2);
+		qg.buyStack.put(45.0, 3);
 		qg.buyStack.put(41.7, 5);
+		
 		
 		ConcurrentSkipListMap<Double, Integer> res = qg.subSell(20);
 		for (Double key : res.keySet()) {
-			System.out.println("can sell " + res.get(key) + " lots by " + key);
+			System.out.println("S " + res.get(key) + " - " + key);
 		}
 		
 		res = qg.subBuy(20);
 		for (Double key : res.keySet()) {
-			System.out.println("can buy " + res.get(key) + " lots by " + key);
+			System.out.println("B " + res.get(key) + " - " + key);
 		}
 	}
 }

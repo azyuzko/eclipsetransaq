@@ -1,6 +1,6 @@
 package ru.eclipsetrader.transaq.core.candle;
 
-import ru.eclipsetrader.transaq.core.candle.CandleList.ICandleProcessContext;
+import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
 import ru.eclipsetrader.transaq.core.model.internal.TickTrade;
 import ru.eclipsetrader.transaq.core.util.Utils;
@@ -12,15 +12,7 @@ public static void main(String[] args) {
 		//System.out.println(Utils.formatDate(closestCandleStartTime(dt1, CandleType.CANDLE_61S)));
 		//System.out.println(DateUtils.ceiling(dt1, Calendar.MINUTE));
 
-		ICandleProcessContext candleProcessContext = new ICandleProcessContext() {
-
-			@Override
-			public void onCandleClose(Candle candle) {
-				//System.out.println("Close " + candle);
-			}
-		};
-
-		CandleList cl = new CandleList(CandleType.CANDLE_11S);
+		CandleList cl = new CandleList(TQSymbol.BRU5, CandleType.CANDLE_11S);
 		Tick t1 = new TickTrade();
 		t1.setTime(Utils.parseDate("15.02.2015 21:47:01.145"));
 		t1.setQuantity(1);
@@ -46,15 +38,5 @@ public static void main(String[] args) {
 		t5.setQuantity(2);
 		t5.setPrice(400.0);
 
-		cl.processTickInCandle(t1, candleProcessContext);
-		System.out.println("1 " + cl);
-		cl.processTickInCandle(t2, candleProcessContext);
-		System.out.println("2 " + cl);
-		cl.processTickInCandle(t3, candleProcessContext);
-		System.out.println("3 " + cl);
-		cl.processTickInCandle(t4, candleProcessContext);
-		System.out.println("4 " + cl);
-		cl.processTickInCandle(t5, candleProcessContext);
-		System.out.println("5 " + cl);
 	}
 }

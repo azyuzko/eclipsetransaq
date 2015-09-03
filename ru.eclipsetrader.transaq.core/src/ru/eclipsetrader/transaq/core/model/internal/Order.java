@@ -10,6 +10,8 @@ import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.Transient;
 
+import com.google.common.base.MoreObjects;
+
 import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.OrderConditionType;
@@ -18,7 +20,8 @@ import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.UnfilledType;
 import ru.eclipsetrader.transaq.core.orders.DiffMap;
 import ru.eclipsetrader.transaq.core.orders.ICancelOrderCallback;
-import ru.eclipsetrader.transaq.core.orders.IExecuteOrderCallback;
+import ru.eclipsetrader.transaq.core.orders.IMoveOrderCallback;
+import ru.eclipsetrader.transaq.core.util.Holder;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 @Table(name="orders")
@@ -80,7 +83,7 @@ public class Order extends ServerObject {
 	ICancelOrderCallback cancelOrderCallback;
 	
 	@Transient
-	IExecuteOrderCallback executeOrderCallback;
+	IMoveOrderCallback moveOrderCallback;
 	
 	public Order() {
 		super(null);
@@ -98,15 +101,15 @@ public class Order extends ServerObject {
 		this.cancelOrderCallback = cancelOrderCallback;
 	}
 
-	public IExecuteOrderCallback getExecuteOrderCallback() {
-		return executeOrderCallback;
+	public IMoveOrderCallback getMoveOrderCallback() {
+		return moveOrderCallback;
 	}
 
-	public void setExecuteOrderCallback(IExecuteOrderCallback executeOrderCallback) {
-		this.executeOrderCallback = executeOrderCallback;
+	public void setMoveOrderCallback(IMoveOrderCallback moveOrderCallback) {
+		this.moveOrderCallback = moveOrderCallback;
 	}
 
-	public void notifyChanges(Order newOrder) {
+	public DiffMap notifyChanges(Order newOrder) {
 		synchronized (this) {
 			// сохраним старые статусы ордеров 
 			OrderStatus currentStatus = this.getStatus();
@@ -121,17 +124,29 @@ public class Order extends ServerObject {
 				}
 				cancelOrderCallback = null;
 			}
-			if (executeOrderCallback != null) {
-				if (newStatus == OrderStatus.matched) {
-					executeOrderCallback.onOrderExecute(this);
+			if (moveOrderCallback != null) {
+				Holder<Object, Object> values = diff.get("price");
+				if (values != null && !values.getFirst().equals(values.getSecond())) {
+					moveOrderCallback.onOrderMoved(this);
+				} else {
+					moveOrderCallback.onOrderMoveFailed(this);
 				}
-				executeOrderCallback = null;
+				moveOrderCallback = null;
 			}
+			return diff;
 		}
 	}
 
 	public String getOrderDesc() {
-		return buysell + " " + getSymbol() + " " + transactionid + " " + orderno + " " +status + (result != null && !result.isEmpty() ? " "+result : "");
+		return MoreObjects.toStringHelper(this)
+				.addValue(buysell)
+				.addValue(getSymbol())
+				.addValue(transactionid)
+				.addValue(orderno)
+				.addValue(value)
+				.addValue(status)
+				.omitNullValues()
+				.addValue(result).toString();
 	}
 
 	public TQSymbol getSymbol() {

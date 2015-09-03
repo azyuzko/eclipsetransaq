@@ -7,7 +7,7 @@ import java.util.Map;
 
 import ru.eclipsetrader.transaq.core.data.DatabaseManager;
 import ru.eclipsetrader.transaq.core.event.ListObserver;
-import ru.eclipsetrader.transaq.core.instruments.TQInstrumentService;
+import ru.eclipsetrader.transaq.core.instruments.TQDataFeed;
 import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
@@ -37,7 +37,7 @@ public class TQTickTradeService implements ITQTickTradeService {
 			DatabaseManager.writeTicks(list);
 			Map<TQSymbol, List<Tick>> map = createMap(list);
 			for (TQSymbol symbol : map.keySet()) {
-				TQInstrumentService.getInstance().getDefaultTickListEvent().notifyObservers(symbol, map.get(symbol));
+				TQDataFeed.getInstance().getTicksFeeder().notifyObservers(symbol, map.get(symbol));
 			}
 		}
 	};

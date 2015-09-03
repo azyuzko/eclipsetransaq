@@ -6,14 +6,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
-import javax.persistence.SynchronizationType;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.logging.log4j.LogManager;
@@ -28,11 +26,7 @@ import ru.eclipsetrader.transaq.core.candle.TQCandleService;
 import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.event.IInstrumentEvent;
 import ru.eclipsetrader.transaq.core.event.SynchronousInstrumentEvent;
-import ru.eclipsetrader.transaq.core.exception.UnimplementedException;
-import ru.eclipsetrader.transaq.core.instruments.Instrument;
-import ru.eclipsetrader.transaq.core.interfaces.IAccount;
 import ru.eclipsetrader.transaq.core.model.Quote;
-import ru.eclipsetrader.transaq.core.model.QuoteGlass;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.SymbolGapMap;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
@@ -40,7 +34,6 @@ import ru.eclipsetrader.transaq.core.model.internal.TickTrade;
 import ru.eclipsetrader.transaq.core.quotes.TQQuotationService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuoteService;
 import ru.eclipsetrader.transaq.core.strategy.IStrategy;
-import ru.eclipsetrader.transaq.core.strategy.Strategy;
 import ru.eclipsetrader.transaq.core.util.Holder3;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
@@ -191,53 +184,17 @@ public class DataFeeder implements IDataFeedContext {
 		
 	public static ConcurrentSkipListMap<Long, List<TickTrade>> getTradeList(Date dateFrom, Date dateTo, TQSymbol[] symbols) {
 		List<TickTrade> ticks = DataManager.getTickList(dateFrom, dateTo, symbols);
-		ConcurrentSkipListMap<Long, List<TickTrade>> result = new ConcurrentSkipListMap<>();
-		for (TickTrade tick : ticks) {
-			long time = tick.getReceived().getTime();
-			List<TickTrade> list = result.get(time);
-			if (list == null) {
-				list = new ArrayList<TickTrade>();
-				result.put(time, list);
-			}
-			list.add(tick);
-		}
-		return result;
+		return ticks.stream().collect(Collectors.groupingBy( (TickTrade t) -> {return t.getReceived().getTime();}, ConcurrentSkipListMap::new, Collectors.toList()));
 	}
-	
+		
 	public static ConcurrentSkipListMap<Long, List<Quote>> getQuoteList(Date dateFrom, Date dateTo, TQSymbol[] symbols) {
-		List<Quote> quotes = DataManager.getQuoteList(dateFrom, dateTo, symbols); // возвращает данные сплошным списком
-		// разложим их по датам
-		ConcurrentSkipListMap<Long, List<Quote>> result = new ConcurrentSkipListMap<>();
-		for (Quote q : quotes) {
-			List<Quote> list;
-			long time = q.getTime().getTime();
-			if (result.containsKey(time)) {
-				list = result.get(time);
-			} else {
-				list = new ArrayList<Quote>();
-			}
-			list.add(q);
-			result.put(time, list);
-		}
-		return result;
+		List<Quote> quotes = DataManager.getQuoteList(dateFrom, dateTo, symbols);
+		return quotes.stream().collect(Collectors.groupingBy( (Quote q) -> {return q.getTime().getTime();}, ConcurrentSkipListMap::new, Collectors.toList()));
 	}
-	
+		
 	public static ConcurrentSkipListMap<Long, List<SymbolGapMap>> getQuotationGapList(Date dateFrom, Date dateTo, TQSymbol[] symbols) {
 		List<SymbolGapMap> quotationGapList = DataManager.getQuotationGapList(dateFrom, dateTo, symbols);
-		// разложим их по датам
-		ConcurrentSkipListMap<Long, List<SymbolGapMap>> result = new ConcurrentSkipListMap<>();
-		for (SymbolGapMap sg : quotationGapList) {
-			List<SymbolGapMap> list;
-			long time = sg.getTime().getTime();
-			if (result.containsKey(time)) {
-				list = result.get(time);
-			} else {
-				list = new ArrayList<SymbolGapMap>();
-			}
-			list.add(sg);
-			result.put(time, list);
-		}
-		return result;
+		return quotationGapList.stream().collect(Collectors.groupingBy( (SymbolGapMap s) -> {return s.getTime().getTime();}, ConcurrentSkipListMap::new, Collectors.toList()));
 	}
 	
 	@Override
@@ -255,7 +212,7 @@ public class DataFeeder implements IDataFeedContext {
 					CandleType.CANDLE_5M, 
 					CandleType.CANDLE_15M }) {
 				List<Candle> candles = TQCandleService.getInstance().getSavedCandles(symbol, candleType, fromDate, toDate);
-				CandleList candleList = new CandleList(candleType, candles);
+				CandleList candleList = new CandleList(symbol, candleType, candles);
 				for (Candle candle : candles) {
 					Date candleEndDate = DateUtils.addSeconds(candle.getDate(), candleType.getSeconds());
 					data.put(candleEndDate.getTime(), new Holder3<TQSymbol, CandleList, Candle>(symbol, candleList, candle));
@@ -292,12 +249,7 @@ public class DataFeeder implements IDataFeedContext {
 		public double sellPrice() {
 			throw new IllegalArgumentException();
 		}
-		
-		@Override
-		public QuoteGlass getQuoteGlass(TQSymbol symbol) {
-			return strategy.getInstrument(symbol).getQuoteGlass();
-		}
-		
+
 		@Override
 		public double buyPrice() {
 			throw new IllegalArgumentException();
@@ -318,11 +270,6 @@ public class DataFeeder implements IDataFeedContext {
 		}
 		
 		@Override
-		public QuoteGlass getQuoteGlass(TQSymbol symbol) {
-			return null;
-		}
-		
-		@Override
 		public double buyPrice() {
 			return price;
 		}
@@ -330,17 +277,6 @@ public class DataFeeder implements IDataFeedContext {
 		
 	
 	Object start = new Object();
-
-	@Override
-	public void OnStart(Instrument[] instruments) {
-		synchronized (start) {
-			for (Instrument i : instruments) {
-				logger.debug("On start " + i.getSymbol() + " " + Integer.toHexString(i.hashCode()));
-				i.init(fromDate);
-				logger.debug("ticksEvent.get() = " + ticksEvent.get());
-			}
-		}
-	}
 
 	public void feed(FeedType feedType, IStrategy strategy, SimpleAccount account) {
 		
@@ -358,7 +294,7 @@ public class DataFeeder implements IDataFeedContext {
 			account.setPricingFeeder(pricingFeeder);
 		}
 		
-		strategy.start(account);
+		// strategy.start(account);
 		
 		logger.debug("Starting feed... ");
 		while (tickTime < toDate.getTime()) {
@@ -427,8 +363,7 @@ public class DataFeeder implements IDataFeedContext {
 			
 		}
 		
-		strategy.closePositions();
-		strategy.stop();
+		// strategy.stop();
 		
 		logger.debug("Complete " + strategy);
 		
@@ -437,6 +372,17 @@ public class DataFeeder implements IDataFeedContext {
 		ticksEvent.remove();
 		quotesEvent.remove();
 		
+	}
+
+	public static void main(String[] args) {
+		TQSymbol[] symbols = new TQSymbol[] {TQSymbol.BRU5};
+		
+		Date fromDate = Utils.parseDate("03.08.2015 09:30:00.000");
+		Date toDate = Utils.parseDate("03.08.2015 12:15:00.000");
+		List<SymbolGapMap> list = DataManager.getQuotationGapList(fromDate, toDate, symbols);
+		
+		ConcurrentSkipListMap<Long, List<SymbolGapMap>> result = getQuotationGapList(fromDate, toDate, symbols);
+		System.out.println(result.size());
 	}
 
 	

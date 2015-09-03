@@ -6,7 +6,7 @@ import javax.persistence.Table;
 @Entity
 @Table(name="ticks")
 public class TickTrade extends Tick {
-
+	
 	public TickTrade() {
 		super();
 	}

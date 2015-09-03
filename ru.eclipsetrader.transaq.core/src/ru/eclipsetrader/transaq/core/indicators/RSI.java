@@ -73,7 +73,7 @@ public class RSI extends IndicatorFunction {
 		Date toDate = Utils.parseDate("20.08.2015 00:00:00.000");
 		
 		List<Candle> candles = DataManager.getCandles(symbol, candleType, fromDate, toDate);
-		CandleList cl = new CandleList(candleType);
+		CandleList cl = new CandleList(symbol, candleType);
 		cl.appendCandles(candles);
 		double[] inReal = cl.values(priceType).getSecond();
 		Date[] dates = cl.values(priceType).getFirst();

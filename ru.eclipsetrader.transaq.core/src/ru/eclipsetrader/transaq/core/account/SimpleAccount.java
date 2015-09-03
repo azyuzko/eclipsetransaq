@@ -5,14 +5,12 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import ru.eclipsetrader.transaq.core.interfaces.IAccount;
 import ru.eclipsetrader.transaq.core.model.BuySell;
-import ru.eclipsetrader.transaq.core.model.QuoteGlass;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.trades.IDateTimeSupplier;
 import ru.eclipsetrader.transaq.core.util.Utils;
@@ -106,13 +104,8 @@ public class SimpleAccount implements IAccount {
 
 	@Override
 	public QuantityCost buy(TQSymbol symbol, int quantity) {
-		QuoteGlass quoteGlass = pricingFeeder.getQuoteGlass(symbol);
-		if (quoteGlass != null) {
-			return buy(symbol, quantity, quoteGlass);
-		} else {
-			double price = pricingFeeder.buyPrice();
-			return buy(symbol, quantity, price);
-		}
+		double price = pricingFeeder.buyPrice();
+		return buy(symbol, quantity, price);
 	}
 	
 	/**
@@ -147,7 +140,7 @@ public class SimpleAccount implements IAccount {
 	 * Покупка по ценам в стакане котировок
 	 * @param symbol
 	 * @param priceMap
-	 */
+	 
 	public QuantityCost buy(TQSymbol symbol, int quantity, QuoteGlass quoteGlass) {
 		
 		if (logger.isDebugEnabled()) {
@@ -185,17 +178,12 @@ public class SimpleAccount implements IAccount {
 		}
 		
 		return createOperation(BuySell.B, available_quantity, full_cost);
-	}
+	}*/
 
 	@Override
 	public QuantityCost sell(TQSymbol symbol, int quantity) {
-		QuoteGlass quoteGlass = pricingFeeder.getQuoteGlass(symbol);
-		if (quoteGlass != null) {
-			return sell(symbol, quantity, quoteGlass);
-		} else {
-			double price = pricingFeeder.buyPrice();
-			return sell(symbol, quantity, price);
-		}
+		double price = pricingFeeder.buyPrice();
+		return sell(symbol, quantity, price);
 	}
 
 	public QuantityCost sell(TQSymbol symbol, int quantity, double price) {
@@ -219,6 +207,7 @@ public class SimpleAccount implements IAccount {
 		return createOperation(BuySell.S, quantity, current_cost);
 	}
 
+	/*
 	public QuantityCost sell(TQSymbol symbol, int quantity, QuoteGlass quoteGlass) {
 		
 		if (logger.isDebugEnabled()) {
@@ -255,7 +244,7 @@ public class SimpleAccount implements IAccount {
 		
 		return createOperation(BuySell.S, available_quantity, full_cost);
 	}
-	
+	*/
 	
 	@Override
 	public String toString() {

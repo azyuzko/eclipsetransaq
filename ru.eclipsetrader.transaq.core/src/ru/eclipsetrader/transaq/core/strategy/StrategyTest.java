@@ -22,11 +22,6 @@ import javax.persistence.Transient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.tictactec.ta.lib.MAType;
-
-import ru.eclipsetrader.transaq.core.candle.CandleType;
-import ru.eclipsetrader.transaq.core.model.PriceType;
-import ru.eclipsetrader.transaq.core.model.StrategyWorkOn;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.trades.DataFeeder;
 import ru.eclipsetrader.transaq.core.util.Holder;
@@ -76,26 +71,13 @@ public class StrategyTest {
 		
 		System.out.println("Data loaded..");
 		int index = 0;
-		// create params
-		StrategyParamsType sp = new StrategyParamsType();
-		sp.setFast(6);
-		sp.setSlow(15);
-		sp.setSignal(9);
-		sp.setPriceType(PriceType.CLOSE);
-		sp.setWorkOn(StrategyWorkOn.CandleClose);
-		sp.setCandleType(CandleType.CANDLE_5M);
-		sp.setShortCandleType(CandleType.CANDLE_1M);
-		
-		sp.setStochF_optInFastD_MAType(MAType.Trima);
-		sp.setStochF_optInFastK_Period(25);
-		sp.setStochF_optInFastD_Period(4);
-		
+	
 		
 		DataFeeder dataFeeder = new DataFeeder(fromDate, toDate, 
 				//TQSymbol.workingSymbolSet().toArray(new TQSymbol[0])); 
 		 new TQSymbol[] {TQSymbol.SiU5});
 		
-		Strategy macd = new Strategy(dataFeeder, sp);
+		Strategy macd = new Strategy(dataFeeder);
 		StrategyJob s = new StrategyJob(index++, macd, dataFeeder);
 		Future<Holder<Double, String>> fut = service.submit(s);
 		lr.add(fut);

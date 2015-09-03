@@ -16,9 +16,14 @@ import java.lang.reflect.Modifier;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.function.IntFunction;
+import java.util.stream.Collectors;
 
 import javax.persistence.Id;
 import javax.xml.parsers.SAXParserFactory;
@@ -91,6 +96,28 @@ public class Utils {
         //Print Maximum available memory
         sb.append("Max Memory:" + (runtime.maxMemory() / mb) + " Mb\n");
         return sb.toString();
+	}
+	
+	/**
+	 * Приведение типов ?? списков
+	 * @param from
+	 * @param func
+	 * @return
+	 */
+	public static <T, U> List<U> convertList(List<T> from, Function<T, U> func){
+	    return from.stream().map(func).collect(Collectors.toList());
+	}
+
+	/**
+	 * Приведение типов ?? массивов
+	 * @param from
+	 * @param func
+	 * @param generator
+	 * @return
+	 */
+	public static <T, U> U[] convertArray(T[] from, Function<T, U> func, 
+	                                       IntFunction<U[]> generator){
+	    return Arrays.stream(from).map(func).toArray(generator);
 	}
 	
 	public static Date truncDate(Date date) {

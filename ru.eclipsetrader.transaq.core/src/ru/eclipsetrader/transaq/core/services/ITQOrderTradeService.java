@@ -2,12 +2,12 @@ package ru.eclipsetrader.transaq.core.services;
 
 import java.util.List;
 
-import ru.eclipsetrader.transaq.core.model.internal.CommandResult;
 import ru.eclipsetrader.transaq.core.model.internal.Order;
 import ru.eclipsetrader.transaq.core.model.internal.StopOrder;
 import ru.eclipsetrader.transaq.core.model.internal.Trade;
 import ru.eclipsetrader.transaq.core.orders.ICancelOrderCallback;
 import ru.eclipsetrader.transaq.core.orders.ICreateOrderCallback;
+import ru.eclipsetrader.transaq.core.orders.IMoveOrderCallback;
 import ru.eclipsetrader.transaq.core.orders.OrderRequest;
 
 public interface ITQOrderTradeService {
@@ -23,8 +23,9 @@ public interface ITQOrderTradeService {
 	Order cancelOrder(String orderno);
 	void cancelOrder(String orderno, ICancelOrderCallback callback);
 	
-	CommandResult moveOrder(String transactionId, double newPrice);
-	CommandResult moveOrderQuantity(String transactionId, double newPrice, int quantity);
+	void moveOrder(String orderno, double newPrice, IMoveOrderCallback callback);
+	void moveOrder(String orderno, double newPrice, int quantity, IMoveOrderCallback callback);
+	
 	StopOrder getStopOrderById(String transactionId);
 	
 	List<Trade> getTrades();

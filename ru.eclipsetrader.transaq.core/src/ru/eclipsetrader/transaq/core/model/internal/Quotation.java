@@ -4,11 +4,11 @@ import java.lang.reflect.Field;
 import java.util.Date;
 import java.util.List;
 
-import javax.persistence.SynchronizationType;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import ru.eclipsetrader.transaq.core.event.ListObserver;
+import ru.eclipsetrader.transaq.core.interfaces.IQuotationProcessingContext;
 import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.QuotationStatus;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
@@ -59,6 +59,19 @@ public class Quotation {
 	double volatility; // Волатильность 
 	double theoreticalprice; // Теоретическая цена
 	
+
+	IQuotationProcessingContext quotationProcessingContext;
+
+	public ListObserver<SymbolGapMap> iQuotationObserver = new ListObserver<SymbolGapMap>() {
+		@Override
+		public void update(List<SymbolGapMap> list) {
+			if (logger.isDebugEnabled()) {
+				logger.debug("iQuotationObserver " + list.get(0).getSeccode() + "  size = " + list.size() + "  "+ Utils.formatTime(list.get(0).getTime()) + " -- " + Utils.formatTime(list.get(list.size()-1).getTime()) );
+			}
+			applyQuotationGap(list);
+		}
+	};
+	
 	public Quotation(){
 
 	}
@@ -70,7 +83,15 @@ public class Quotation {
 		logger.debug("Quotation for " + symbol +" created");
 	}
 
-	
+	public IQuotationProcessingContext getQuotationProcessingContext() {
+		return quotationProcessingContext;
+	}
+
+	public void setQuotationProcessingContext(
+			IQuotationProcessingContext quotationProcessingContext) {
+		this.quotationProcessingContext = quotationProcessingContext;
+	}
+
 	public void applyQuotationGap(List<SymbolGapMap> quotationGapList) {
 		synchronized (this) {
 			
@@ -155,6 +176,9 @@ public class Quotation {
 					}
 				}
 			}
+		}
+		if (quotationGapList.size() > 0 && quotationProcessingContext != null) {
+			quotationProcessingContext.onQuotationsChange(new TQSymbol(board, seccode), this);
 		}
 	}
 	

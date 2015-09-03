@@ -11,6 +11,8 @@ import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class OrderRequest {
 
+	String transactionId;
+	
 	TQSymbol symbol;
 	double price;
 	int quantity;
@@ -41,6 +43,14 @@ public class OrderRequest {
 		OrderRequest orderRequest = new OrderRequest(symbol, bs, quantity);
 		orderRequest.byMarket = true;
 		return orderRequest;
+	}
+
+	public String getTransactionId() {
+		return transactionId;
+	}
+
+	public void setTransactionId(String transactionId) {
+		this.transactionId = transactionId;
 	}
 
 	public Order getOrder() {

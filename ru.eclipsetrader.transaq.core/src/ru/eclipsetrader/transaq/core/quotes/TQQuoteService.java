@@ -10,7 +10,7 @@ import org.apache.logging.log4j.Logger;
 
 import ru.eclipsetrader.transaq.core.data.DatabaseManager;
 import ru.eclipsetrader.transaq.core.event.Observer;
-import ru.eclipsetrader.transaq.core.instruments.TQInstrumentService;
+import ru.eclipsetrader.transaq.core.instruments.TQDataFeed;
 import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
 import ru.eclipsetrader.transaq.core.model.Quote;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
@@ -36,7 +36,7 @@ public class TQQuoteService implements ITQQuoteService {
 			Map<TQSymbol, List<Quote>> quoteMap = applyQuoteGap(gapList);
 			for (TQSymbol symbol : quoteMap.keySet()) {
 				List<Quote> quotesList = quoteMap.get(symbol);
-				TQInstrumentService.getInstance().getDefaultQuoteListEvent().notifyObservers(symbol, quotesList);
+				TQDataFeed.getInstance().getQuotesFeeder().notifyObservers(symbol, quotesList);
 				DatabaseManager.writeQuotes(quotesList);
 			}
 		}

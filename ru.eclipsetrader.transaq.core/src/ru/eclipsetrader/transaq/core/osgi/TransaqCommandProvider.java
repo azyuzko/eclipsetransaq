@@ -7,29 +7,21 @@ import org.eclipse.osgi.framework.console.CommandProvider;
 
 import ru.eclipsetrader.transaq.core.CoreActivator;
 import ru.eclipsetrader.transaq.core.Settings;
-import ru.eclipsetrader.transaq.core.account.TQAccountService;
 import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.candle.TQCandleService;
-import ru.eclipsetrader.transaq.core.instruments.TQInstrumentService;
+import ru.eclipsetrader.transaq.core.helper.TransaqHelper;
 import ru.eclipsetrader.transaq.core.interfaces.ITransaqServer;
-import ru.eclipsetrader.transaq.core.model.BuySell;
-import ru.eclipsetrader.transaq.core.model.PriceType;
-import ru.eclipsetrader.transaq.core.model.StrategyWorkOn;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
-import ru.eclipsetrader.transaq.core.model.UnfilledType;
 import ru.eclipsetrader.transaq.core.model.internal.Order;
 import ru.eclipsetrader.transaq.core.model.internal.Security;
 import ru.eclipsetrader.transaq.core.model.internal.Trade;
-import ru.eclipsetrader.transaq.core.orders.OrderCallback;
-import ru.eclipsetrader.transaq.core.orders.OrderRequest;
 import ru.eclipsetrader.transaq.core.orders.TQOrderTradeService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuotationService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuoteService;
 import ru.eclipsetrader.transaq.core.securities.TQSecurityService;
 import ru.eclipsetrader.transaq.core.services.ITransaqServerManager;
 import ru.eclipsetrader.transaq.core.strategy.Strategy;
-import ru.eclipsetrader.transaq.core.strategy.StrategyParamsType;
 import ru.eclipsetrader.transaq.core.trades.TQTickTradeService;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
@@ -220,17 +212,7 @@ public class TransaqCommandProvider implements CommandProvider {
 		
 		case "start": {
 			
-			StrategyParamsType sp = new StrategyParamsType();
-			sp.setFast(12);
-			sp.setSlow(24);
-			sp.setSignal(9);
-			sp.setPriceType(PriceType.CLOSE);
-			sp.setWorkOn(StrategyWorkOn.CandleClose);
-			sp.setCandleType(CandleType.CANDLE_61S);
 			
-			Strategy s = new Strategy(TQInstrumentService.getInstance().getDefaultDataFeedContext(), sp);
-			
-			s.start(TQAccountService.getInstance().getAccount(TQSymbol.SiU5));
 			
 			break;
 		}
@@ -241,9 +223,8 @@ public class TransaqCommandProvider implements CommandProvider {
 		}
 		
 		case "test": {
-			OrderRequest or = OrderRequest.createRequest(TQSymbol.EDU5, BuySell.S, 1.1271, 1).setUnfilled(UnfilledType.PutInQueue);
-			Order o = TQOrderTradeService.getInstance().createOrder(or);
-			ci.println("result = " + o);
+			TransaqHelper th = new TransaqHelper();
+			th.start();
 			break;
 		}
 
