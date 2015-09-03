@@ -43,9 +43,7 @@ public class CandleList {
 			if (logger.isDebugEnabled()) {
 				logger.debug("iTickObserver " + list.get(0).getSeccode() + "  size = " + list.size() + " " + Utils.formatTime(list.get(0).getTime()) + " -- " + Utils.formatTime(list.get(list.size()-1).getTime()) );
 			}
-			for (Tick tick : list) {
-				processTickInCandle(tick);
-			}
+			list.forEach(t -> processTickInCandle(t));
 		}
 	};
 	

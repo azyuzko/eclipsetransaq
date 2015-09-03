@@ -32,9 +32,7 @@ public class TQQuotationService implements ITQQuotationService {
 		@Override
 		public void update(List<SymbolGapMap> quotationGapList) {
 			Map<TQSymbol, List<SymbolGapMap>> gapMap = createMap(quotationGapList); // разложим гэпы по инструментам
-			for (TQSymbol symbol : gapMap.keySet()) {
-				TQDataFeed.getInstance().getQuotationGapsFeeder().notifyObservers(symbol, gapMap.get(symbol));
-			}
+			gapMap.forEach((symbol, gap) -> TQDataFeed.getInstance().getQuotationGapsFeeder().notifyObservers(symbol, gap));
 			DatabaseManager.writeQuotations(quotationGapList);
 		}
 	};
@@ -44,6 +42,7 @@ public class TQQuotationService implements ITQQuotationService {
 		return quotationGapObserver;
 	}
 	
+	// TODO refactor java 8
 	public static Map<TQSymbol, List<SymbolGapMap>> createMap(List<SymbolGapMap> quotationGapList) {
 		Map<TQSymbol, List<SymbolGapMap>> result = new HashMap<>();
 		for (SymbolGapMap symbolGapMap : quotationGapList) {
@@ -68,9 +67,7 @@ public class TQQuotationService implements ITQQuotationService {
 	
 	public void subscribe(List<TQSymbol> symbols) {
 		SubscribeCommand subscribeCommand = new SubscribeCommand();
-		for (TQSymbol symbol : symbols) {
-			subscribeCommand.subscribeQuotations(symbol);
-		}
+		symbols.forEach(symbol -> subscribeCommand.subscribeQuotations(symbol));
 		TransaqLibrary.SendCommand(subscribeCommand.createConnectCommand());
 		
 	}

@@ -3,9 +3,6 @@ package ru.eclipsetrader.transaq.core.indicators;
 import java.util.Date;
 import java.util.List;
 
-import com.tictactec.ta.lib.Core;
-import com.tictactec.ta.lib.MInteger;
-
 import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.candle.CandleList;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
@@ -14,6 +11,8 @@ import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.PriceType;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.util.Utils;
+
+import com.tictactec.ta.lib.MInteger;
 
 public class RSI extends IndicatorFunction {
 

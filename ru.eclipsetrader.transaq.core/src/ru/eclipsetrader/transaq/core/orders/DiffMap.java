@@ -20,9 +20,7 @@ public class DiffMap {
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		for (String key : map.keySet()) {
-			sb.append(key + ": " + map.get(key).getFirst() + " - " + map.get(key).getSecond() + "\n");
-		}
+		map.forEach((key,v) -> sb.append(key + ": " + v.getFirst() + " - " + v.getSecond() + "\n"));
 		return sb.toString();
 	}
 

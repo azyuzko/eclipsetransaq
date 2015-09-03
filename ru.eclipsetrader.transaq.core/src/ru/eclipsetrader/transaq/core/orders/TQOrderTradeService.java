@@ -21,7 +21,6 @@ import ru.eclipsetrader.transaq.core.model.internal.StopOrder;
 import ru.eclipsetrader.transaq.core.model.internal.Trade;
 import ru.eclipsetrader.transaq.core.services.ITQOrderTradeService;
 import ru.eclipsetrader.transaq.core.util.Holder;
-import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class TQOrderTradeService implements ITQOrderTradeService {
 	

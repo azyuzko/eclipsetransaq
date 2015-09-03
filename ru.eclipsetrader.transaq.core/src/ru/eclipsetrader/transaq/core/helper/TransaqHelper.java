@@ -11,7 +11,6 @@ import ru.eclipsetrader.transaq.core.candle.ICandleProcessContext;
 import ru.eclipsetrader.transaq.core.event.Observer;
 import ru.eclipsetrader.transaq.core.instruments.TQDataFeed;
 import ru.eclipsetrader.transaq.core.interfaces.IQuotesProcessingContext;
-import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.QuoteGlass;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Order;

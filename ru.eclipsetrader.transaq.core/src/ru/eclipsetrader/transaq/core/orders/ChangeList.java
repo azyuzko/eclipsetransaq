@@ -18,10 +18,9 @@ public class ChangeList {
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		for (Holder<Date, DiffMap> dm : changes) {
-			sb.append(Utils.formatDate(dm.getFirst()) + ":\n");
-			sb.append("\n");
-		}
+		changes.forEach(h -> sb.append(Utils.formatDate(h.getFirst()) + ":\n" + h.getSecond() +"\n"));
 		return sb.toString();
 	}
+	
+	
 }
