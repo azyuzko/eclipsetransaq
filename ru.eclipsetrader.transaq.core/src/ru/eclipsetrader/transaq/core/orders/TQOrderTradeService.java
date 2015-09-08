@@ -50,77 +50,67 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 	public InstrumentEvent<StopOrder> newStopOrderEvent = new InstrumentEvent<>("New StopOrder Monitor Event");
 	public InstrumentEvent<Trade> newTradeEvent = new InstrumentEvent<>("New Trade Monitor Event");
 
-	Observer<Order> orderObserver = new Observer<Order>() {
-		@Override
-		public void update(Order order) {
-			String orderno = order.getOrderno();
-			String transactionid = order.getTransactionid();
-			logger.info("Received order " + order.getOrderDesc());
-			if (transactionid != null) {
-				// найдем его запрос
-				 Holder<OrderRequest, ICreateOrderCallback> orderRequestHolder = createRequests.get(transactionid);
-				if (orderRequestHolder != null) {
-					// удалим запрос
-					createRequests.remove(transactionid);
-					// получим его callback
-					ICreateOrderCallback callback = orderRequestHolder.getSecond();
-					// оповестим
-					if (order.getOrderno().equals("0")) {
-						logger.warn("Received empty order : " + order.getOrderDesc());
-						callback.onOrderCreateError(order, order.getResult());
-					} else {
-						callback.onOrderCreated(order);
-						// посмотрим, есть ли у нас этот ордер
-						Order currentOrder = orders.get(orderno);
-						if (currentOrder != null) {
-							logger.warn("Something wrong! currentOrder must be null here");
-						}
-						orders.put(orderno, order);
-						DataManager.merge(order);
-						return;
+	Observer<Order> orderObserver = (Order order) -> {
+		String orderno = order.getOrderno();
+		String transactionid = order.getTransactionid();
+		logger.info("Received order " + order.getOrderDesc());
+		if (transactionid != null) {
+			// найдем его запрос
+			 Holder<OrderRequest, ICreateOrderCallback> orderRequestHolder = createRequests.get(transactionid);
+			if (orderRequestHolder != null) {
+				// удалим запрос
+				createRequests.remove(transactionid);
+				// получим его callback
+				ICreateOrderCallback callback = orderRequestHolder.getSecond();
+				// оповестим
+				if (order.getOrderno().equals("0")) {
+					logger.warn("Received empty order : " + order.getOrderDesc());
+					callback.onOrderCreateError(order, order.getResult());
+				} else {
+					callback.onOrderCreated(order);
+					// посмотрим, есть ли у нас этот ордер
+					Order currentOrder = orders.get(orderno);
+					if (currentOrder != null) {
+						logger.warn("Something wrong! currentOrder must be null here");
 					}
+					orders.put(orderno, order);
+					DataManager.merge(order);
+					return;
 				}
 			}
-			
-			// посмотрим, есть ли у нас этот ордер
-			Order currentOrder = orders.get(orderno);
-			
-			if (currentOrder == null) {
-				// такого ордера нет, оповестим заинтересованных
-				orders.put(orderno, order);
-				DataManager.merge(order);
-				newOrderEvent.notifyObservers(order.getSymbol(), order);
-			} else {
-				DiffMap diff = currentOrder.notifyChanges(order);
-				logger.info(("DIFF MAP = " + diff).replace("\n", ""));
-				DataManager.merge(currentOrder);
-			}
-			
-		}
-	};
-	
-	Observer<Trade> tradeObserver = new Observer<Trade>() {
-		@Override
-		public void update(Trade trade) {
-			logger.info("Received trade = " + trade.getTradeDesc());
-			Objects.requireNonNull(trade.getTradeno(), "Cannot put trade without tradeno!");
-			Trade old = trades.put(trade.getTradeno(), trade);
-			if (old != null) {
-				logger.warn("Something wrong! old trade must be null here");
-			}
-			DataManager.merge(trade);
-		}
-	};
-	
-	Observer<StopOrder> stopOrderObserver = new Observer<StopOrder>() {
-		
-		@Override
-		public void update(StopOrder stopOrder) {
-			logger.info("Received stop order " +  stopOrder.getStopOrderDesc());
-			put(stopOrder);
-			DataManager.merge(stopOrder);
 		}
 		
+		// посмотрим, есть ли у нас этот ордер
+		Order currentOrder = orders.get(orderno);
+		
+		if (currentOrder == null) {
+			// такого ордера нет, оповестим заинтересованных
+			orders.put(orderno, order);
+			DataManager.merge(order);
+			newOrderEvent.notifyObservers(order.getSymbol(), order);
+		} else {
+			DiffMap diff = currentOrder.notifyChanges(order);
+			logger.info(("DIFF MAP = " + diff).replace("\n", ""));
+			DataManager.merge(currentOrder);
+		}
+		
+	};
+	
+	Observer<Trade> tradeObserver = (Trade trade) -> {
+		logger.info("Received trade = " + trade.getTradeDesc());
+		Objects.requireNonNull(trade.getTradeno(), "Cannot put trade without tradeno!");
+		Trade old = trades.put(trade.getTradeno(), trade);
+		if (old != null) {
+			logger.warn("Something wrong! old trade must be null here");
+		}
+		newTradeEvent.notifyObservers(trade.getSymbol(), trade);
+		DataManager.merge(trade);
+	};
+	
+	Observer<StopOrder> stopOrderObserver = (StopOrder stopOrder) -> {
+		logger.info("Received stop order " +  stopOrder.getStopOrderDesc());
+		put(stopOrder);
+		DataManager.merge(stopOrder);
 	};
 
 	public Observer<Order> getOrderObserver() {

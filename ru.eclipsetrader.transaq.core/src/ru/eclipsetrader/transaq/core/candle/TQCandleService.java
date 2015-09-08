@@ -8,11 +8,11 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.WeakHashMap;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import ru.eclipsetrader.transaq.core.Constants;
 import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.event.Observer;
 import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
@@ -23,7 +23,6 @@ import ru.eclipsetrader.transaq.core.model.internal.CandleStatus;
 import ru.eclipsetrader.transaq.core.server.command.GetHistoryDataCommand;
 import ru.eclipsetrader.transaq.core.services.ITQCandleService;
 import ru.eclipsetrader.transaq.core.util.Holder;
-import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class TQCandleService implements ITQCandleService {
 	
@@ -35,17 +34,14 @@ public class TQCandleService implements ITQCandleService {
 	WeakHashMap<Holder<TQSymbol, CandleType>, List<Candle>> buffer = new WeakHashMap<>();
 	ArrayBlockingQueue<CandleGraph> dbWriteQueue = new ArrayBlockingQueue<>(300);
 	
-	Thread dbWriteThread = new Thread(new Runnable() {
-		@Override
-		public void run() {
-			while (!Thread.interrupted()) {
-				try {
-					CandleGraph candleGraph = dbWriteQueue.take();
-					TQSymbol symbol = new TQSymbol(candleGraph.getBoard(), candleGraph.getSeccode());
-					persist(symbol, getCandleTypeFromPeriodId(candleGraph.getPeriod()), candleGraph.getCandles());
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
+	Thread dbWriteThread = new Thread(() -> {
+		while (!Thread.interrupted()) {
+			try {
+				CandleGraph candleGraph = dbWriteQueue.take();
+				TQSymbol symbol = new TQSymbol(candleGraph.getBoard(), candleGraph.getSeccode());
+				DataManager.batchCandles(symbol, getCandleTypeFromPeriodId(candleGraph.getPeriod()), candleGraph.getCandles());
+			} catch (InterruptedException e) {
+				logger.throwing(e);
 			}
 		}
 	});
@@ -54,7 +50,7 @@ public class TQCandleService implements ITQCandleService {
 	public static TQCandleService getInstance() {
 		if (instance == null) {
 			instance = new TQCandleService();
-			instance.load(Constants.DEFAULT_SERVER_ID);
+			instance.loadCandleTypes();
 		}
 		return instance;
 	}
@@ -62,39 +58,32 @@ public class TQCandleService implements ITQCandleService {
 	private TQCandleService() {
 	}
 	
-	Observer<List<CandleKind>> candleKindObserver = new Observer<List<CandleKind>>() {
-		@Override
-		public void update(List<CandleKind> candleKindList) {
-			candleKinds.clear();
-			for (CandleKind ck : candleKindList) {
-				candleKinds.put(ck.getPeriod(), ck);
-			}
-			persist();
-		}
+	Observer<List<CandleKind>> candleKindObserver = (candleKindList) -> {
+		candleKinds.clear();
+		candleKindList.forEach(ck -> candleKinds.merge(ck.getPeriod(), ck, (a,b) -> b));
+		DataManager.mergeList(candleKinds.values());
 	}; 
 		
-	Observer<CandleGraph> candleGraphObserver = new Observer<CandleGraph>() {
-		@Override
-		public void update(CandleGraph candleGraph) {
-			TQSymbol symbol = new TQSymbol(candleGraph.getBoard(), candleGraph.getSeccode());
-			CandleType candleType = getCandleTypeFromPeriodId(candleGraph.getPeriod());
-			Holder<TQSymbol, CandleType> key = new Holder<TQSymbol, CandleType>(symbol, candleType);
-			if (buffer.containsKey(key)) {
-				List<Candle> candleBuffer = buffer.get(key);
-				candleBuffer.addAll(candleGraph.getCandles());
-				
-				if (logger.isDebugEnabled()) {
-					logger.debug(symbol + "  " + candleType + " candleGraph.getCandles().size = " + candleGraph.getCandles().size() + " status = " + candleGraph.getStatus());
-				}
-				if (candleGraph.getStatus() == CandleStatus.NO_MORE || candleGraph.getStatus() == CandleStatus.FULL_PROVIDED) {
-					synchronized (candleBuffer) {
-						logger.debug(symbol + "  " + candleType + " notify waiters");
-						candleBuffer.notify();	
-					}				
-				}
-			} else {
-				throw new RuntimeException("Unable to find buffer for " + symbol);
+	Observer<CandleGraph> candleGraphObserver = (CandleGraph candleGraph) -> {
+		TQSymbol symbol = new TQSymbol(candleGraph.getBoard(), candleGraph.getSeccode());
+		CandleType candleType = getCandleTypeFromPeriodId(candleGraph.getPeriod());
+		Holder<TQSymbol, CandleType> key = new Holder<TQSymbol, CandleType>(symbol, candleType);
+		if (buffer.containsKey(key)) {
+			List<Candle> candleBuffer = buffer.get(key);
+			candleBuffer.addAll(candleGraph.getCandles());
+			
+			if (logger.isDebugEnabled()) {
+				logger.debug(symbol + "  " + candleType + " candleGraph.getCandles().size = " + candleGraph.getCandles().size() + " status = " + candleGraph.getStatus());
 			}
+			if (candleGraph.getStatus() == CandleStatus.NO_MORE || candleGraph.getStatus() == CandleStatus.FULL_PROVIDED) {
+				synchronized (candleBuffer) {
+					logger.debug(symbol + "  " + candleType + " notify waiters");
+					candleBuffer.notify();	
+				}				
+			}
+			dbWriteQueue.add(candleGraph);
+		} else {
+			throw new RuntimeException("Unable to find buffer for " + symbol);
 		}
 
 	};
@@ -109,23 +98,11 @@ public class TQCandleService implements ITQCandleService {
 
 	@Override
 	public List<CandleType> getCandleTypes() {
-		List<CandleType> result = new ArrayList<CandleType>();
-		for (CandleKind candleKind : candleKinds.values()) {
-			result.add(getCandleTypeByKind(candleKind));
-		}
-		return result;
+		return candleKinds.values().stream().map((CandleKind candleKind) -> getCandleTypeByKind(candleKind)).collect(Collectors.toList());
 	}
 
-	@Override
-	public void persist() {
-		DataManager.mergeList(candleKinds.values());
-	}
-
-	@Override
-	public void load(String serverId) {
-		for (CandleKind ck : DataManager.getList(CandleKind.class)) {
-			candleKinds.put(ck.getPeriod(), ck);
-		}
+	private void loadCandleTypes() {
+		DataManager.getList(CandleKind.class).forEach((ck) -> candleKinds.put(ck.getPeriod(), ck));
 	}
 
 	public CandleType getCandleTypeByKind(CandleKind candleKind) {
@@ -133,19 +110,11 @@ public class TQCandleService implements ITQCandleService {
 	}
 	
 	public CandleKind getCandleKindByType(CandleType candleType) {
-		if (candleKinds.containsKey(candleType.getSeconds())) {
-			return candleKinds.get(candleType.getSeconds());
-		}
-		return null;
+		return candleKinds.get(candleType.getSeconds());
 	}
 	
-	public CandleType getCandleTypeFromPeriodId(Integer periodId) {	
-		for (CandleKind candleKind : candleKinds.values()) {
-			if (candleKind.getId() == periodId) {
-				return CandleType.fromSeconds(candleKind.getPeriod());
-			}
-		}
-		throw new IllegalArgumentException("CandleType for periodId = " + periodId + " not found!");
+	public CandleType getCandleTypeFromPeriodId(Integer periodId) {
+		return CandleType.fromSeconds(candleKinds.values().stream().filter( (candleKind) -> candleKind.getId() == periodId).findFirst().get().getPeriod());
 	}
 	
 	public List<Candle> getHistoryData(TQSymbol symbol, CandleType candleType, int count) {
@@ -166,17 +135,7 @@ public class TQCandleService implements ITQCandleService {
 		}
 		return result;
 	}
-	
-	public static void main(String[] args) {
-		Date fromDate = Utils.parseDate("03.08.2015 10:30:00.000");
-		Date toDate = Utils.parseDate("06.08.2015 10:40:00.000");
-		List<Candle> list = TQCandleService.getInstance().getSavedCandles(TQSymbol.SiU5, CandleType.CANDLE_1M, fromDate, toDate);
-		list = convertCandleList(CandleType.CANDLE_1M, CandleType.CANDLE_2M, list);
-		for (Candle c : list) {
-			System.out.println(c);
-		}
-	}
-	
+
 	public List<Candle> getHistoryData(TQSymbol symbol, CandleType candleType, int count, boolean reset) {		
 		// Проверим, какой тип свечи - реальный или синтетический
 		if (getCandleKindByType(candleType) != null) {
@@ -227,12 +186,6 @@ public class TQCandleService implements ITQCandleService {
 			}
 			return candleBuffer;
 		}
-	}
-
-	@Override
-	public void persist(TQSymbol symbol, CandleType candleType,
-			List<Candle> candles) {
-		DataManager.batchCandles(symbol, candleType, candles);		
 	}
 
 	@Override

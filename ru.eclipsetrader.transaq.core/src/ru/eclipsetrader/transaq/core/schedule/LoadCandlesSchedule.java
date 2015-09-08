@@ -61,8 +61,6 @@ public class LoadCandlesSchedule {
 				if (TransaqServer.getInstance() != null && TransaqServer.getInstance().getStatus() == ConnectionStatus.CONNECTED) {
 					List<Candle> candles = TQCandleService.getInstance().getHistoryData(symbol, candleType, count, true);	// , // по умолчанию за день
 					logger.debug("Received " + candles.size() + " candles");				
-					TQCandleService.getInstance().persist(symbol, candleType, candles);
-					logger.debug("Completed.");
 				} else {
 					logger.warn("No connection to server. LoadCandles will not be performed.");
 				}

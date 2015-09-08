@@ -201,7 +201,7 @@ public class TransaqCommandProvider implements CommandProvider {
 				List<Candle> candles = TQCandleService.getInstance().getHistoryData(symbol, candleType, 
 						count == null ? 86400 / candleType.getSeconds() : Integer.valueOf(count), // по умолчанию за день
 						reset == null ? true : Boolean.valueOf(reset));
-				TQCandleService.getInstance().persist(symbol, candleType, candles);
+				// TQCandleService.getInstance().persist(symbol, candleType, candles);
 			}
 			break;
 		}

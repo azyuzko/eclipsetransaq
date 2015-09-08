@@ -1,24 +1,15 @@
 package ru.eclipsetrader.transaq.core.indicators;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import ru.eclipsetrader.transaq.core.account.QuantityCost;
-import ru.eclipsetrader.transaq.core.account.SimpleAccount;
 import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.candle.CandleList;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.data.DataManager;
-import ru.eclipsetrader.transaq.core.model.BuySell;
+import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.PriceType;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
-import ru.eclipsetrader.transaq.core.strategy.StrategyPosition;
-import ru.eclipsetrader.transaq.core.util.Holder;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 import com.tictactec.ta.lib.MAType;
@@ -62,9 +53,9 @@ public class StochasticFast extends IndicatorFunction {
 		int startIdx = 0;
 		int endIdx = cl.size() - 1;
 
-		inHigh = cl.values(PriceType.HIGH).getSecond();
-		inLow = cl.values(PriceType.LOW).getSecond();
-		inClose = cl.values(PriceType.CLOSE).getSecond();
+		inHigh = cl.streamPrice(PriceType.HIGH).toArray();
+		inLow = cl.streamPrice(PriceType.LOW).toArray();
+		inClose = cl.streamPrice(PriceType.CLOSE).toArray();
 
 		outFastK = new double[cl.size()];
 		outFastD = new double[cl.size()];
@@ -125,68 +116,20 @@ public class StochasticFast extends IndicatorFunction {
 		return outFastD;
 	}
 	
-	public static String simpleStochFTest(CandleList cl, SimpleAccount sa, StochasticFast sf) {
-		TQSymbol symbol = TQSymbol.SiU5;
-		
-		sf.evaluate(cl);
-		Date[] dates = cl.dates();
-				
-		double[] close = cl.values(PriceType.CLOSE).getSecond();
-		double[] fastK = sf.getOutFastK();
-		double[] fastD = sf.getOutFastD();
-		double[] diff = Utils.minusArray(fastK, fastD);
-		
-		StringBuilder sb = new StringBuilder();
-		
-		StrategyPosition position = null;
-		
-		for (int i = 0; i < dates.length-1; i++) {
-			if (fastD[i] > 0 && fastK[i] > 0) {
-				
-				BuySell bs = null;
-				if ((position == null || position.getBuySell() == BuySell.S) && fastK[i] < 15) {
-					if (sa.buy(symbol, 1, close[i]).getQuantity() > 0) {
-						position = new StrategyPosition(symbol, BuySell.B);
-					};
-				}
-				
-				if ((position == null || position.getBuySell() == BuySell.B) && fastK[i] > 85) {
-					if (sa.sell(symbol, 1, close[i]).getQuantity() > 0) {
-						position = new StrategyPosition(symbol, BuySell.S);
-					}
-				}
-				
-				if (position != null) {
-					if (position.getBuySell() == BuySell.B) {
-						if (diff[i] > 20) {
-							if (sa.sell(symbol, 1, close[i]).getQuantity() > 0) {
-								bs = BuySell.S;
-								position = null;
-							}							
-						}
-					}
-
-				}
-
-				String s = String.format(
-						"\n %s :  %5.2f  %5.2f  %5.2f  %5.2f %s",
-						Utils.formatDate(dates[i]),
-						close[i],
-						sf.getOutFastK()[i],
-						sf.getOutFastD()[i],
-						diff[i],
-						bs != null ? String.valueOf(bs) : "");
-				sb.append(s);
-			}
-		}
-		
-		sa.close(symbol, close[close.length-1]);
-		
-		return sb.toString();		
-	}
-	
 	public static void main(String[] args) {
+		Date fromDate = Utils.parseDate("10.08.2015 00:00:00.000");
+		Date toDate = Utils.parseDate("19.08.2015 00:00:00.000");
 
+		TQSymbol symbol = new TQSymbol(BoardType.FUT, "SiU5");
+		CandleType candleType = CandleType.CANDLE_15M;
+		List<Candle> candles = DataManager.getCandles(symbol, candleType, fromDate, toDate);
+		CandleList cl = new CandleList(symbol, candleType);
+		cl.appendCandles(candles);
+		
+		StochasticFast sf = new StochasticFast();
+		sf.evaluate(cl);
+		
+		System.out.println(sf);
 		
 	}
 

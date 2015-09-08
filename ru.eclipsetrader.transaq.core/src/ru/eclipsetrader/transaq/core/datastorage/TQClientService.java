@@ -47,12 +47,10 @@ public class TQClientService implements ITQClientService, IPersistable, Observer
 		clients.put(client.getId(), client);
 	}
 
-	@Override
 	public void persist() {
 		DataManager.mergeList(getAll());
 	}
 
-	@Override
 	public void load(String serverId) {
 		clear();
 		for (Client client : DataManager.getServerObjectList(Client.class, serverId)) {

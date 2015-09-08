@@ -20,7 +20,7 @@ public class TQBoardService implements ITQBoardService, Observer<List<Board>> {
 	public static TQBoardService getInstance() {
 		if (instance == null) {
 			instance = new TQBoardService();
-			instance.load(Constants.DEFAULT_SERVER_ID);
+			instance.load();
 		}
 		return instance;
 	}
@@ -28,13 +28,11 @@ public class TQBoardService implements ITQBoardService, Observer<List<Board>> {
 	private TQBoardService() {
 	}
 
-	@Override
 	public void persist() {
 		DataManager.mergeList(objects.values());
 	}
 
-	@Override
-	public void load(String serverId) {
+	public void load() {
 		clear();
 		putList(DataManager.getList(Board.class));
 	}

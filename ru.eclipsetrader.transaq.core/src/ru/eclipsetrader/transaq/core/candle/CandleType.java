@@ -51,11 +51,8 @@ public enum CandleType {
 	CANDLE_1H(3600), 
 	CANDLE_2H(7200), 
 	CANDLE_3H(10800), 
-	CANDLE_4H(14400),
 	CANDLE_1D(86400), 
-//	CANDLE_2D(172800), 
-	CANDLE_1W(604800), 
-	CANDLE_2W(1209600);
+	CANDLE_1W(604800);
 	
 	static TreeMap<Integer, CandleType> enumStorage = new TreeMap<Integer, CandleType>();
 	static {
@@ -92,18 +89,6 @@ public enum CandleType {
 			}
 		}
 		return this;
-	}
-	
-	public CandleType ceilingCandleType() {
-		return enumStorage.ceilingEntry(this.getSeconds()).getValue();
-	}
-	
-	public CandleType floorCandleType() {
-		return enumStorage.floorEntry(this.getSeconds()).getValue();
-	}
-	
-	public static void main(String[] args) {
-		System.out.println(CandleType.CANDLE_61S.getClosest60Candle());
 	}
 	
 	/**
@@ -148,7 +133,6 @@ public enum CandleType {
 		case CANDLE_1H:
 		case CANDLE_2H: 
 		case CANDLE_3H: 
-		case CANDLE_4H:
 			return Calendar.DATE;
 		
 		case CANDLE_1D:

@@ -11,13 +11,12 @@ import ru.eclipsetrader.transaq.core.model.internal.Tick;
 import ru.eclipsetrader.transaq.core.util.Holder;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
+import com.google.common.base.MoreObjects;
+
 public class Candle {
 	
-	public interface ICandleCalculator {
-		double getPrice();
-	}
-
 	Date date;
+	Date closeDate;
 	double open;
 	double high;
 	double low = Double.MAX_VALUE;
@@ -45,20 +44,14 @@ public class Candle {
 		if (close != tickPrice) {
 			close = tickPrice;
 		}
-		
 		volume += tick.getQuantity();
-
-		List<Holder<Double, Integer>> list = ticks.get(date);
-		if (list == null) {
-			list = new ArrayList<Holder<Double,Integer>>();
-			ticks.put(date, list);
-		}
-		list.add(new Holder<Double, Integer>(tickPrice, tick.getQuantity()));
+		ticks.computeIfAbsent(date, p -> new ArrayList<>()).add(new Holder<Double, Integer>(tickPrice, tick.getQuantity()));
 	}
 
 	@Override
 	public String toString() {
-		return "date = " + Utils.formatDate(date) + ",   open = " + open + ",   high = " + high + ",   low = " + low + ",   close = " + close + ",   volume = " + volume;
+		return MoreObjects.toStringHelper(this).
+				add("date", Utils.formatDate(date)).add("open", open).add("high", high).add("low", low).add("close", close).add("volume", volume).toString();
 	}
 	
 	public Candle() {
@@ -71,17 +64,12 @@ public class Candle {
 		case CLOSE: return getClose();
 		case HIGH: return getHigh();
 		case LOW: return getLow();
-		case MED: return (getHigh() + getLow()) / 2;
-		//case TYPICAL: return (getHigh() + getLow() + getClose()) / 3; вообще ни о чем
+		case MED: return (getHigh() + getLow() +  getClose()) / 3;
 		case WEIGHTED_CLOSE: return (getHigh() + getLow() + 2 * getClose()) / 4;
 		case VOLUME_WEIGHTED: {
-			double full = 0;
-			for (Date tickDate : ticks.keySet()) {
-				for (Holder<Double, Integer> x : ticks.get(tickDate)) {
-					full += x.getFirst() * x.getSecond();
-				}
-			}
-			return full / getVolume();
+			double sum = ticks.entrySet().stream().map( p -> p.getValue() ).reduce(new ArrayList<Holder<Double, Integer>>(), (a,b) -> { a.addAll(b); return a;}).stream()
+					.mapToDouble(p -> p.getFirst() * p.getSecond() ).sum();
+			return sum / getVolume();
 		}
 		default:
 			throw new UnimplementedException();
@@ -97,75 +85,91 @@ public class Candle {
 			return CandleColor.NO_COLOR;
 		}
 	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (obj instanceof Candle) {
+			Candle c = (Candle)obj;
+			return c.getDate().equals(getDate()) && c.getClose() == getClose() && c.getOpen() == getOpen() && c.getHigh() == getHigh() && c.getLow() == getLow() && c.getVolume() == getVolume();
+		} else {
+			return false;
+		}
+	}
+	
+	public boolean isClosed() {
+		return closeDate != null;
+	}
+
+	public Date getCloseDate() {
+		return closeDate;
+	}
+
+	public Candle setCloseDate(Date closeDate) {
+		this.closeDate = closeDate;
+		return this;
+	}
 
 	public Date getDate() {
 		return date;
 	}
 
-	public void setDate(Date date) {
+	public Candle setDate(Date date) {
 		this.date = date;
+		return this;
 	}
 
 	public double getOpen() {
 		return open;
 	}
 
-	public void setOpen(double open) {
+	public Candle setOpen(double open) {
 		this.open = open;
+		return this;
 	}
 
 	public double getHigh() {
 		return high;
 	}
 
-	public void setHigh(double high) {
+	public Candle setHigh(double high) {
 		this.high = high;
+		return this;
 	}
 
 	public double getLow() {
 		return low;
 	}
 
-	public void setLow(double low) {
+	public Candle setLow(double low) {
 		this.low = low;
+		return this;
 	}
 
 	public double getClose() {
 		return close;
 	}
 
-	public void setClose(double close) {
+	public Candle setClose(double close) {
 		this.close = close;
+		return this;
 	}
 
 	public int getVolume() {
 		return volume;
 	}
 
-	public void setVolume(int volume) {
+	public Candle setVolume(int volume) {
 		this.volume = volume;
+		return this;
 	}
 
 	public int getOi() {
 		return oi;
 	}
 
-	public void setOi(int oi) {
+	public Candle setOi(int oi) {
 		this.oi = oi;
-	}
-	
-	public static void main(String[] args) {
-		Candle c = new Candle();
-		c.open = 50.0;
-		c.low = 40.0;
-		c.high = 70.0;
-		c.close = 60.0;
-		c.volume = 12;
-		
-		System.out.println(c.getPriceValueByType(PriceType.MED));
-		System.out.println(c.getPriceValueByType(PriceType.VOLUME_WEIGHTED));
-		//System.out.println(c.getPriceValueByType(PriceType.TYPICAL));
-		System.out.println(c.getPriceValueByType(PriceType.WEIGHTED_CLOSE));
+		return this;
 	}
 
 }

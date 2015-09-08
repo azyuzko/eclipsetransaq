@@ -74,24 +74,27 @@ public abstract class Tick extends ServerObject implements ITQTickTrade {
 		return received;
 	}
 
-	public void setReceived(Date received) {
+	public Tick setReceived(Date received) {
 		this.received = received;
+		return this;
 	}
 
 	public String getTradeno() {
 		return tradeno;
 	}
 
-	public void setTradeno(String tradeno) {
+	public Tick setTradeno(String tradeno) {
 		this.tradeno = tradeno;
+		return this;
 	}
 
 	public BoardType getBoard() {
 		return symbol.getBoard();
 	}
 
-	public void setBoard(BoardType board) {
+	public Tick setBoard(BoardType board) {
 		this.symbol.setBoard(board);
+		return this;
 	}
 
 	@Override
@@ -99,8 +102,9 @@ public abstract class Tick extends ServerObject implements ITQTickTrade {
 		return time;
 	}
 
-	public void setTime(Date time) {
+	public Tick setTime(Date time) {
 		this.time = time;
+		return this;
 	}
 
 	@Override
@@ -108,8 +112,9 @@ public abstract class Tick extends ServerObject implements ITQTickTrade {
 		return price;
 	}
 
-	public void setPrice(double price) {
+	public Tick setPrice(double price) {
 		this.price = price;
+		return this;
 	}
 
 	@Override
@@ -117,40 +122,45 @@ public abstract class Tick extends ServerObject implements ITQTickTrade {
 		return quantity;
 	}
 
-	public void setQuantity(int quantity) {
+	public Tick setQuantity(int quantity) {
 		this.quantity = quantity;
+		return this;
 	}
 
 	public String getSeccode() {
 		return symbol.getSeccode();
 	}
 
-	public void setSeccode(String seccode) {
+	public Tick setSeccode(String seccode) {
 		this.symbol.setSeccode(seccode);
+		return this;
 	}
 
 	public BuySell getBuysell() {
 		return buysell;
 	}
 
-	public void setBuysell(BuySell buysell) {
+	public Tick setBuysell(BuySell buysell) {
 		this.buysell = buysell;
+		return this;
 	}
 
 	public TradePeriod getPeriod() {
 		return period;
 	}
 
-	public void setPeriod(TradePeriod period) {
+	public Tick setPeriod(TradePeriod period) {
 		this.period = period;
+		return this;
 	}
 
 	public int getOpeninterest() {
 		return openinterest;
 	}
 
-	public void setOpeninterest(int openinterest) {
+	public Tick setOpeninterest(int openinterest) {
 		this.openinterest = openinterest;
+		return this;
 	}
 
 }

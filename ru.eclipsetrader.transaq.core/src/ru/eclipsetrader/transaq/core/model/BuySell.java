@@ -4,7 +4,7 @@ public enum BuySell {
 
 	B, S;
 	
-	public BuySell getOpposited() {
+	public BuySell reverted() {
 		switch (this) {
 		case B:	return S;
 		case S:	return B;

@@ -1,6 +1,7 @@
 package ru.eclipsetrader.transaq.core.server;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 import ru.eclipsetrader.transaq.core.data.DataManager;
 import ru.eclipsetrader.transaq.core.exception.ConnectionException;
@@ -51,20 +52,7 @@ public class TransaqServerManager implements ITransaqServerManager {
 
 	@Override
 	public ITransaqServer connect(String serverId) {
-		if (TransaqServer.getInstance() != null) {
-			throw new RuntimeException("Already connected to server!");
-		}
-		
-		TransaqServer instance = new TransaqServer(serverId);
-		
-		try {
-			instance.connect(serverId);
-			TransaqServer.setTransaqServer(instance);
-			return instance;
-		} catch (ConnectionException e) {
-			throw new RuntimeException(e.getMessage());
-		}
-		
+		return connect(serverId, (c) -> {});
 	}
 
 	@Override
@@ -74,6 +62,24 @@ public class TransaqServerManager implements ITransaqServerManager {
 		}
 		TransaqServer.getInstance().disconnect();
 		TransaqServer.setTransaqServer(null);
+	}
+
+	@Override
+	public ITransaqServer connect(String serverId,
+			Consumer<TransaqServer> callback) {
+		if (TransaqServer.getInstance() != null) {
+			throw new RuntimeException("Already connected to server!");
+		}
+		
+		TransaqServer instance = new TransaqServer(serverId);
+		
+		try {
+			instance.connect(serverId, callback);
+			TransaqServer.setTransaqServer(instance);
+			return instance;
+		} catch (ConnectionException e) {
+			throw new RuntimeException(e.getMessage());
+		}
 	}
 
 

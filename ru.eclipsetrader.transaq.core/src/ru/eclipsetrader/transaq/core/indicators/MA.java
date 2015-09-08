@@ -1,6 +1,7 @@
 package ru.eclipsetrader.transaq.core.indicators;
 
-import java.util.Date;
+import java.util.Arrays;
+import java.util.stream.DoubleStream;
 
 import com.tictactec.ta.lib.MAType;
 import com.tictactec.ta.lib.MInteger;
@@ -9,30 +10,27 @@ public class MA extends IndicatorFunction {
 
 	// indicator-based params 
 	int optInTimePeriod = 12;
-	int lookback = 0;
 	MAType maType;
 	
 	double[] outReal;
-	Date[] dates;
 	
 	public MA(int optInTimePeriod, MAType maType) {
 		this.optInTimePeriod = optInTimePeriod;
 		this.lookback = core.movingAverageLookback(optInTimePeriod, maType);
 		this.maType = maType;
 	}
-	
-	public int getLookback() {
-		return lookback;
-	}
-	
+
 	public double[] getOutReal() {
 		return outReal;
 	}
 
-	public void evaluate(double[] inReal, Date[] dates) {
+	public void evaluate(DoubleStream doubleStream) {
+		evaluate(doubleStream.toArray());
+	}
+	
+	public void evaluate(double[] inReal) {
 		MInteger outBegIdx = new MInteger();
 		MInteger outNBElement = new MInteger();
-		this.dates = dates;
 		this.outReal = new double[inReal.length];
 		switch (maType) {
 		case Sma:
@@ -56,11 +54,19 @@ public class MA extends IndicatorFunction {
 		case Wma:
 			core.wma(0, inReal.length-1, inReal, optInTimePeriod, outBegIdx, outNBElement, outReal);
 			break;
+		case T3:
+			double optInVFactor = 0.7;
+			core.t3(0, inReal.length-1, inReal, optInTimePeriod, optInVFactor, outBegIdx, outNBElement, outReal);
+			break;
 		default:
 			throw new IllegalArgumentException();
 		}
 
 		normalizeArray(outReal, lookback);
+	}
+	
+	public DoubleStream outStream() {
+		return Arrays.stream(outReal);
 	}
 
 }

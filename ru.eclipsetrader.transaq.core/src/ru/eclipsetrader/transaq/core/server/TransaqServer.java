@@ -4,6 +4,7 @@ import java.io.Closeable;
 import java.io.StringReader;
 import java.util.Date;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import javax.xml.parsers.SAXParser;
 
@@ -157,15 +158,6 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 		}
 	}
 	
-	public void persistState() {
-		TQBoardService.getInstance().persist();
-		TQCandleService.getInstance().persist();
-		TQClientService.getInstance().persist();
-		TQMarketService.getInstance().persist();
-		TQSecurityService.getInstance().persist();
-		TQAccountService.getInstance().persist();
-	}
-	
 	public void updateServerStatus(ServerStatus newStatus) {
 		if (session.getStatus() != newStatus.getStatus()) {
 			session.setStatus(newStatus.getStatus());
@@ -255,7 +247,7 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 		throw new UnimplementedException();
 	}
 
-	public void connect(String serverId) throws ConnectionException {
+	public void connect(String serverId, Consumer<TransaqServer> callback) throws ConnectionException {
 		long startTime = System.currentTimeMillis();
 		
 		if (!wasInitialized) {
@@ -278,7 +270,7 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 				long endTime = System.currentTimeMillis();
 				
 				System.err.println(String.format("Connected in %.2fs", (endTime-startTime)/1000.0));
-				
+				callback.accept(this);
 			} catch (InterruptedException e) {
 				session.setStatus(ConnectionStatus.DISCONNECTED);
 				DataManager.merge(session);
@@ -338,7 +330,6 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 	}
 
 	public void onConnect() {
-		persistState();
 		LoadCandlesSchedule.scheduleLoadCandles();
 	}
 	

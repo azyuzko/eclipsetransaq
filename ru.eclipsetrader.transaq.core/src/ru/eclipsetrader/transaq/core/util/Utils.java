@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.IntFunction;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.persistence.Id;
 import javax.xml.parsers.SAXParserFactory;
@@ -341,9 +342,17 @@ public class Utils {
 	public static String printArray(double[] data, String format) {
 		return printArray(ArrayUtils.toObject(data), format);
 	}
-
+	
 	public static String printArray(Object[] data) {
 		return printArray(data);
+	}
+	
+	public static String printArray(Stream<Object> data) {
+		return printArray(data.toArray());
+	}
+
+	public static String printArray(Stream<Object> data, String format) {
+		return printArray(data.toArray(), format);
 	}
 	
 	public static String printArray(Object[] data, String format) {
@@ -358,7 +367,7 @@ public class Utils {
 				sb.append(" ");
 			}
 		} else {
-			sb.append("empty");
+			sb.append("data is null");
 		}
 		return sb.toString();
 	}

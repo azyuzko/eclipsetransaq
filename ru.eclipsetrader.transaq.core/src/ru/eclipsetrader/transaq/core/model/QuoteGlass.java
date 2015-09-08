@@ -28,14 +28,11 @@ public class QuoteGlass {
 	
 	IQuotesProcessingContext quotesProcessingContext;
 	
-	ListObserver<Quote> iQuotesObserver = new ListObserver<Quote>() {
-		@Override
-		public void update(List<Quote> list) {
-			if (logger.isDebugEnabled()) {
-				logger.debug("iQuotesObserver " + list.get(0).getSeccode() + "  size = " + list.size() + " " + Utils.formatTime(list.get(0).getTime()) + " -- " + Utils.formatTime(list.get(list.size()-1).getTime()) );
-			}
-			updateQuotes(list);
+	ListObserver<Quote> iQuotesObserver = (List<Quote> list) -> {
+		if (logger.isDebugEnabled()) {
+			logger.debug("iQuotesObserver " + list.get(0).getSeccode() + "  size = " + list.size() + " " + Utils.formatTime(list.get(0).getTime()) + " -- " + Utils.formatTime(list.get(list.size()-1).getTime()) );
 		}
+		updateQuotes(list);
 	};
 	
 	public ListObserver<Quote> getQuotesObserver() {
@@ -185,18 +182,18 @@ public class QuoteGlass {
 	
 	@Override
 	public String toString() {
+		return toString(2);
+	}
+	
+	public String toString(int count) {
 		StringBuilder sb = new StringBuilder();
-		for (Double price : sellStack.descendingKeySet()) {
-			sb.append(price); sb.append(" "); sb.append(sellStack.get(price)); sb.append("\n");
-		}
+		sellStack.descendingKeySet().stream().limit(count).forEach(price ->	{ sb.append(price); sb.append(" "); sb.append(sellStack.get(price)); sb.append("\n");});
 		sb.append("------\n");
-		for (Double price : buyStack.descendingKeySet()) {
-			sb.append(price); sb.append(" "); sb.append(buyStack.get(price)); sb.append("\n");
-		}
+		buyStack.descendingKeySet().stream().limit(count).forEach(price -> {sb.append(price); sb.append(" "); sb.append(buyStack.get(price)); sb.append("\n");});
 		return sb.toString();
 	}
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws InterruptedException {
 		QuoteGlass qg = new QuoteGlass(TQSymbol.BRU5);
 		qg.sellStack.put(53.5, 2);
 		qg.sellStack.put(50.0, 3);
@@ -206,15 +203,7 @@ public class QuoteGlass {
 		qg.buyStack.put(45.0, 3);
 		qg.buyStack.put(41.7, 5);
 		
+		System.out.println(qg); 
 		
-		ConcurrentSkipListMap<Double, Integer> res = qg.subSell(20);
-		for (Double key : res.keySet()) {
-			System.out.println("S " + res.get(key) + " - " + key);
-		}
-		
-		res = qg.subBuy(20);
-		for (Double key : res.keySet()) {
-			System.out.println("B " + res.get(key) + " - " + key);
-		}
 	}
 }

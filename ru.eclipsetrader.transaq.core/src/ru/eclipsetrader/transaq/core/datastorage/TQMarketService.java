@@ -26,12 +26,10 @@ public class TQMarketService implements ITQMarketService, IPersistable, Observer
 		return instance;
 	}
 	
-	@Override
 	public void persist() {
 		DataManager.mergeList(getAll());
 	}
 	
-	@Override
 	public void load(String serverId) {
 		clear();
 		for (Market m : DataManager.getServerObjectList(Market.class, serverId)) {

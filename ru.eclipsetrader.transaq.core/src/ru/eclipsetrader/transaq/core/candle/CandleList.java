@@ -1,13 +1,16 @@
 package ru.eclipsetrader.transaq.core.candle;
 
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.DoubleStream;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.logging.log4j.LogManager;
@@ -17,7 +20,7 @@ import ru.eclipsetrader.transaq.core.event.ListObserver;
 import ru.eclipsetrader.transaq.core.model.PriceType;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
-import ru.eclipsetrader.transaq.core.util.Holder;
+import ru.eclipsetrader.transaq.core.server.TransaqServer;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 /**
@@ -35,17 +38,24 @@ public class CandleList {
 	CandleType candleType;
 	ICandleProcessContext candleProcessContext;
 	
-	ConcurrentSkipListMap<Date,Candle> map = new ConcurrentSkipListMap<Date, Candle>();
+	ScheduledExecutorService ses = Executors.newScheduledThreadPool(1, Executors.defaultThreadFactory());
 	
-	public ListObserver<Tick> tickObserver = new ListObserver<Tick>() {
-		@Override
-		public void update(List<Tick> list) {
-			if (logger.isDebugEnabled()) {
-				logger.debug("iTickObserver " + list.get(0).getSeccode() + "  size = " + list.size() + " " + Utils.formatTime(list.get(0).getTime()) + " -- " + Utils.formatTime(list.get(list.size()-1).getTime()) );
-			}
-			list.forEach(t -> processTickInCandle(t));
+	final ConcurrentSkipListMap<Date,Candle> map = new ConcurrentSkipListMap<Date, Candle>();
+	
+	public ListObserver<Tick> tickObserver = (List<Tick> list) -> {
+		if (logger.isDebugEnabled()) {
+			logger.debug("iTickObserver " + list.get(0).getSeccode() + "  size = " + list.size() + " " + Utils.formatTime(list.get(0).getTime()) + " -- " + Utils.formatTime(list.get(list.size()-1).getTime()) );
 		}
+		list.forEach(t -> processTickInCandle(t));
 	};
+	
+	public TQSymbol getSymbol() {
+		return symbol;
+	}
+	
+	public CandleType getCandleType() {
+		return candleType;
+	}
 	
 	public ListObserver<Tick> getTickObserver() {
 		return tickObserver;
@@ -59,12 +69,24 @@ public class CandleList {
 		this.candleProcessContext = candleProcessContext;
 	}
 
-	public List<Candle> candleList() {
-		return new ArrayList<>(map.values());
+	public synchronized Stream<Candle> stream(boolean desc) {
+		if (desc) {
+			return map.values().stream().sorted((c1, c2) -> c2.getDate().compareTo(c1.getDate()));
+		} else {
+			return map.values().stream();
+		}
 	}
 	
-	public Map<Date, Candle> candleMap() {
-		return map;
+	public synchronized Stream<Candle> stream() {
+		return stream(false);
+	}
+	
+	public synchronized DoubleStream streamPrice(boolean desc, PriceType priceType) {
+		return stream(desc).mapToDouble(c -> c.getPriceValueByType(priceType));
+	}
+	
+	public synchronized DoubleStream streamPrice(PriceType priceType) {
+		return stream().mapToDouble(c -> c.getPriceValueByType(priceType));
 	}
 	
 	public int getMaxSize() {
@@ -75,10 +97,25 @@ public class CandleList {
 		this.maxSize = maxSize;
 	}
 	
+	public synchronized void clear() {
+		map.clear();			
+	}
+	
 	public CandleList(TQSymbol symbol, CandleType candleType){
 		this.symbol = symbol;
 		this.candleType = candleType;
+		this.ses.scheduleAtFixedRate(() -> tickAtFixedTime(), 0, 1, TimeUnit.SECONDS);
 		logger.debug(symbol + " CandleList " + candleType + " created..");
+	}
+	
+	private void tickAtFixedTime() {
+		logger.debug("Tick at fixed time");
+		Date current = TransaqServer.getInstance() != null ? TransaqServer.getInstance().getServerTime() : new Date();
+		Candle top = getLastCandle();
+		// закрываем через 1 секунду
+		if (top != null && current.after(DateUtils.addSeconds(top.getDate(), 1))) {
+			processTickInCandle(current);
+		}
 	}
 	
 	public CandleList(TQSymbol symbol, CandleType candleType, Collection<Candle> candles) {
@@ -86,110 +123,50 @@ public class CandleList {
 		appendCandles(candles);
 	}
 	
-	public int size() {
+	public synchronized int size() {
 		return map.size();
 	}
 	
-	public Candle firstDayCandle() {
+	public synchronized Candle firstDayCandle() {
 		return map.firstEntry().getValue();
-	}
-	
-	public Holder<Date[], double[]> values(PriceType priceType) {
-		return values(priceType, map.size());
-	}
-	
-	public Holder<Date[], double[]> values(PriceType priceType, int count) {
-		synchronized (map) {
-			count = Math.min(count, map.size());
-			double[] values = new double[count];
-			int i = 1;
-			for (Date date : map.descendingKeySet()) {
-				values[count-i] = map.get(date).getPriceValueByType(priceType);
-				i++;
-				if (i > count) {
-					break;
-				}
-			}
-			Date[] dates = map.keySet().toArray(new Date[count]);
-			return new Holder<Date[], double[]>(dates, values);
-		}
-	}
-	
-	public Date[] dates() {
-		return dates(map.size());
-	}
-	
-	public Date[] dates(int count) {
-		synchronized (map) {
-			count = Math.min(count, map.size());
-			Date[] dates = map.keySet().toArray(new Date[count]);
-			return dates;
-		}
 	}
 	
 	/**
 	 * Отсекает голову у списка свечей до даты включительно
 	 * @param toDate дата тоже отсекается
 	 */
-	public void truncHead(Date toDate) {
-		synchronized (map) {
-			Iterator<Date> itd = map.descendingKeySet().iterator();
-			while (itd.hasNext()) {
-				Date d = itd.next();
-				if (!toDate.after(d)) {
-					itd.remove();
-				}
-			}
-		}
+	public synchronized void truncHead(Date toDate) {
+		Objects.requireNonNull(toDate);
+		map.descendingKeySet().stream().filter((d) -> !toDate.after(d)).forEach(d -> map.remove(d));
 	}
 	
 	/**
 	 * Отсекает хвост у списка свечей до даты включительно
 	 * @param toDate дата тоже отсекается
 	 */
-	public void truncTail(Date toDate) {
-		synchronized (map) {
-			Iterator<Date> itd = map.descendingKeySet().iterator();
-			while (itd.hasNext()) {
-				Date d = itd.next();
-				if (!toDate.before(d)) {
-					itd.remove();
-				}
-			}			
-		}
+	public synchronized void truncTail(Date toDate) {
+		Objects.requireNonNull(toDate);
+		map.descendingKeySet().stream().filter((d) -> !toDate.before(d)).forEach(d -> map.remove(d));
 	}
 	
-	public CandleType getCandleType(){
-		return candleType;
+	public synchronized Candle getLastCandle() {
+		if (map.size() > 0) {
+			return map.lastEntry().getValue();
+		} else {
+			return null;
+		}			
 	}
 	
-	public Candle getLastCandle() {
-		synchronized (map) {
-			if (map.size() > 0) {
-				return map.lastEntry().getValue();
-			} else {
-				return null;
-			}			
-		}
+	public synchronized void appendCandles(Collection<Candle> candles) {
+		Objects.requireNonNull(candles);
+		logger.debug(symbol + " appendCandles size = " + candles.size() + " to " + candleType);
+		candles.forEach(c -> putCandle(c));
 	}
 	
-	public void appendCandles(Collection<Candle> candles) {
-		synchronized (map) {
-			if (candles != null) {
-				logger.debug(symbol + " appendCandles size = " + candles.size() + " to " + candleType);
-				for (Candle candle : candles) {
-					putCandle(candle);
-				}
-			}			
-		}
-	}
-	
-	public void putCandle(Candle candle) {
-		synchronized (map) {
-			map.put(candle.getDate(), candle);
-			if (map.size() > maxSize) {
-				map.remove(map.firstKey());
-			}
+	public synchronized void putCandle(Candle candle) {
+		map.put(candle.getDate(), candle);
+		if (map.size() > maxSize) {
+			map.remove(map.firstKey());
 		}
 	}
 	
@@ -238,46 +215,57 @@ public class CandleList {
 		}
 	}
 
-
+	
+	public void processTickInCandle(Date date) {
+		processTickInCandle(date, null);
+	}
 	
 	public void processTickInCandle(Tick tick) {
-		synchronized (map) {
-			if (tick.getTime() == null) {
-				throw new IllegalArgumentException("trade.getTime() is null");
-			}
-			Candle topCandle = getLastCandle(); // если свечей нет, вернет null
-			
-			Date newTime = new Date(0); // minimal date
-			
-			if (topCandle != null) {
-				newTime = new Date(topCandle.getDate().getTime() + (candleType.getSeconds()) * 1000 ); // перешагнули за размер свечи
-				
-			}
-			
-			if (tick.getTime().after(newTime)) {
-				
-				newTime = CandleList.closestCandleStartTime(tick.getTime(), candleType);
-				
-				if (topCandle != null && candleProcessContext != null) {
-					candleProcessContext.onCandleClose(symbol, this, topCandle);
+		processTickInCandle(tick.getTime(), tick);
+	}
+	
+	private synchronized void processTickInCandle(Date time, Tick tick) {
+		Objects.requireNonNull(time);
+		
+		Candle topCandle = getLastCandle(); // если свечей нет, вернет null
+		
+		Date newTime = new Date(0); // minimal date
+		
+		if (topCandle != null) {
+			newTime = new Date(topCandle.getDate().getTime() + (candleType.getSeconds()) * 1000 ); // перешагнули за размер свечи
+		}
+		
+		if (time.after(newTime)) {
+			if (topCandle != null && !topCandle.isClosed()) {
+				topCandle.setCloseDate(newTime);
+				if (candleProcessContext != null) {
+					candleProcessContext.onCandleClose(this, topCandle);
 				}
-				
+			}
+			
+			// если была сделка, надо открыть новую свечу
+			if (tick != null) {
+				newTime = CandleList.closestCandleStartTime(time, candleType);
 				logger.debug("New candle starting from " + Utils.formatDate(newTime));
 				topCandle = new Candle();
 				topCandle.setDate(newTime);
 				putCandle(topCandle);
 			}
-			topCandle.processTick(tick);		
+		} else {
+			if (topCandle.getDate().after(time)) {
+				logger.warn("Unexpected problem. Tick time <"  + Utils.formatDate(time) + "> less than topCandle time <" + Utils.formatDate(topCandle.getDate()) + ">");
+			}
 		}
 		
+		if (topCandle != null && tick != null) {
+			topCandle.processTick(tick);
+		}
 	}
 	
 	@Override
 	public String toString() {
 		StringBuilder sb= new StringBuilder();
-		for (Date date : map.navigableKeySet()) {
-			sb.append(map.get(date).toString()); sb.append("\n");
-		}
+		map.navigableKeySet().stream().forEachOrdered((date) -> { sb.append(map.get(date) + "\n"); });
 		return sb.toString();
 	}
 	
@@ -288,7 +276,7 @@ public class CandleList {
 		System.out.println(Utils.formatDate(closestCandleStartTime(dt1, CandleType.CANDLE_61S)));
 		//System.out.println(DateUtils.ceiling(dt1, Calendar.MINUTE));
 
-	/*	CandleList cl = new CandleList(CandleType.CANDLE_1M);
+		CandleList cl = new CandleList(TQSymbol.BRU5, CandleType.CANDLE_1M);
 		Candle c1 = new Candle();
 		c1.setDate(Utils.parseDate("16.07.2015 23:00:00.000"));
 		c1.setOpen(1.2);
@@ -307,12 +295,23 @@ public class CandleList {
 		
 		System.out.println(cl.toString());
 		
+	/*	System.out.println("-- truncate Tail --");
 		cl.truncTail(Utils.parseDate("17.07.2015 00:00:00.000"));
+		System.out.println(cl.toString());
 		
-		System.out.println("-- truncate --");
-		
+		System.out.println("-- truncate Head --");
+		cl.clear();
+		cl.putCandle(c1);
+		cl.putCandle(c2);
+		cl.putCandle(c3);		
+		cl.truncHead(Utils.parseDate("17.07.2015 00:00:00.000"));
 		System.out.println(cl.toString());*/
 		
+		System.out.println("---");
+		cl.stream().forEach(System.out::println);
+		System.out.println("---");
+		
+
 	}
 	
 }

@@ -67,11 +67,8 @@ public class CoreActivator implements BundleActivator {
 
 		registerServices();
 
-		Thread thread = new Thread(new Runnable() {
-			@Override
-			public void run() {
-				TransaqServerManager.getInstance().connect(Constants.DEFAULT_SERVER_ID);
-			}
+		Thread thread = new Thread(() -> {
+			TransaqServerManager.getInstance().connect(Constants.DEFAULT_SERVER_ID);
 		});
 		thread.setDaemon(true);
 		thread.start();

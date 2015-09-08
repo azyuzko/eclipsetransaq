@@ -25,8 +25,6 @@ import ru.eclipsetrader.transaq.core.model.QuoteGlass;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Quotation;
 import ru.eclipsetrader.transaq.core.trades.IDataFeedContext;
-import ru.eclipsetrader.transaq.core.trades.IFeedContext;
-import ru.eclipsetrader.transaq.core.util.Holder;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 import com.tictactec.ta.lib.MAType;
@@ -51,7 +49,6 @@ public class Strategy implements IProcessingContext {
 
 	StochasticFast sf;
 	
-	IFeedContext feedContext;
 	IAccount account;
 	Date currentDate = null;
 	
@@ -66,7 +63,6 @@ public class Strategy implements IProcessingContext {
 			
 	public Strategy(IDataFeedContext dataFeedContext) {
 		this();
-		this.feedContext = dataFeedContext;
 	}
 
 	@Override
@@ -105,7 +101,8 @@ public class Strategy implements IProcessingContext {
 	
 	double avg_corr = 0;
 	
-	public void tick(TQSymbol symbol, CandleList candleList, Candle candle) {
+	public void tick(CandleList candleList, Candle candle) {
+		TQSymbol symbol = candleList.getSymbol();
 		if (symbol.equals(SiU5)) {
 			// 2 min wait after close position
 			if (!hasOpenedPosition(SiU5)){
@@ -116,8 +113,11 @@ public class Strategy implements IProcessingContext {
 				}
 			}
 			
-			Holder<Date[], double[]> valuesBr = candleList.values(PriceType.CLOSE);
-			macd.evaluate(valuesBr.getSecond(), valuesBr.getFirst());
+			Date[] dates = candleList.stream().map(c -> c.getDate()).toArray(size -> new Date[size]);
+		
+			
+			double[] valuesBr = candleList.streamPrice(PriceType.CLOSE).toArray();
+			macd.evaluate(valuesBr, MAType.Ema);
 			
 			double[] hist = macd.getOutMACDHist();		
 			
@@ -134,8 +134,8 @@ public class Strategy implements IProcessingContext {
 
 				int last_count = 10;
 				StringBuilder sb = new StringBuilder();
-				sb.append("\ndate      :" + Utils.printArray(last(valuesBr.getFirst(), last_count), "%10tR") + ", current = " + Utils.formatTime(getDateTime()) + " \n");					
-				sb.append("price  :" + Utils.printArray(last(valuesBr.getSecond(), last_count), "%10.2f") + "\n");
+				sb.append("\ndate      :" + Utils.printArray(last(dates, last_count), "%10tR") + ", current = " + Utils.formatTime(getDateTime()) + " \n");					
+				sb.append("price  :" + Utils.printArray(last(valuesBr, last_count), "%10.2f") + "\n");
 				sb.append("macd   :" + Utils.printArray(last(macd.getOutMACD(), last_count), "%10.4f") + "\n");
 				sb.append("macdsig:" + Utils.printArray(last(macd.getOutMACDSignal(), last_count), "%10.4f") + "\n");
 				sb.append("hist   :" + Utils.printArray(last(macd.getOutMACDHist(), last_count), "%10.4f") + "\n");
@@ -161,7 +161,7 @@ public class Strategy implements IProcessingContext {
 					
 				} else {
 					
-					double planProfit = currentPosition.getPlanProfit(valuesBr.getSecond()[valuesBr.getSecond().length-1]);
+					double planProfit = currentPosition.getPlanProfit(valuesBr[valuesBr.length-1]);
 					if (planProfit < - 50.0) {
 						logger.info("******* Close STOP LOSS = " + planProfit);							
 						needClose = true;
@@ -294,8 +294,8 @@ public class Strategy implements IProcessingContext {
 	}
 
 	@Override
-	public void onCandleClose(TQSymbol symbol, CandleList candleList, Candle candle) {
-		tick(symbol, candleList, candle);			
+	public void onCandleClose(CandleList candleList, Candle candle) {
+		tick(candleList, candle);			
 	}
 
 	@Override

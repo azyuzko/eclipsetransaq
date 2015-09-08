@@ -23,7 +23,6 @@ import ru.eclipsetrader.transaq.core.orders.OrderRequest;
 import ru.eclipsetrader.transaq.core.orders.TQOrderTradeService;
 import ru.eclipsetrader.transaq.core.services.ITQAccountService;
 import ru.eclipsetrader.transaq.core.util.Holder;
-import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class TQAccountService implements ITQAccountService, Observer<Holder<PositionType,Map<String,String>>> {
 	
@@ -207,7 +206,6 @@ public class TQAccountService implements ITQAccountService, Observer<Holder<Posi
 
 	}
 
-	@Override
 	public void persist() {
 		try {
 			DataManager.removeList(DataManager.getList(FortsMoneyPosition.class));
@@ -223,7 +221,6 @@ public class TQAccountService implements ITQAccountService, Observer<Holder<Posi
 		}
 	}
 
-	@Override
 	public void load(String serverId) {
 		clear();
 		for (FortsMoneyPosition p : DataManager.getServerObjectList(FortsMoneyPosition.class, serverId)) {

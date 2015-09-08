@@ -11,7 +11,7 @@ import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.SymbolGapMap;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;
 
-public interface IDataFeedContext extends IFeedContext {
+public interface IDataFeedContext {
 
 	IInstrumentEvent<List<Tick>> getTicksFeeder();
 	IInstrumentEvent<List<Quote>> getQuotesFeeder();

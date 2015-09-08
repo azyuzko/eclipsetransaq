@@ -54,9 +54,9 @@ public class Stochastic extends IndicatorFunction {
 		int startIdx = 0;
 		int endIdx = cl.size() - 1;
 
-		inHigh = cl.values(PriceType.HIGH).getSecond();
-		inLow = cl.values(PriceType.LOW).getSecond();
-		inClose = cl.values(PriceType.CLOSE).getSecond();
+		inHigh = cl.streamPrice(PriceType.HIGH).toArray();
+		inLow = cl.streamPrice(PriceType.LOW).toArray();
+		inClose = cl.streamPrice(PriceType.CLOSE).toArray();
 
 		outSlowK = new double[cl.size()];
 		outSlowD = new double[cl.size()];
@@ -166,17 +166,14 @@ public class Stochastic extends IndicatorFunction {
 		double[] inLow = s.getInLow();
 		double[] inClose = s.getInClose();
 
-		Date[] dates = cl.dates();
-
 		StringBuilder sb = new StringBuilder();
 		sb.append("\n" + "dates     :"
-				+ Utils.printArray(dates, "%1$2tm-%1$2td%1$6tR") + "\n");
+				+ Utils.printArray(cl.stream(true).map(c -> c.getDate()), "%1$2tm-%1$2td%1$6tR") + "\n");
 		sb.append("high      :" + Utils.printArray(inHigh, "%11.2f") + "\n");
 		sb.append("low       :" + Utils.printArray(inLow, "%11.2f") + "\n");
 		sb.append("close     :" + Utils.printArray(inClose, "%11.2f") + "\n");
 		sb.append("slowK     :" + Utils.printArray(s.getOutSlowK(), "%11.4f") + "\n");
 		sb.append("slowD     :" + Utils.printArray(s.getOutSlowD(), "%11.4f") + "\n");
-		sb.append("dates = " + dates.length + "\n");
 		sb.append("outBegIdx = " + s.getOutBegIdx() + "\n");
 		sb.append("outNBElement = " + s.getOutNBElement() + "\n");
 		sb.append("lookback = " + s.getLookback() + "\n");

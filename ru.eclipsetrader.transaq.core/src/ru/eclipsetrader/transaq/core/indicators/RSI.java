@@ -2,6 +2,8 @@ package ru.eclipsetrader.transaq.core.indicators;
 
 import java.util.Date;
 import java.util.List;
+import java.util.stream.DoubleStream;
+import java.util.stream.Stream;
 
 import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.candle.CandleList;
@@ -16,7 +18,6 @@ import com.tictactec.ta.lib.MInteger;
 
 public class RSI extends IndicatorFunction {
 
-	int lookback;
 	int optInTimePeriod = 5;
 	MInteger outBegIdx = new MInteger();
 	MInteger outNBElement = new MInteger();
@@ -25,6 +26,10 @@ public class RSI extends IndicatorFunction {
 	public RSI(int optInTimePeriod) {
 		this.optInTimePeriod = optInTimePeriod;
 		lookback = core.rsiLookback(optInTimePeriod);
+	}
+	
+	public void evaluate(DoubleStream doubleStream) {
+		evaluate(doubleStream.toArray());
 	}
 	
 	public void evaluate(double[] inReal) {
@@ -42,10 +47,6 @@ public class RSI extends IndicatorFunction {
 	public void setOptInTimePeriod(int optInTimePeriod) {
 		this.optInTimePeriod = optInTimePeriod;
 		this.lookback = core.rsiLookback(optInTimePeriod);
-	}
-
-	public int getLookback() {
-		return lookback;
 	}
 
 	public Integer getOutBegIdx() {
@@ -67,22 +68,21 @@ public class RSI extends IndicatorFunction {
 	public static void main(String[] args) {
 		TQSymbol symbol = new TQSymbol(BoardType.FUT, "SiU5");
 		CandleType candleType = CandleType.CANDLE_15M;
-		PriceType priceType = PriceType.CLOSE;
 		Date fromDate = Utils.parseDate("10.08.2015 00:00:00.000");
 		Date toDate = Utils.parseDate("20.08.2015 00:00:00.000");
 		
 		List<Candle> candles = DataManager.getCandles(symbol, candleType, fromDate, toDate);
 		CandleList cl = new CandleList(symbol, candleType);
+		cl.setMaxSize(20);
 		cl.appendCandles(candles);
-		double[] inReal = cl.values(priceType).getSecond();
-		Date[] dates = cl.values(priceType).getFirst();
-		
-		RSI rsi = new RSI(10);
-		rsi.evaluate(inReal);
+				
+		RSI rsi = new RSI(6);
+		rsi.evaluate(cl.streamPrice(PriceType.CLOSE));
+		Stream<Object> res = cl.stream(true).map(c -> c.getDate());
 		
 		System.out.println("\n"
-				+ 		   "dates  :" + Utils.printArray(dates, "%1$10tR"));
-		System.out.println("inReal :" + Utils.printArray(inReal, "%10.0f"));
+				+ 		   "dates  :" + Utils.printArray(res, "%1$10tR"));
+		System.out.println("inReal :" + Utils.printArray(cl.streamPrice(PriceType.CLOSE).toArray(), "%10.0f"));
 		System.out.println("outReal:" + Utils.printArray(rsi.getOutReal(), "%10.2f"));
 	}
 }

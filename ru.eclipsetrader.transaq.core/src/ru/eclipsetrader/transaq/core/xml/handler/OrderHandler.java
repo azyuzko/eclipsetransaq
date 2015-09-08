@@ -16,7 +16,6 @@ import ru.eclipsetrader.transaq.core.model.internal.Order;
 import ru.eclipsetrader.transaq.core.model.internal.StopLoss;
 import ru.eclipsetrader.transaq.core.model.internal.StopOrder;
 import ru.eclipsetrader.transaq.core.model.internal.TakeProfit;
-import ru.eclipsetrader.transaq.core.orders.TQOrderTradeService;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class OrderHandler extends DefaultHandler {
@@ -150,7 +149,14 @@ public class OrderHandler extends DefaultHandler {
 				case condition:	currentOrder.setCondition(value);break;
 				case conditionvalue:	currentOrder.setConditionvalue(Double.valueOf(value)); break;
 				case validafter:	currentOrder.setValidafter(Utils.parseDate(value)); break;
-				case validbefore:	currentOrder.setValidbefore(Utils.parseDate(value)); break;
+				case validbefore:
+					if (!"0".equals(value)) {
+						currentOrder.setValidbefore(Utils.parseDate(value));
+					} else {
+						// TODO разобраться с датой
+					}
+					break;	
+					
 				case maxcomission: currentOrder.setMaxcomission(Double.valueOf(value)); break;
 				case result: currentOrder.setResult(value); break;
 				default:
