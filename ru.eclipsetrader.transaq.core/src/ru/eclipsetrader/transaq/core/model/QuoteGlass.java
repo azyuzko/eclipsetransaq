@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 
 import ru.eclipsetrader.transaq.core.event.ListObserver;
 import ru.eclipsetrader.transaq.core.interfaces.IQuotesProcessingContext;
+import ru.eclipsetrader.transaq.core.quotes.Spread;
 import ru.eclipsetrader.transaq.core.util.Utils;
 /**
  * Стакан котировок
@@ -72,32 +73,30 @@ public class QuoteGlass {
 	 * @param quantity - запрашиваемое кол-во лотов в стакане продажи
 	 * @return
 	 */
-	public ConcurrentSkipListMap<Double, Integer> subSell(int quantity) {
-		synchronized (this) {
-			if (logger.isDebugEnabled()) {
-				logger.debug("subSell = " + quantity);
-			}
-			ConcurrentSkipListMap<Double, Integer> result = new ConcurrentSkipListMap<Double, Integer>();
-			int remain_quantity = quantity;
-			for (Double price : sellStack.keySet()) {
-				int priceVolume = 0;
-				try {
-					priceVolume = sellStack.get(price);
-				} catch (NullPointerException nex) {
-					priceVolume = sellStack.get(price);
-				}
-				int extract_volume = Math.min(priceVolume, remain_quantity); // сколько можно вынуть из позиции стакана
-				result.put(price, extract_volume);
-				remain_quantity -= extract_volume;
-				if (remain_quantity == 0) {
-					break;
-				}
-				if (remain_quantity < 0) {
-					throw new RuntimeException("Something wrong, remain < 0\n" + toString());
-				}
-			}
-			return result;
+	public synchronized ConcurrentSkipListMap<Double, Integer> subSell(int quantity) {
+		if (logger.isDebugEnabled()) {
+			logger.debug("subSell = " + quantity);
 		}
+		ConcurrentSkipListMap<Double, Integer> result = new ConcurrentSkipListMap<Double, Integer>();
+		int remain_quantity = quantity;
+		for (Double price : sellStack.keySet()) {
+			int priceVolume = 0;
+			try {
+				priceVolume = sellStack.get(price);
+			} catch (NullPointerException nex) {
+				priceVolume = sellStack.get(price);
+			}
+			int extract_volume = Math.min(priceVolume, remain_quantity); // сколько можно вынуть из позиции стакана
+			result.put(price, extract_volume);
+			remain_quantity -= extract_volume;
+			if (remain_quantity == 0) {
+				break;
+			}
+			if (remain_quantity < 0) {
+				throw new RuntimeException("Something wrong, remain < 0\n" + toString());
+			}
+		}
+		return result;
 	}
 	
 	/**
@@ -107,40 +106,38 @@ public class QuoteGlass {
 	 * @param quantity - запрашиваемое кол-во лотов в стакане покупки
 	 * @return
 	 */
-	public ConcurrentSkipListMap<Double, Integer> subBuy(int quantity) {
-		synchronized (this) {
-			if (logger.isDebugEnabled()) {
-				logger.debug("subBuy = " + quantity);
-			}
-
-			ConcurrentSkipListMap<Double, Integer> result = new ConcurrentSkipListMap<Double, Integer>(new Comparator<Double>() { // inverted order
-				@Override
-				public int compare(Double d1, Double d2) {
-					return -Double.compare(d1, d2);
-				}
-			});
-			int remain_quantity = quantity;
-			for (Double price : buyStack.descendingKeySet()) {
-				int priceVolume = buyStack.get(price);
-				int extract_volume = Math.min(priceVolume, remain_quantity); // сколько можно вынуть из позиции стакана
-				result.put(price, extract_volume);
-				remain_quantity -= extract_volume;
-				if (remain_quantity == 0) {
-					break;
-				}
-				if (remain_quantity < 0) {
-					throw new RuntimeException("Something wrong, remain < 0\n" + toString());
-				}
-			}
-			return result;
+	public synchronized ConcurrentSkipListMap<Double, Integer> subBuy(int quantity) {
+		if (logger.isDebugEnabled()) {
+			logger.debug("subBuy = " + quantity);
 		}
+
+		ConcurrentSkipListMap<Double, Integer> result = new ConcurrentSkipListMap<Double, Integer>(new Comparator<Double>() { // inverted order
+			@Override
+			public int compare(Double d1, Double d2) {
+				return -Double.compare(d1, d2);
+			}
+		});
+		int remain_quantity = quantity;
+		for (Double price : buyStack.descendingKeySet()) {
+			int priceVolume = buyStack.get(price);
+			int extract_volume = Math.min(priceVolume, remain_quantity); // сколько можно вынуть из позиции стакана
+			result.put(price, extract_volume);
+			remain_quantity -= extract_volume;
+			if (remain_quantity == 0) {
+				break;
+			}
+			if (remain_quantity < 0) {
+				throw new RuntimeException("Something wrong, remain < 0\n" + toString());
+			}
+		}
+		return result;
 	}
 	
 	/**
 	 * Обновляет стакан на основе котировок с сервера
 	 * @param quotes
 	 */
-	public void updateQuotes(List<Quote> quotes) {
+	public synchronized void updateQuotes(List<Quote> quotes) {
 		for (Quote quote : quotes) {
 			updateQuotes(quote);
 		}
@@ -149,43 +146,46 @@ public class QuoteGlass {
 		}
 	}
 	
-	public void updateQuotes(Quote quote) {
-		synchronized (this) {
-			if (quote.getSource() != null) {
-				throw new RuntimeException("Field source not implemented yet in QuoteGlass");
-			}
-			
-			if (logger.isDebugEnabled()) {
-				logger.debug("Update glass = " + quote.getSeccode() + " B " + quote.getBuy() + " S " + quote.getSell() + " Price " + quote.getPrice()) ;
-			}
-			
-			double priceValue = quote.getPrice();
-			
-			if (priceValue == 0) {
-				throw new RuntimeException();
-			}
-			
-			int buy = quote.getBuy();
-			int sell = quote.getSell();
-			if (buy == -1) {
-				buyStack.remove(priceValue);
-			} else if (buy > 0) {
-				buyStack.put(priceValue, buy);
-			}
-			if (sell == -1) {
-				sellStack.remove(priceValue);
-			} else if (sell > 0) {
-				sellStack.put(priceValue, sell);
-			}
+	public synchronized void updateQuotes(Quote quote) {
+		if (quote.getSource() != null) {
+			throw new RuntimeException("Field source not implemented yet in QuoteGlass");
+		}
+		
+		if (logger.isDebugEnabled()) {
+			logger.debug("Update glass = " + quote.getSeccode() + " B " + quote.getBuy() + " S " + quote.getSell() + " Price " + quote.getPrice()) ;
+		}
+		
+		double priceValue = quote.getPrice();
+		
+		if (priceValue == 0) {
+			throw new RuntimeException();
+		}
+		
+		int buy = quote.getBuy();
+		int sell = quote.getSell();
+		if (buy == -1) {
+			buyStack.remove(priceValue);
+		} else if (buy > 0) {
+			buyStack.put(priceValue, buy);
+		}
+		if (sell == -1) {
+			sellStack.remove(priceValue);
+		} else if (sell > 0) {
+			sellStack.put(priceValue, sell);
 		}
 	}
+	
+	public Spread getSpread() {
+		return new Spread(buyStack.size() > 0 ? buyStack.lastKey() : null, sellStack.size() > 0 ? sellStack.firstKey() : null);
+	}
+
 	
 	@Override
 	public String toString() {
 		return toString(2);
 	}
 	
-	public String toString(int count) {
+	public synchronized String toString(int count) {
 		StringBuilder sb = new StringBuilder();
 		sellStack.descendingKeySet().stream().limit(count).forEach(price ->	{ sb.append(price); sb.append(" "); sb.append(sellStack.get(price)); sb.append("\n");});
 		sb.append("------\n");
@@ -194,7 +194,7 @@ public class QuoteGlass {
 	}
 	
 	public static void main(String[] args) throws InterruptedException {
-		QuoteGlass qg = new QuoteGlass(TQSymbol.BRU5);
+		QuoteGlass qg = new QuoteGlass(TQSymbol.BRV5);
 		qg.sellStack.put(53.5, 2);
 		qg.sellStack.put(50.0, 3);
 		qg.sellStack.put(55.7, 5);
@@ -203,7 +203,7 @@ public class QuoteGlass {
 		qg.buyStack.put(45.0, 3);
 		qg.buyStack.put(41.7, 5);
 		
-		System.out.println(qg); 
+		System.out.println(qg.getSpread()); 
 		
 	}
 }

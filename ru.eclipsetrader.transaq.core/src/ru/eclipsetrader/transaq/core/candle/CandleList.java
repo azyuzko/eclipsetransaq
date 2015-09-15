@@ -276,7 +276,7 @@ public class CandleList {
 		System.out.println(Utils.formatDate(closestCandleStartTime(dt1, CandleType.CANDLE_61S)));
 		//System.out.println(DateUtils.ceiling(dt1, Calendar.MINUTE));
 
-		CandleList cl = new CandleList(TQSymbol.BRU5, CandleType.CANDLE_1M);
+		CandleList cl = new CandleList(TQSymbol.BRV5, CandleType.CANDLE_1M);
 		Candle c1 = new Candle();
 		c1.setDate(Utils.parseDate("16.07.2015 23:00:00.000"));
 		c1.setOpen(1.2);

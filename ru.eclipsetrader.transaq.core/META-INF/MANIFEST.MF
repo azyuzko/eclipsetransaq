@@ -8,7 +8,7 @@ Require-Bundle: org.eclipse.osgi.services;bundle-version="3.3.100",
  org.eclipse.osgi,
  com.tictactec.ta.lib;bundle-version="0.4.0"
 Bundle-ActivationPolicy: lazy
-Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-ClassPath: lib/jna-platform.jar,
  lib/jna.jar,
  lib/log4j-api-2.3.jar,
@@ -22,7 +22,8 @@ Bundle-ClassPath: lib/jna-platform.jar,
  lib/guava-18.0.jar,
  lib/junit-4.12.jar,
  lib/commons-beanutils-1.9.2-javadoc.jar,
- lib/commons-beanutils-1.9.2.jar
+ lib/commons-beanutils-1.9.2.jar,
+ lib/json-20141113.jar
 Bundle-NativeCode: 
  /win32-x86/txmlconnector.dll;processor=x86
  /win32-x86-64/txmlconnector64.dll;processor=x86_64  

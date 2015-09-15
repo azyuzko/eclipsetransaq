@@ -1,4 +1,4 @@
-package ru.eclipsetrader.transaq.core.instruments;
+package ru.eclipsetrader.transaq.core.feed;
 
 import java.util.Date;
 import java.util.List;

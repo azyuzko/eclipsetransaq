@@ -8,10 +8,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.xml.sax.InputSource;
 
-import ru.eclipsetrader.transaq.core.data.DatabaseManager;
 import ru.eclipsetrader.transaq.core.exception.CommandException;
 import ru.eclipsetrader.transaq.core.model.internal.CommandResult;
-import ru.eclipsetrader.transaq.core.server.TransaqServer;
 import ru.eclipsetrader.transaq.core.util.Utils;
 import ru.eclipsetrader.transaq.core.xml.handler.ResultHandler;
 
@@ -29,7 +27,7 @@ public class TransaqLibrary {
 					ITransaqLibrary.class);;
 
 	public static void Initialize(String path, int level) {
-		System.setProperty("jna.encoding", "UTF-8");
+		//System.setProperty("jna.encoding", "UTF-8");
 		Pointer pResult = library.Initialize(path, level);
 		if (pResult != null) {
 			String error = pResult.getString(0);
@@ -47,7 +45,7 @@ public class TransaqLibrary {
 
 	public static CommandResult SendCommand(String data) {
 		
-		DatabaseManager.writeOutputEvent(data);
+		//DatabaseManager.writeOutputEvent(data);
 		
 		if (xmlLogger.isDebugEnabled()) {
 			xmlLogger.debug("Send " + data);

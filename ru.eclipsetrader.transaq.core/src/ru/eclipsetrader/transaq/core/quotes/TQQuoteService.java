@@ -10,7 +10,7 @@ import org.apache.logging.log4j.Logger;
 
 import ru.eclipsetrader.transaq.core.data.DatabaseManager;
 import ru.eclipsetrader.transaq.core.event.Observer;
-import ru.eclipsetrader.transaq.core.instruments.TQDataFeed;
+import ru.eclipsetrader.transaq.core.feed.TQDataFeed;
 import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
 import ru.eclipsetrader.transaq.core.model.Quote;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;

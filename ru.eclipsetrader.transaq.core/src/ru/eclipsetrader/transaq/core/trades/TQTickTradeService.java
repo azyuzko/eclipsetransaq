@@ -7,7 +7,7 @@ import java.util.Map;
 
 import ru.eclipsetrader.transaq.core.data.DatabaseManager;
 import ru.eclipsetrader.transaq.core.event.ListObserver;
-import ru.eclipsetrader.transaq.core.instruments.TQDataFeed;
+import ru.eclipsetrader.transaq.core.feed.TQDataFeed;
 import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Tick;

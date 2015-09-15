@@ -1,5 +1,6 @@
 package ru.eclipsetrader.transaq.core.model.internal;
 import java.util.Date;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -10,8 +11,6 @@ import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.Transient;
 
-import com.google.common.base.MoreObjects;
-
 import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.OrderConditionType;
@@ -19,10 +18,11 @@ import ru.eclipsetrader.transaq.core.model.OrderStatus;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.UnfilledType;
 import ru.eclipsetrader.transaq.core.orders.DiffMap;
-import ru.eclipsetrader.transaq.core.orders.ICancelOrderCallback;
-import ru.eclipsetrader.transaq.core.orders.IMoveOrderCallback;
-import ru.eclipsetrader.transaq.core.util.Holder;
+import ru.eclipsetrader.transaq.core.orders.OrderCallback;
 import ru.eclipsetrader.transaq.core.util.Utils;
+
+import com.google.common.base.MoreObjects;
+import com.sun.org.apache.xpath.internal.operations.Or;
 
 @Table(name="orders")
 @Entity
@@ -78,12 +78,20 @@ public class Order extends ServerObject {
 	@Enumerated(EnumType.STRING)
 	OrderConditionType cond_type;
 	Double cond_value;
+
+	@Transient
+	OrderCallback orderCallback;
 	
 	@Transient
-	ICancelOrderCallback cancelOrderCallback;
+	ReentrantLock lock = new ReentrantLock();
 	
-	@Transient
-	IMoveOrderCallback moveOrderCallback;
+	public boolean tryLock() {
+		return lock.tryLock();
+	}
+	
+	public void unlock() {
+		lock.unlock();
+	}
 	
 	public Order() {
 		super(null);
@@ -93,47 +101,44 @@ public class Order extends ServerObject {
 		super(serverId);		
 	}
 
-	public ICancelOrderCallback getCancelOrderCallback() {
-		return cancelOrderCallback;
+	public OrderCallback getOrderCallback() {
+		return orderCallback;
 	}
 
-	public void setCancelOrderCallback(ICancelOrderCallback cancelOrderCallback) {
-		this.cancelOrderCallback = cancelOrderCallback;
+	public void setOrderCallback(OrderCallback orderCallback) {
+		this.orderCallback = orderCallback;
 	}
 
-	public IMoveOrderCallback getMoveOrderCallback() {
-		return moveOrderCallback;
-	}
-
-	public void setMoveOrderCallback(IMoveOrderCallback moveOrderCallback) {
-		this.moveOrderCallback = moveOrderCallback;
-	}
-
-	public DiffMap notifyChanges(Order newOrder) {
+	public DiffMap merge(Order newOrder) {
 		synchronized (this) {
-			// сохраним старые статусы ордеров 
-			OrderStatus currentStatus = this.getStatus();
-			OrderStatus newStatus = newOrder.getStatus();
+			OrderStatus oldState = this.status;
+			OrderStatus newState = newOrder.status;
 			// сделаем merge нового ордера в старый
 			DiffMap diff = Utils.mergeObjects(this, newOrder);
-			if (cancelOrderCallback != null) {
-				if (newStatus == OrderStatus.cancelled) {
-					cancelOrderCallback.onOrderCancelled(this);
-				} else {
-					cancelOrderCallback.onOrderCancelFailed(this);
-				}
-				cancelOrderCallback = null;
-			}
-			if (moveOrderCallback != null) {
-				Holder<Object, Object> values = diff.get("price");
-				if (values != null && !values.getFirst().equals(values.getSecond())) {
-					moveOrderCallback.onOrderMoved(this);
-				} else {
-					moveOrderCallback.onOrderMoveFailed(this);
-				}
-				moveOrderCallback = null;
+			if (oldState != OrderStatus.matched && newState == OrderStatus.matched) {
+				onExecute();
+			} else if (oldState != newState) {
+				onStateChange(oldState, newState, diff);
 			}
 			return diff;
+		}
+	}
+	
+	public void onExecute() {
+		if (orderCallback != null) {
+			orderCallback.onExecuted(this);
+		}
+	}
+	
+	public void onStateChange(OrderStatus oldState, OrderStatus newState, DiffMap diff) {
+		if (orderCallback != null) {
+			orderCallback.onChangeState(this, oldState, newState, diff);
+		}
+	}
+	
+	public void onTransaqError(CommandResult result) {
+		if (orderCallback != null) {
+			orderCallback.onTransaqError(result);
 		}
 	}
 

@@ -1,7 +1,5 @@
 package ru.eclipsetrader.transaq.core.interfaces;
 
-import java.util.Map;
-
 import ru.eclipsetrader.transaq.core.account.QuantityCost;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 
@@ -19,16 +17,16 @@ public interface IAccount {
 	void reset();
 	
 	/**
-	 * Вернуть позиции по счету
+	 * Вернуть позицию
 	 * @return
 	 */
-	Map<TQSymbol, QuantityCost> getPositions();
+	int getPosition(TQSymbol symbol);
 	
 	/**
-	 * Вернуть начальные позиции по счету
+	 * Вернуть начальную позицию по счету
 	 * @return
 	 */
-	Map<TQSymbol, QuantityCost> getInitialPositions();
+	int getInitialPosition(TQSymbol symbol);
 
 	/**
 	 * Купить контракты по рынку

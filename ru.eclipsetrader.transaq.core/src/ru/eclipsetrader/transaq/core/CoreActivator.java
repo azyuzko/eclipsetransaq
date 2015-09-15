@@ -18,13 +18,11 @@ import ru.eclipsetrader.transaq.core.datastorage.TQMarketService;
 import ru.eclipsetrader.transaq.core.datastorage.TQServerService;
 import ru.eclipsetrader.transaq.core.osgi.TransaqCommandProvider;
 import ru.eclipsetrader.transaq.core.securities.TQSecurityService;
-import ru.eclipsetrader.transaq.core.server.TransaqServerManager;
 import ru.eclipsetrader.transaq.core.services.ITQCandleService;
 import ru.eclipsetrader.transaq.core.services.ITQClientService;
 import ru.eclipsetrader.transaq.core.services.ITQMarketService;
 import ru.eclipsetrader.transaq.core.services.ITQSecurityService;
 import ru.eclipsetrader.transaq.core.services.ITQServerService;
-import ru.eclipsetrader.transaq.core.services.ITransaqServerManager;
 
 public class CoreActivator implements BundleActivator {
 
@@ -67,15 +65,14 @@ public class CoreActivator implements BundleActivator {
 
 		registerServices();
 
-		Thread thread = new Thread(() -> {
+/*		Thread thread = new Thread(() -> {
 			TransaqServerManager.getInstance().connect(Constants.DEFAULT_SERVER_ID);
 		});
 		thread.setDaemon(true);
-		thread.start();
+		thread.start();*/
 	}
 
 	public void registerServices() {
-		context.registerService(ITransaqServerManager.class, TransaqServerManager.getInstance(), null);
 		context.registerService(ITQServerService.class, TQServerService.getInstance(), null);
 		context.registerService(ITQMarketService.class, TQMarketService.getInstance(), null);
 		context.registerService(ITQSecurityService.class, TQSecurityService.getInstance(), null);

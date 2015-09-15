@@ -2,8 +2,6 @@ package ru.eclipsetrader.transaq.core.indicators;
 
 import java.util.Arrays;
 
-import org.eclipse.persistence.internal.libraries.antlr.runtime.misc.LookaheadStream;
-
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 import com.tictactec.ta.lib.Core;
@@ -13,7 +11,7 @@ import com.tictactec.ta.lib.MInteger;
 public abstract class IndicatorFunction {
 	
 	static Core core = new Core();
-	int lookback;
+	int lookback = 0;
 	
 	@Override
 	public String toString() {

@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.WeakHashMap;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -20,14 +22,8 @@ import ru.eclipsetrader.transaq.core.model.internal.Order;
 import ru.eclipsetrader.transaq.core.model.internal.StopOrder;
 import ru.eclipsetrader.transaq.core.model.internal.Trade;
 import ru.eclipsetrader.transaq.core.services.ITQOrderTradeService;
-import ru.eclipsetrader.transaq.core.util.Holder;
 
 public class TQOrderTradeService implements ITQOrderTradeService {
-	
-	public enum RequestType {
-		CancelOrder,
-		MoveOrder
-	}
 
 	Logger logger = LogManager.getLogger(TQOrderTradeService.class);
 	
@@ -35,7 +31,7 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 
 	// список отправленных НА БИРЖУ запросов на создание заявки
 	// ключ - transactionId
-	Map<String, Holder<OrderRequest, ICreateOrderCallback>> createRequests = Collections.synchronizedMap(new HashMap<String, Holder<OrderRequest, ICreateOrderCallback>>());
+	Map<OrderRequest, OrderCallback> createRequests = Collections.synchronizedMap(new WeakHashMap<OrderRequest, OrderCallback>());
 
 	// ключ - orderNo
 	private Map<String, Order> orders = Collections.synchronizedMap(new HashMap<String, Order>());
@@ -56,24 +52,24 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 		logger.info("Received order " + order.getOrderDesc());
 		if (transactionid != null) {
 			// найдем его запрос
-			 Holder<OrderRequest, ICreateOrderCallback> orderRequestHolder = createRequests.get(transactionid);
-			if (orderRequestHolder != null) {
-				// удалим запрос
-				createRequests.remove(transactionid);
-				// получим его callback
-				ICreateOrderCallback callback = orderRequestHolder.getSecond();
+			Optional<OrderRequest> orderRequestOptional = createRequests.keySet().stream().filter(or -> or.getTransactionId().equals(transactionid)).findFirst();
+			if (orderRequestOptional.isPresent()) {
+				OrderRequest orderRequest = orderRequestOptional.get();
+				// получим его callback и удалим
+				OrderCallback callback = createRequests.remove(orderRequest);
 				// оповестим
-				if (order.getOrderno().equals("0")) {
-					logger.warn("Received empty order : " + order.getOrderDesc());
-					callback.onOrderCreateError(order, order.getResult());
+				if (order.getOrderno().equals("0") || order.getStatus() == OrderStatus.cancelled) {
+					logger.warn("Order cancelled : " + order.getOrderDesc());
+					callback.onCreateError(orderRequest, order, order.getResult());
 				} else {
-					callback.onOrderCreated(order);
 					// посмотрим, есть ли у нас этот ордер
 					Order currentOrder = orders.get(orderno);
 					if (currentOrder != null) {
 						logger.warn("Something wrong! currentOrder must be null here");
 					}
 					orders.put(orderno, order);
+					orderRequest.setOrder(order);
+					callback.onCreated(orderRequest, order);
 					DataManager.merge(order);
 					return;
 				}
@@ -89,8 +85,7 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 			DataManager.merge(order);
 			newOrderEvent.notifyObservers(order.getSymbol(), order);
 		} else {
-			DiffMap diff = currentOrder.notifyChanges(order);
-			logger.info(("DIFF MAP = " + diff).replace("\n", ""));
+			DiffMap diff = currentOrder.merge(order);
 			DataManager.merge(currentOrder);
 		}
 		
@@ -131,7 +126,7 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 			instance = new TQOrderTradeService();
 		}
 		return instance;
-	}	
+	}
 	
 	public StopOrder put(StopOrder stopOrder) {
 		if (stopOrder.getTransactionid() == null) {
@@ -166,14 +161,12 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 	}
 	
 	@Override
-	public Order getOrderByServerNo(String orderno) {
-		synchronized (orders) {
-			for (Order order : orders.values()) {
-				if (order.getOrderno().equals(orderno)) {
-					return order;
-				}
-			}			
-		}
+	public synchronized Order getOrderByServerNo(String orderno) {
+		for (Order order : orders.values()) {
+			if (order.getOrderno().equals(orderno)) {
+				return order;
+			}
+		}			
 		return null;
 	}
 
@@ -186,130 +179,74 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 	public Trade getTrade(String trandeNo) {
 		return trades.get(trandeNo);
 	}
-
-	@Override
-	public Order createOrder(final OrderRequest orderRequest) {
-		synchronized (orderRequest) {
-			logger.warn(orderRequest.getSymbol() + " Create new order "  + orderRequest.getBuysell());
-			createOrderAsync(orderRequest, new OrderCallback() {
-				@Override
-				public void onOrderCreated(Order order) {
-					synchronized (orderRequest) {
-						super.onOrderCreated(order);
-						logger.debug("received response order " + order.getOrderno());
-						// положим его в запрос
-						orderRequest.setOrder(order);
-						// оповестим, что пришел ответ
-						orderRequest.notifyAll();						
-					}
-				}
-				@Override
-				public void onOrderCreateError(Order order, String error) {
-					synchronized (orderRequest) {
-						super.onOrderCreateError(order, error);
-						// положим его в запрос
-						orderRequest.setOrder(order);
-						// оповестим, что пришел ответ
-						orderRequest.notifyAll();						
-					}
-				}
-			});
-			try {
-				logger.debug("begin wait for server response");
-				orderRequest.wait(TIMEOUT);
-				return orderRequest.getOrder();
-			} catch (InterruptedException e) {
-				// не дождались ответа
-				logger.error(e.getMessage(), e);
-				if (orderRequest.getTransactionId() != null) {
-					createRequests.remove(orderRequest.getTransactionId());
-				}
-				return null;
-			}			
-		}
-		 
-	}
 	
 	@Override
-	public void createOrderAsync(OrderRequest orderRequest, ICreateOrderCallback callback) {
-		String command = orderRequest.createNewOrderCommand();
+	public Order createOrder(OrderRequest orderRequest, OrderCallback callback) {
 		synchronized (orderRequest) {
-			logger.warn(orderRequest.getSymbol() + " Create new "  + orderRequest.getBuysell() + " order: " + command);
+			/*if (orderRequest.getOrder() != null) {
+				throw new RuntimeException("OrderRequest <" + orderRequest.toString() + "> already has created order <" + orderRequest.getOrder().getOrderDesc() + ">");
+			}*/
+			String command = orderRequest.createNewOrderCommand();
+			logger.warn(orderRequest.getSymbol() + " Create new "  + orderRequest.getBuysell() + " order: " + command);						
 			CommandResult result = TransaqLibrary.SendCommand(command);
 			if (result.getTransactionId() == null || result.getTransactionId().isEmpty()) {
 				callback.onTransaqError(result);
-				return;
+				return null;
 			}
 			String transactionId = result.getTransactionId();
 			orderRequest.setTransactionId(transactionId);
-			createRequests.put(transactionId, new Holder<OrderRequest, ICreateOrderCallback>(orderRequest, callback));
-		}
-	}
-
-	@Override
-	public Order cancelOrder(String orderno) {
-		Order order = orders.get(orderno);
-		synchronized (order) {
-			cancelOrder(orderno, new OrderCallback() {
+			createRequests.put(orderRequest, new OrderCallback() {
 				@Override
-				public void onOrderCancelFailed(Order order) {
-					super.onOrderCancelFailed(order);
-					synchronized (order) {
-						order.notifyAll();
+				public void onCreated(OrderRequest orderRequest, Order order) {
+					synchronized (orderRequest) {
+						orderRequest.notify();
 					}
+					callback.onCreated(orderRequest, order);
 				}
 				@Override
-				public void onOrderCancelled(Order order) {
-					super.onOrderCancelled(order);
-					synchronized (order) {
-						order.notifyAll();
+				public void onCreateError(OrderRequest orderRequest,Order order, String error) {
+					synchronized (orderRequest) {
+						orderRequest.notify();
 					}
-				}
-				@Override
-				public void onError(String message) {
-					super.onError(message);
-				}
-				@Override
-				public void onTransaqError(CommandResult commandResult) {
-					super.onTransaqError(commandResult);
+					callback.onCreateError(orderRequest, order, error);
 				}
 			});
-			try {
-				order.wait(TIMEOUT);
-				return order;
-			} catch (InterruptedException e) {
-				throw new RuntimeException(e);
+			
+			synchronized (orderRequest) {
+				try {
+					orderRequest.wait(TIMEOUT);
+					return orderRequest.getOrder();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+					createRequests.remove(orderRequest);
+					callback.onCreateError(orderRequest, null, e.getMessage());
+					return null;
+				}
 			}
 			
 		}
 	}
-	
+
 	@Override
-	public void cancelOrder(String orderno, ICancelOrderCallback callback) {
+	public void cancelOrder(String orderno) {
 		logger.info("Perform order cancelling:" + orderno);
 		Order order = orders.get(orderno);
 		if (order != null) {
-			synchronized (order) {
-				if (order.getCancelOrderCallback() != null) {
-					callback.onError("Order " + orderno + "  already have active CANCEL request");
-					return;
-				}
-				String command = "<command id=\"cancelorder\"><transactionid>" + order.getTransactionid() +"</transactionid></command>";
-				CommandResult result = TransaqLibrary.SendCommand(command);
-				if (!result.isSuccess()) {
-					if (callback != null) {
-						callback.onTransaqError(result);
+			if (order.tryLock()) {
+				try {
+					String command = "<command id=\"cancelorder\"><transactionid>" + order.getTransactionid() +"</transactionid></command>";
+					CommandResult result = TransaqLibrary.SendCommand(command);
+					if (!result.isSuccess()) {
+						order.onTransaqError(result);
 					}
-				} else {
-					if (callback != null) {
-						order.setCancelOrderCallback(callback);
-					}
+				} finally {
+					order.unlock();
 				}
-			}			
-		} else {
-			if (callback != null) {
-				callback.onError("Order not found = " + orderno);
+			} else {
+				logger.warn("cancelOrder failed! Order " + orderno + " already locked for another operation");
 			}
+		} else {
+			throw new RuntimeException("Order not found = " + orderno);
 		}			
 
 	}
@@ -328,44 +265,40 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 	 */
 	
 	@Override
-	public void moveOrder(String orderno, double newPrice, int quantity, IMoveOrderCallback callback) {
+	public void moveOrder(String orderno, double newPrice, int quantity) {
 		Order order = orders.get(orderno);
 		if (order != null) {
-			synchronized (order) {
-				String command = 
-					  "<command id=\"moveorder\">"
-					+ "<transactionid>" + order.getTransactionid() + "</transactionid>"
-					+ "<price>" + newPrice + "</price>"
-					+ "<moveflag>1</moveflag>"
-					+ "<quantity>" + quantity + "</quantity>"
-					+ "</command>";
-				CommandResult result = TransaqLibrary.SendCommand(command);
-				if (!result.isSuccess()) {
-					if (callback != null) {
-						callback.onTransaqError(result);
+			if (order.tryLock()) {
+				try {
+					String command = 
+						  "<command id=\"moveorder\">"
+						+ "<transactionid>" + order.getTransactionid() + "</transactionid>"
+						+ "<price>" + newPrice + "</price>"
+						+ "<moveflag>1</moveflag>"
+						+ "<quantity>" + quantity + "</quantity>"
+						+ "</command>";
+					CommandResult result = TransaqLibrary.SendCommand(command);
+					if (!result.isSuccess()) {
+						order.onTransaqError(result);
 					}
-				} else {
-					if (callback != null) {
-						order.setMoveOrderCallback(callback);
-					}
+				} finally {
+					order.unlock();
 				}
+			} else {
+				throw new RuntimeException("moveOrder failed! Order " + orderno + " already locked for another operation");
 			}
 		} else {
-			if (callback != null) {
-				callback.onError("Order not found = " + orderno);
-			}
+			throw new RuntimeException("Order not found = " + orderno);
 		}
 	}
 	
 	@Override
-	public void moveOrder(String orderno, double newPrice, IMoveOrderCallback callback) {
+	public void moveOrder(String orderno, double newPrice) {
 		Order order = orders.get(orderno);
 		if (order != null) {
-			moveOrder(orderno, newPrice, order.getQuantity(), callback);
+			moveOrder(orderno, newPrice, order.getQuantity());
 		} else {
-			if (callback != null) {
-				callback.onError("Order not found = " + orderno);
-			}
+			throw new RuntimeException("Order not found = " + orderno);
 		}
 	}
 

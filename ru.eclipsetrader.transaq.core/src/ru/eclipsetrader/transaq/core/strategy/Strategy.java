@@ -35,7 +35,7 @@ public class Strategy implements IProcessingContext {
 
 	Logger logger = LogManager.getLogger("Strategy");
 
-	TQSymbol SiU5 = TQSymbol.SiU5;
+	TQSymbol SiZ5 = TQSymbol.SiZ5;
 	
 	int fast = 9;
 	int slow = 16;
@@ -103,10 +103,10 @@ public class Strategy implements IProcessingContext {
 	
 	public void tick(CandleList candleList, Candle candle) {
 		TQSymbol symbol = candleList.getSymbol();
-		if (symbol.equals(SiU5)) {
+		if (symbol.equals(SiZ5)) {
 			// 2 min wait after close position
-			if (!hasOpenedPosition(SiU5)){
-				StrategyPosition lastPosition = lastPosition(SiU5);
+			if (!hasOpenedPosition(SiZ5)){
+				StrategyPosition lastPosition = lastPosition(SiZ5);
 				if (lastPosition != null &&	DateUtils.addMinutes(lastPosition.getCloseDate(), 2).after(getDateTime())){
 					logger.info(Utils.formatDate(getDateTime()) + " 2 min wait after close position");
 					return;
@@ -144,8 +144,8 @@ public class Strategy implements IProcessingContext {
 				sb.append("---\n");
 				
 				// 
-				StrategyPosition currentPosition = currentOpenedPosition(SiU5);
-				if (!hasOpenedPosition(SiU5)) {
+				StrategyPosition currentPosition = currentOpenedPosition(SiZ5);
+				if (!hasOpenedPosition(SiZ5)) {
 					if (   (sfD[sfD.length-1] > 80)
 						|| (sfK[sfK.length-1] > 90)) {
 						if (sfK[sfK.length-1] > sfK[sfK.length-2]) {
@@ -254,7 +254,7 @@ public class Strategy implements IProcessingContext {
 	}
 	
 	private boolean closePosition(StrategyPosition strategyPosition) {
-		account.close(SiU5, 10.0);
+		account.close(SiZ5, 10.0);
 		return true;
 	}
 

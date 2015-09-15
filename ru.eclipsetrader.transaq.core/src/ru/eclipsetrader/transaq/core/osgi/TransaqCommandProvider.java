@@ -5,25 +5,28 @@ import java.util.List;
 import org.eclipse.osgi.framework.console.CommandInterpreter;
 import org.eclipse.osgi.framework.console.CommandProvider;
 
-import ru.eclipsetrader.transaq.core.CoreActivator;
 import ru.eclipsetrader.transaq.core.Settings;
 import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.candle.TQCandleService;
-import ru.eclipsetrader.transaq.core.helper.TransaqHelper;
-import ru.eclipsetrader.transaq.core.interfaces.ITransaqServer;
+import ru.eclipsetrader.transaq.core.exception.ConnectionException;
+import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Order;
 import ru.eclipsetrader.transaq.core.model.internal.Security;
 import ru.eclipsetrader.transaq.core.model.internal.Trade;
+import ru.eclipsetrader.transaq.core.orders.OrderCallback;
+import ru.eclipsetrader.transaq.core.orders.OrderRequest;
 import ru.eclipsetrader.transaq.core.orders.TQOrderTradeService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuotationService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuoteService;
 import ru.eclipsetrader.transaq.core.securities.TQSecurityService;
-import ru.eclipsetrader.transaq.core.services.ITransaqServerManager;
+import ru.eclipsetrader.transaq.core.server.TransaqServer;
 import ru.eclipsetrader.transaq.core.strategy.Strategy;
 import ru.eclipsetrader.transaq.core.trades.TQTickTradeService;
 import ru.eclipsetrader.transaq.core.util.Utils;
+
+import com.investing.InvestingStrategy;
 
 public class TransaqCommandProvider implements CommandProvider {
 
@@ -47,26 +50,24 @@ public class TransaqCommandProvider implements CommandProvider {
 			return;
 		}
 
-		ITransaqServerManager tsm = CoreActivator
-				.getServiceInstance(ITransaqServerManager.class);
-
 		switch (arg.toLowerCase()) {
 		case "connect": {
-			String serverId = ci.nextArgument();
-			if (serverId == null) {
-				ci.println("Server ID required");
+			try {
+				TransaqServer.getInstance().connect( c -> {});
+			} catch (ConnectionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-			tsm.connect(new String(serverId).toUpperCase());
 			break;
 		}
 
 		case "disconnect": {
-			tsm.disconnect();
+			TransaqServer.getInstance().disconnect();
 			break;
 		}
 
 		case "status": {
-			ITransaqServer ts = tsm.getActiveTransaqServer();
+			TransaqServer ts = TransaqServer.getInstance();
 			if (ts != null) {
 				ci.println("Connected to " + ts.getId() + " status=<" + ts.getStatus()+">");
 			} else {
@@ -196,35 +197,35 @@ public class TransaqCommandProvider implements CommandProvider {
 			String reset = ci.nextArgument();
 			
 			CandleType candleType = CandleType.valueOf(("CANDLE_" + timespan).toUpperCase());
-			for (TQSymbol symbol : TQSymbol.workingSymbolSet()) {
+			//for (TQSymbol symbol : TQSymbol.workingSymbolSet()) {
+			TQSymbol symbol = TQSymbol.BRV5;
 				System.out.println("get candles for " + symbol + " " + candleType);
 				List<Candle> candles = TQCandleService.getInstance().getHistoryData(symbol, candleType, 
 						count == null ? 86400 / candleType.getSeconds() : Integer.valueOf(count), // по умолчанию за день
 						reset == null ? true : Boolean.valueOf(reset));
+				System.out.println("received candles from " + candles.get(0).getDate() + " to " + candles.get(candles.size()-1).getDate());
 				// TQCandleService.getInstance().persist(symbol, candleType, candles);
-			}
+			//}
 			break;
 		}
 		
-		case "servtime" : {
-			break;
-		}
-		
-		case "start": {
-			
-			
-			
-			break;
-		}
 	
-		case "showglass": {
-			
+		case "createorder": {
+			OrderRequest orderRequest = OrderRequest.createRequest(TQSymbol.BRV5, BuySell.B, 10.50, 1);
+			Order order = TQOrderTradeService.getInstance().createOrder(orderRequest, new OrderCallback() {
+				@Override
+				public void onCreateError(OrderRequest orderRequest,
+						Order order, String error) {
+					System.err.println("Create error " + error + "\n" + orderRequest + "\n" + order);
+				}
+			});
+			System.out.println("order = " + order);
 			break;
 		}
 		
-		case "test": {
-			TransaqHelper th = new TransaqHelper();
-			th.start();
+		case "run": {
+			InvestingStrategy hrd = new InvestingStrategy();
+			hrd.start();
 			break;
 		}
 

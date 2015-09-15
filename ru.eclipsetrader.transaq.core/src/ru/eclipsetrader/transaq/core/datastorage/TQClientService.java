@@ -80,7 +80,7 @@ public class TQClientService implements ITQClientService, IPersistable, Observer
 	@Override
 	public String getSecurityClientId(TQSymbol symbol) {
 		// TODO implement and refactor!
-		System.err.println("IMPLEMENT THIS!");
+		// System.err.println("IMPLEMENT THIS!");
 		return new ArrayList<Client>(clients.values()).get(0).getId();
 	}
 	

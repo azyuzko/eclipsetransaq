@@ -15,7 +15,7 @@ import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class TestTickList extends TestCase {
 
-	TQSymbol symbol = TQSymbol.SiU5;
+	TQSymbol symbol = TQSymbol.SiZ5;
 	Date fromDate = Utils.parseDate("03.08.2015 10:30:00.000");
 	Date toDate = Utils.parseDate("03.08.2015 12:15:00.000");
 	

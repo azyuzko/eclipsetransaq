@@ -335,7 +335,7 @@ public class FortsAccountSimulator implements IAccount {
 
 
 	@Override
-	public Map<TQSymbol, QuantityCost> getPositions() {
+	public int getPosition(TQSymbol symbol) {
 		throw new UnimplementedException();
 	}
 
@@ -345,9 +345,8 @@ public class FortsAccountSimulator implements IAccount {
 	}
 
 	@Override
-	public Map<TQSymbol, QuantityCost> getInitialPositions() {
-		// TODO Auto-generated method stub
-		return null;
+	public int getInitialPosition(TQSymbol symbol) {
+		throw new UnimplementedException();
 	}
 
 

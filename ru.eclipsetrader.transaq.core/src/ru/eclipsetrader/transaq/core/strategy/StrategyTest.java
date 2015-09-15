@@ -75,7 +75,7 @@ public class StrategyTest {
 		
 		DataFeeder dataFeeder = new DataFeeder(fromDate, toDate, 
 				//TQSymbol.workingSymbolSet().toArray(new TQSymbol[0])); 
-		 new TQSymbol[] {TQSymbol.SiU5});
+		 new TQSymbol[] {TQSymbol.SiZ5});
 		
 		Strategy macd = new Strategy(dataFeeder);
 		StrategyJob s = new StrategyJob(index++, macd, dataFeeder);

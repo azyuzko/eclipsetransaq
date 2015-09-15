@@ -15,30 +15,31 @@ import ru.eclipsetrader.transaq.core.interfaces.ITQKey;
 @Embeddable
 public class TQSymbol implements ITQKey, Serializable {
 	
-	public static TQSymbol BRU5 = new TQSymbol(BoardType.FUT, "BRU5"); // BR-9.15
-	public static TQSymbol SiU5 = new TQSymbol(BoardType.FUT, "SiU5"); // Si-9.15
-	public static TQSymbol EuU5 = new TQSymbol(BoardType.FUT, "EuU5"); // Eu-9.15
-	public static TQSymbol EDU5 = new TQSymbol(BoardType.FUT, "EDU5"); // ED-9.15
+	public static TQSymbol BRV5 = new TQSymbol(BoardType.FUT, "BRV5"); // BR-10.15
+	public static TQSymbol SiZ5 = new TQSymbol(BoardType.FUT, "SiZ5"); // Si-12.15
+	public static TQSymbol EuZ5 = new TQSymbol(BoardType.FUT, "EuZ5"); // Eu-12.15
+	public static TQSymbol EDZ5 = new TQSymbol(BoardType.FUT, "EDZ5"); // ED-12.15
 	
-	public static TQSymbol RIU5 = new TQSymbol(BoardType.FUT, "RIU5"); // RTS-9.15
-	public static TQSymbol RSU5 = new TQSymbol(BoardType.FUT, "RSU5"); // RTSS-9.15
-	public static TQSymbol VIQ5 = new TQSymbol(BoardType.FUT, "VIU5"); // RVI-9.15 Фьючерсный контракт на волатильность российского рынка
-	public static TQSymbol MXU5 = new TQSymbol(BoardType.FUT, "MXU5"); // MIX-9.15	
+	public static TQSymbol RIZ5 = new TQSymbol(BoardType.FUT, "RIZ5"); // RTS-12.15
+	public static TQSymbol MXZ5 = new TQSymbol(BoardType.FUT, "MMZ5"); // MXI-12.15	
+
+	public static TQSymbol GDZ5 = new TQSymbol(BoardType.FUT, "GDZ5"); // GOLD-12.15
+	public static TQSymbol SVZ5 = new TQSymbol(BoardType.FUT, "SVZ5"); // SILV-12.15
+
+	//public static TQSymbol RSU5 = new TQSymbol(BoardType.FUT, "RSZ5"); // RTSS-9.15
+	//public static TQSymbol VIQ5 = new TQSymbol(BoardType.FUT, "VIZ5"); // RVI-9.15 Фьючерсный контракт на волатильность российского рынка
 
 	//public static TQSymbol _1BU5 = new TQSymbol(BoardType.FUT, "1BU5"); // IBVS-8.15 на Индекс BOVESPA
 	//public static TQSymbol _2BU5 = new TQSymbol(BoardType.FUT, "2BU5"); // SNSX-8.15 на Индекс SENSEX
-	public static TQSymbol _3BU5 = new TQSymbol(BoardType.FUT, "3BU5"); // HSIF-9.15 на Индекс Hang Seng
-	public static TQSymbol _4BU5 = new TQSymbol(BoardType.FUT, "4BU5"); // ALSI-9.15 на Индекс FTSE/JSE Top40
+	//public static TQSymbol _3BU5 = new TQSymbol(BoardType.FUT, "3BU5"); // HSIF-9.15 на Индекс Hang Seng
+	//public static TQSymbol _4BU5 = new TQSymbol(BoardType.FUT, "4BU5"); // ALSI-9.15 на Индекс FTSE/JSE Top40
 	
-	public static TQSymbol SPU5 = new TQSymbol(BoardType.FUT, "SPU5"); // SBPR-9.15
-	public static TQSymbol SRU5 = new TQSymbol(BoardType.FUT, "SRU5"); // SBRF-9.15
-	public static TQSymbol VBU5 = new TQSymbol(BoardType.FUT, "VBU5"); // VTBR-9.15
-	public static TQSymbol GZU5 = new TQSymbol(BoardType.FUT, "GZU5"); // GAZR-9.15
-	public static TQSymbol GDU5 = new TQSymbol(BoardType.FUT, "GDU5"); // GOLD-9.15
-	public static TQSymbol SVU5 = new TQSymbol(BoardType.FUT, "SVU5"); // SILV-9.15
-	public static TQSymbol AUU5 = new TQSymbol(BoardType.FUT, "AUU5"); // AUDU-9.15
+	//public static TQSymbol SPU5 = new TQSymbol(BoardType.FUT, "SPU5"); // SBPR-9.15
+	//public static TQSymbol SRU5 = new TQSymbol(BoardType.FUT, "SRU5"); // SBRF-9.15
+	//public static TQSymbol VBU5 = new TQSymbol(BoardType.FUT, "VBU5"); // VTBR-9.15
+	//public static TQSymbol GZU5 = new TQSymbol(BoardType.FUT, "GZU5"); // GAZR-9.15
 	
-//	public static TQSymbol BRV5 = new TQSymbol(BoardType.FUT, "BRV5"); // BR-10.15
+	
 
 //	public static TQSymbol USD000000TOD = new TQSymbol(BoardType.CETS, "USD000000TOD"); // USD Tod
 //	public static TQSymbol USD000UTSTOM = new TQSymbol(BoardType.CETS, "USD000UTSTOM"); // USD Tom
@@ -53,8 +54,8 @@ public class TQSymbol implements ITQKey, Serializable {
 //	public static TQSymbol LKOH = new TQSymbol(BoardType.TQBR, "LKOH");
 //	public static TQSymbol ROSN = new TQSymbol(BoardType.TQBR, "ROSN");
 
-	public static TQSymbol RTSI = new TQSymbol(BoardType.INDEXR, "RTSI");
-	public static TQSymbol RTS2 = new TQSymbol(BoardType.INDEXR, "RTS2");
+//	public static TQSymbol RTSI = new TQSymbol(BoardType.INDEXR, "RTSI");
+//	public static TQSymbol RTS2 = new TQSymbol(BoardType.INDEXR, "RTS2");
 //	public static TQSymbol MIX = new TQSymbol(BoardType.INDEXR, "MIX");
 	
 	public static List<TQSymbol> workingSymbolSet() {

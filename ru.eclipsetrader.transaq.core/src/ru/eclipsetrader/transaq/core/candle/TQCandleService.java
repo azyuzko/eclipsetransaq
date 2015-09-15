@@ -1,15 +1,19 @@
 package ru.eclipsetrader.transaq.core.candle;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.WeakHashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.time.DateUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -23,6 +27,7 @@ import ru.eclipsetrader.transaq.core.model.internal.CandleStatus;
 import ru.eclipsetrader.transaq.core.server.command.GetHistoryDataCommand;
 import ru.eclipsetrader.transaq.core.services.ITQCandleService;
 import ru.eclipsetrader.transaq.core.util.Holder;
+import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class TQCandleService implements ITQCandleService {
 	
@@ -122,17 +127,18 @@ public class TQCandleService implements ITQCandleService {
 	}
 	
 	public static List<Candle> convertCandleList(CandleType fromCandleType, CandleType toCandleType, List<Candle> list) {
-		List<Candle> result = new ArrayList<Candle>();
-		for (Candle c : list) {
-			Candle last = null;
-			if (result.size() > 0) {
-				last = result.get(result.size()-1);
-			} else {
-			}
-			last = new Candle();
-			last.setDate(c.getDate());
-			last.setOpen(c.getOpen());
+		if (fromCandleType == toCandleType) {
+			return list;
 		}
+		if (fromCandleType.getSeconds() > toCandleType.getSeconds()) {
+			throw new IllegalArgumentException();
+		}
+		if (toCandleType.getSeconds() % fromCandleType.getSeconds() > 0) {
+			throw new IllegalArgumentException("Невозможно преобразовать");
+		}
+		Map<Date, List<Candle>> map = list.stream().collect(Collectors.groupingBy( c -> CandleList.closestCandleStartTime(c.getDate(), toCandleType)));
+		List<Candle> result = map.entrySet().stream().map(e -> mergeCandles(e.getKey(), e.getValue())).sorted((c1, c2) -> c1.getDate().compareTo(c2.getDate()))
+				.collect(Collectors.toCollection(LinkedList::new));
 		return result;
 	}
 
@@ -193,5 +199,30 @@ public class TQCandleService implements ITQCandleService {
 			CandleType candleType, Date fromDate, Date toDate) {
 		return DataManager.getCandles(symbol, candleType, fromDate, toDate);
 	}
+	
+	private static Candle mergeCandles(Date date, List<Candle> list) {
+		Candle candle = new Candle();
+		candle.setDate(date);
+		list.stream().sorted( (c1,c2) -> c1.getDate().compareTo(c2.getDate())).forEach(c -> { 
+			if (candle.getOpen() == 0) candle.setOpen(c.getOpen());
+			candle.setHigh(Math.max(candle.getHigh(), c.getHigh()));
+			candle.setLow(Math.min(candle.getLow(), c.getLow()));
+			candle.setClose(c.getClose());
+			candle.setVolume(candle.getVolume() + c.getVolume());
+			});
+		return candle;
+	}
 
+	public static void main(String[] args) {
+		List<Candle> l = new ArrayList<>();
+		Date date = Utils.parseDate("01.08.2015 10:00:00.000");
+		Candle c1 = new Candle().setDate(date).setOpen(10).setHigh(30).setLow(5).setClose(20).setVolume(2);
+		Candle c2 = new Candle().setDate(DateUtils.addMinutes(date, 5)).setOpen(10).setHigh(30).setLow(5).setClose(20).setVolume(1);
+		Candle c3 = new Candle().setDate(DateUtils.addMinutes(date, 10)).setOpen(11).setHigh(31).setLow(6).setClose(21).setVolume(3);
+		Candle c4 = new Candle().setDate(DateUtils.addMinutes(date, 15)).setOpen(10).setHigh(30).setLow(5).setClose(20).setVolume(4);
+		l.addAll(Arrays.asList(c1, c2, c3, c4));
+		
+		List<Candle> list = convertCandleList(CandleType.CANDLE_1M, CandleType.CANDLE_15M, l);
+		list.forEach(lv -> System.out.println(lv));
+	}
 }

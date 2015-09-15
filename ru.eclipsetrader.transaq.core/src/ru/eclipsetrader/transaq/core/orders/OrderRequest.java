@@ -20,7 +20,7 @@ public class OrderRequest {
 	BuySell buysell;
 	boolean byMarket = false;
 	String brokerref;
-	private UnfilledType unfilled = UnfilledType.CancelBalance; // немедленно, или отменить ImmOrCancel не работает для FUT
+	private UnfilledType unfilled = UnfilledType.PutInQueue; // немедленно, или отменить ImmOrCancel не работает для FUT
 	private boolean usecredit;
 	private boolean nosplit;
 	private Date expdate;
@@ -31,6 +31,11 @@ public class OrderRequest {
 		this.symbol = symbol;
 		this.quantity = quantity;
 		this.buysell = bs;
+	}
+	
+	@Override
+	public String toString() {
+		return symbol + " " + buysell + " " + price + " " + quantity;
 	}
 
 	public static OrderRequest createRequest(TQSymbol symbol, BuySell bs, double price, int quantity) {
@@ -43,6 +48,13 @@ public class OrderRequest {
 		OrderRequest orderRequest = new OrderRequest(symbol, bs, quantity);
 		orderRequest.byMarket = true;
 		return orderRequest;
+	}
+	
+	public static void main(String[] args) {
+		OrderRequest o = new OrderRequest(TQSymbol.RIZ5, BuySell.B, 1);
+		o.setPrice(48.57);
+		System.out.println(o.createNewOrderCommand());
+		
 	}
 
 	public String getTransactionId() {
@@ -88,6 +100,10 @@ public class OrderRequest {
 	}
 
 	public String createNewOrderCommand() {
+/*		Security securty =  TQSecurityService.getInstance().get(symbol);
+		if (securty != null && securty.getMinStep() == 0) {
+			throw new RuntimeException("Unable to create order for " + securty + ", minStep = 0,  Security is readonly" );
+		}*/
 		StringBuilder sb = new StringBuilder();
 		sb.append("<command id=\"neworder\">");
 		sb.append("<security>");
@@ -96,7 +112,12 @@ public class OrderRequest {
 		sb.append("</security>");
 		sb.append("<client>" + TQClientService.getInstance().getSecurityClientId(symbol) + "</client>");
 		if (price != 0) {
-			sb.append("<price>" + price + "</price>");
+			double rest = Math.abs( price - Math.rint(price) );
+			if (rest < 0.00001) {
+				sb.append("<price>" + Math.round(price)  + "</price>");
+			} else {
+				sb.append("<price>" + price + "</price>");
+			}
 		}
 		
 		if (hidden != 0) {

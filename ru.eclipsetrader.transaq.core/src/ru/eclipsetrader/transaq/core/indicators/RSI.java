@@ -44,23 +44,6 @@ public class RSI extends IndicatorFunction {
 		return optInTimePeriod;
 	}
 
-	public void setOptInTimePeriod(int optInTimePeriod) {
-		this.optInTimePeriod = optInTimePeriod;
-		this.lookback = core.rsiLookback(optInTimePeriod);
-	}
-
-	public Integer getOutBegIdx() {
-		if (outBegIdx != null) {
-			return outBegIdx.value;
-		} else {
-			return null;
-		}
-	}
-
-	public MInteger getOutNBElement() {
-		return outNBElement;
-	}
-
 	public double[] getOutReal() {
 		return outReal;
 	}

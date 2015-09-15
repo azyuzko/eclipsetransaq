@@ -14,7 +14,6 @@ import org.apache.logging.log4j.Logger;
 import org.xml.sax.InputSource;
 
 import ru.eclipsetrader.transaq.core.Constants;
-import ru.eclipsetrader.transaq.core.CoreActivator;
 import ru.eclipsetrader.transaq.core.Settings;
 import ru.eclipsetrader.transaq.core.account.TQAccountService;
 import ru.eclipsetrader.transaq.core.candle.TQCandleService;
@@ -24,15 +23,12 @@ import ru.eclipsetrader.transaq.core.datastorage.TQBoardService;
 import ru.eclipsetrader.transaq.core.datastorage.TQClientService;
 import ru.eclipsetrader.transaq.core.datastorage.TQMarketService;
 import ru.eclipsetrader.transaq.core.event.Event;
-import ru.eclipsetrader.transaq.core.event.Observer;
-import ru.eclipsetrader.transaq.core.event.osgi.OSGIServerStatusEvent;
 import ru.eclipsetrader.transaq.core.exception.CommandException;
 import ru.eclipsetrader.transaq.core.exception.ConnectionException;
 import ru.eclipsetrader.transaq.core.exception.UnimplementedException;
 import ru.eclipsetrader.transaq.core.interfaces.ITransaqServer;
 import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
 import ru.eclipsetrader.transaq.core.model.ConnectionStatus;
-import ru.eclipsetrader.transaq.core.model.Message;
 import ru.eclipsetrader.transaq.core.model.internal.CommandResult;
 import ru.eclipsetrader.transaq.core.model.internal.Server;
 import ru.eclipsetrader.transaq.core.model.internal.ServerSession;
@@ -40,7 +36,6 @@ import ru.eclipsetrader.transaq.core.model.internal.ServerStatus;
 import ru.eclipsetrader.transaq.core.orders.TQOrderTradeService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuotationService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuoteService;
-import ru.eclipsetrader.transaq.core.schedule.LoadCandlesSchedule;
 import ru.eclipsetrader.transaq.core.securities.TQSecurityService;
 import ru.eclipsetrader.transaq.core.server.command.ChangePasswordCommand;
 import ru.eclipsetrader.transaq.core.server.command.Command;
@@ -55,27 +50,20 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 	static Logger logger = LogManager.getFormatterLogger(TransaqServer.class);
 	static Logger xmlLogger = LogManager.getFormatterLogger("XMLTrace");
 	
-	protected String serverId;
-	
-	private SAXParser parser;
-	
-	private Object statusLock = new Object();
-	
 	private ServerSession session;
 	private Server server;
-	
-	int timeDiff = 0; // разница межжу 
-	
-	private boolean wasInitialized = false;
+	String serverId;
+	volatile boolean hasInitialized = false;
+	volatile int timeDiff = 0; // разница между текущим и серверным временем 
+	SAXParser parser;
 
+	private Object statusLock = new Object();
+		
 	final EventHolder eventHolder = new EventHolder();
 	
-	private static TransaqServer INSTANCE;
+	private final static TransaqServer INSTANCE = new TransaqServer(Constants.DEFAULT_SERVER_ID);
 	public static TransaqServer getInstance() {
 		return INSTANCE;
-	}
-	public static void setTransaqServer(TransaqServer transaqServer) {
-		INSTANCE = transaqServer;
 	}
 	
 	public static final Event<TransaqServer> onConnectEstablished = new Event<TransaqServer>("TransaqServer.onConnectEstablished");
@@ -96,34 +84,24 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 			throw new RuntimeException(e);
 		}
 
-		eventHolder.onServerStatusChange.addObserver(new Observer<ServerStatus>() {
-			@Override
-			public void update(ServerStatus newStatus) {
-				try {
-					updateServerStatus(newStatus);
-				} catch (Exception e) {
-					e.printStackTrace();
-				} finally {
-					synchronized (statusLock) {
-						statusLock.notify();
-					}
+		eventHolder.onServerStatusChange.addObserver((newStatus) -> {
+			try {
+				updateServerStatus(newStatus);
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				synchronized (statusLock) {
+					statusLock.notify();
 				}
 			}
 		});
 		
-		eventHolder.onMessageReceive.addObserver(new Observer<Message>() {
-			@Override
-			public void update( Message message) {
-				System.err.println(String.format("MESSAGE FROM <%s>: %s", message.getFrom(), message.getText()));				
-			}
+		eventHolder.onMessageReceive.addObserver((message) -> {
+			System.err.println(String.format("MESSAGE FROM <%s>: %s", message.getFrom(), message.getText()));
 		});
 		
-		
-		eventHolder.onOvernightChange.addObserver(new Observer<Boolean>() {
-			@Override
-			public void update(Boolean isOvernight) {
-				System.err.println(String.format("isOvernight is %s", isOvernight));
-			}
+		eventHolder.onOvernightChange.addObserver((isOvernight) -> {
+			System.err.println(String.format("isOvernight is %s", isOvernight));
 		});
 		
 				
@@ -185,15 +163,12 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 				onDisconnected.notifyObservers(this);
 			}
 			
-			if (CoreActivator.getEventAdmin() != null) {
+			/*if (CoreActivator.getEventAdmin() != null) {
 				CoreActivator.getEventAdmin().postEvent(OSGIServerStatusEvent.getEvent(serverId, newStatus));
-			}
+			}*/
 		}
 	}
-	
-	static int counter = 0;
-	
-	// typedef bool (*tcallback)(BYTE* pData);
+		
 	public void callback (Pointer pData) {
 
 		String data = pData.getString(0);	
@@ -221,7 +196,7 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
     }
 	
 	private void init() {
-		if (wasInitialized) {
+		if (hasInitialized) {
 			logger.info("Transaq library was already initialized");
 			return;
 		}
@@ -230,7 +205,7 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 			TransaqLibrary.UnInitialize();
 			throw new RuntimeException("SetCallbackEx failed!");
 		};
-		wasInitialized = true;
+		hasInitialized = true;
 	}
 	
 	private void initNewSession() {
@@ -247,10 +222,10 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 		throw new UnimplementedException();
 	}
 
-	public void connect(String serverId, Consumer<TransaqServer> callback) throws ConnectionException {
+	public void connect(Consumer<TransaqServer> callback) throws ConnectionException {
 		long startTime = System.currentTimeMillis();
 		
-		if (!wasInitialized) {
+		if (!hasInitialized) {
 			logger.info("Initializing library");
 			init();
 		}
@@ -305,7 +280,7 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 	}
 	
 	public void close() {
-		if (wasInitialized) {
+		if (hasInitialized) {
 			TransaqLibrary.UnInitialize();
 		}
 		DatabaseManager.dbThreadGroup.interrupt();
@@ -330,17 +305,16 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 	}
 
 	public void onConnect() {
-		LoadCandlesSchedule.scheduleLoadCandles();
+		//LoadCandlesSchedule.scheduleLoadCandles();
+	}
+	
+	public void onDisconnect() {
+		
 	}
 	
 	static {
-		onConnectEstablished.addObserver(new Observer<TransaqServer>() {
-			
-			@Override
-			public void update(TransaqServer transaqServer) {
-				transaqServer.onConnect();
-			}
-		});
+		onConnectEstablished.addObserver(ts -> ts.onConnect());
+		onDisconnected.addObserver(ts -> ts.onDisconnect());
 	}
 
 }

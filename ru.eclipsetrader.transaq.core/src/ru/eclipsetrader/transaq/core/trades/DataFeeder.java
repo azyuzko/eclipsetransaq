@@ -375,7 +375,7 @@ public class DataFeeder implements IDataFeedContext {
 	}
 
 	public static void main(String[] args) {
-		TQSymbol[] symbols = new TQSymbol[] {TQSymbol.BRU5};
+		TQSymbol[] symbols = new TQSymbol[] {TQSymbol.BRV5};
 		
 		Date fromDate = Utils.parseDate("03.08.2015 09:30:00.000");
 		Date toDate = Utils.parseDate("03.08.2015 12:15:00.000");

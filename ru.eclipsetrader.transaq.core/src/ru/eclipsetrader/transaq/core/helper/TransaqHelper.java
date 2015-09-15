@@ -11,8 +11,8 @@ import ru.eclipsetrader.transaq.core.candle.CandleList;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.candle.ICandleProcessContext;
 import ru.eclipsetrader.transaq.core.event.Observer;
+import ru.eclipsetrader.transaq.core.feed.TQDataFeed;
 import ru.eclipsetrader.transaq.core.indicators.MA;
-import ru.eclipsetrader.transaq.core.instruments.TQDataFeed;
 import ru.eclipsetrader.transaq.core.interfaces.IQuotesProcessingContext;
 import ru.eclipsetrader.transaq.core.model.PriceType;
 import ru.eclipsetrader.transaq.core.model.QuoteGlass;
@@ -30,7 +30,7 @@ public class TransaqHelper  {
 
 	Logger logger = LogManager.getLogger("TransaqHelper");
 	
-	TQSymbol symbol = TQSymbol.EDU5;
+	TQSymbol symbol = TQSymbol.EDZ5;
 	
 	QuoteGlass quoteGlass = new QuoteGlass(symbol);
 	CandleList cl_1M = new CandleList(symbol, CandleType.CANDLE_1M);

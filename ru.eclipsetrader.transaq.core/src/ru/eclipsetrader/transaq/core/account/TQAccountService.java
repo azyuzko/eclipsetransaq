@@ -19,6 +19,7 @@ import ru.eclipsetrader.transaq.core.model.internal.FortsPosition;
 import ru.eclipsetrader.transaq.core.model.internal.MoneyPosition;
 import ru.eclipsetrader.transaq.core.model.internal.Order;
 import ru.eclipsetrader.transaq.core.model.internal.SecurityPosition;
+import ru.eclipsetrader.transaq.core.orders.OrderCallback;
 import ru.eclipsetrader.transaq.core.orders.OrderRequest;
 import ru.eclipsetrader.transaq.core.orders.TQOrderTradeService;
 import ru.eclipsetrader.transaq.core.services.ITQAccountService;
@@ -50,7 +51,7 @@ public class TQAccountService implements ITQAccountService, Observer<Holder<Posi
 		@Override
 		public QuantityCost sell(TQSymbol symbol, int quantity) {
 			OrderRequest or = OrderRequest.createByMarketRequest(symbol, BuySell.S, quantity);
-			Order order = TQOrderTradeService.getInstance().createOrder(or);
+			Order order = TQOrderTradeService.getInstance().createOrder(or, new OrderCallback());
 			return new QuantityCost(order.getQuantity(), order.getPrice());
 		}
 		
@@ -60,12 +61,9 @@ public class TQAccountService implements ITQAccountService, Observer<Holder<Posi
 		}
 		
 		@Override
-		public Map<TQSymbol, QuantityCost> getPositions() {
-			Map<TQSymbol, QuantityCost> result = new HashMap<>();
-			for (String seccode : fortsPosition.keySet()) {
-				result.put(new TQSymbol(BoardType.FUT, seccode), new QuantityCost(fortsPosition.get(seccode).getTotalnet(), 0));
-			}
-			return result;
+		public int getPosition(TQSymbol symbol) {
+			FortsPosition fp = fortsPosition.get(symbol.getSeccode());
+			return fp != null ? fp.getTotalnet() : 0;
 		}
 		
 		@Override
@@ -75,21 +73,20 @@ public class TQAccountService implements ITQAccountService, Observer<Holder<Posi
 		
 		@Override
 		public QuantityCost close(TQSymbol symbol, double price) {
-
 			return null;
 		}
 		
 		@Override
 		public QuantityCost buy(TQSymbol symbol, int quantity) {
 			OrderRequest or = OrderRequest.createByMarketRequest(symbol, BuySell.B, quantity);
-			Order order = TQOrderTradeService.getInstance().createOrder(or);
+			Order order = TQOrderTradeService.getInstance().createOrder(or, new OrderCallback());
 			return new QuantityCost(order.getQuantity(), order.getPrice());
 		}
 
 		@Override
-		public Map<TQSymbol, QuantityCost> getInitialPositions() {
-			// TODO Auto-generated method stub
-			return null;
+		public int getInitialPosition(TQSymbol symbol) {
+			FortsPosition fp = fortsPosition.get(symbol.getSeccode());
+			return fp != null ? fp.getStartnet() : 0;
 		}
 	};
 	
@@ -122,7 +119,7 @@ public class TQAccountService implements ITQAccountService, Observer<Holder<Posi
 			moneyPosition.put(key, (MoneyPosition)position);
 			break;
 		case FORTS:
-			key = gapHolder.getSecond().get("market") + Constants.SEPARATOR + gapHolder.getSecond().get("seccode");
+			key = /*gapHolder.getSecond().get("market") + Constants.SEPARATOR + */gapHolder.getSecond().get("seccode");
 			position = fortsPosition.containsKey(key) ? fortsPosition.get(key)
 					: new FortsPosition(serverId);
 			fortsPosition.put(key, (FortsPosition)position);
@@ -208,14 +205,14 @@ public class TQAccountService implements ITQAccountService, Observer<Holder<Posi
 
 	public void persist() {
 		try {
-			DataManager.removeList(DataManager.getList(FortsMoneyPosition.class));
+			/*DataManager.removeList(DataManager.getList(FortsMoneyPosition.class));
 			DataManager.removeList(DataManager.getList(FortsPosition.class));
 			DataManager.removeList(DataManager.getList(MoneyPosition.class));
 			DataManager.removeList(DataManager.getList(SecurityPosition.class));
 			DataManager.mergeList(fortsMoneyPosition.values());
 			DataManager.mergeList(fortsPosition.values());
 			DataManager.mergeList(securityPosition.values());
-			DataManager.mergeList(moneyPosition.values());
+			DataManager.mergeList(moneyPosition.values());*/
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

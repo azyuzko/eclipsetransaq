@@ -50,14 +50,14 @@ public class SimpleAccount implements IAccount {
 	}
 	
 	@Override
-	public Map<TQSymbol, QuantityCost> getInitialPositions() {
-		return initialPositions;
+	public int getInitialPosition(TQSymbol symbol) {
+		return this.initialPositions.getOrDefault(symbol, new QuantityCost(0, 0)).getQuantity();
 	}
 	
 
 	@Override
-	public Map<TQSymbol, QuantityCost> getPositions() {
-		return positions;
+	public int getPosition(TQSymbol symbol) {
+		return positions.getOrDefault(symbol, new QuantityCost(0, 0)).getQuantity();
 	}
 
 	public IPricingFeeder getPricingFeeder() {

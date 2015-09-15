@@ -135,7 +135,9 @@ public class OrderHandler extends DefaultHandler {
 				case accruedint:	currentOrder.setAccruedint(Double.valueOf(value)); break;
 				case settlecode:	currentOrder.setSettlecode(value); break;
 				case balance:	currentOrder.setBalance(Integer.valueOf(value)); break;
-				case price:	currentOrder.setPrice(Double.valueOf(value)); break;
+				case price:	{
+					currentOrder.setPrice(Double.valueOf(value)); break;
+				}
 				case quantity: currentOrder.setQuantity(Integer.valueOf(value)); break;
 				case hidden:	currentOrder.setHidden(Integer.valueOf(value)); break;
 				case yield:	currentOrder.setYield(Double.valueOf(value)); break;
@@ -148,7 +150,13 @@ public class OrderHandler extends DefaultHandler {
 					break;
 				case condition:	currentOrder.setCondition(value);break;
 				case conditionvalue:	currentOrder.setConditionvalue(Double.valueOf(value)); break;
-				case validafter:	currentOrder.setValidafter(Utils.parseDate(value)); break;
+				case validafter:
+					if (!"0".equals(value)) {
+						currentOrder.setValidafter(Utils.parseDate(value)); 
+					} else {
+						// TODO разобраться с датой
+					}
+					break;
 				case validbefore:
 					if (!"0".equals(value)) {
 						currentOrder.setValidbefore(Utils.parseDate(value));

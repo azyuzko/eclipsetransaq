@@ -11,6 +11,8 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -75,7 +77,8 @@ public class DataManager {
 			+ " using (select ? board, ? seccode, ? candletype, ? startDate, ? open, ? high, ? low, ? close, ? volume, ? oi from dual) c2 "
 			+ " on (c1.board = c2.board and c1.seccode = c2.seccode and c1.candletype = c2.candletype and c1.startDate = c2.startDate)"
 			+ " when not matched then insert (board, seccode, candletype, startDate, open, high, low, close, volume, oi)"
-			+ " values (c2.board, c2.seccode, c2.candletype, c2.startDate, c2.open, c2.high, c2.low, c2.close, c2.volume, c2.oi)";
+			+ " values (c2.board, c2.seccode, c2.candletype, c2.startDate, c2.open, c2.high, c2.low, c2.close, c2.volume, c2.oi)"
+			+ " when matched then update set open = c2.open, close = c2.close, low = c2.low, high = c2.high, volume = c2.volume, oi = c2.oi";
 	final static String CANDLES_SELECT_SQL = "select startDate, open, high, low, close, volume, oi from candles c where c.board = ? and c.seccode = ? and c.candletype = ?"
 			+ " and c.startDate between ? and ?";
 	
@@ -116,6 +119,12 @@ public class DataManager {
 			em.getTransaction().rollback();
 			e.printStackTrace();
 		}
+		Collections.sort(result, new Comparator<Candle>() {
+			@Override
+			public int compare(Candle o1, Candle o2) {
+				return o1.getDate().compareTo(o2.getDate());
+			}
+		});
 		return result;
 	}
 	
@@ -631,66 +640,21 @@ public class DataManager {
 	
 	public static void main(String[] args) {
 		
+		TQSymbol symbol = TQSymbol.BRV5;
+		Date date = Utils.parseDate("04.08.2015 10:00:00.000");
+		CandleType candleType = CandleType.CANDLE_1H;
+		Candle candle = new Candle();
+		candle.setDate(date);
+		// <candle date="04.08.2015 10:00:00.000" open="50.42" close="50.64" high="50.77" oi="20676" low="50.41" volume="2397"/>
+		candle.setOpen(50.42);
+		candle.setClose(50.64);
+		candle.setHigh(50.77);
+		candle.setLow(50.41);
+		candle.setVolume(2397);
+		candle.setOi(20676);
 		
-		Date fromDate = Utils.parseDate("03.08.2015 09:30:00.000");
-		Date toDate = Utils.parseDate("03.08.2015 12:15:00.000");
-		TQSymbol[] symbols = new TQSymbol[] { TQSymbol.SiU5, TQSymbol.BRU5} ;
-		List<Quote> ql = getQuoteList(fromDate, toDate, symbols);
-		List<TickTrade> tl = getTickList(fromDate, toDate, symbols);
-		List<SymbolGapMap> gl = getQuotationGapList(fromDate, toDate, symbols);
-		System.out.println("QL size = " + ql.size());
-		System.out.println("TL size = " + tl.size());
-		System.out.println("GL size = " + gl.size());
-		
-		System.out.println(Utils.getMemoryDetails());
-		
-		/*List<TickTrade> list = new ArrayList<TickTrade>();
-		TickTrade tt = new TickTrade();
-		Utils.generateStub(tt);
-		list.add(tt);
-		
-		batchTickList(list);*/
-		
-		/*for (String id : (List<String>)DataManager.executeQuery("select s.id from Server s")) {
-			System.out.println(id);
-		}
-		
-		/*List<Market> ml = DataManager.getServerObjectList(Market.class, "PROD");
-		for (Market m : ml) {
-			System.out.println(m.toString());
-		}
-		
-		Trade t = new Trade();
-		t = Utils.generateStub(t);
-		System.out.println(t);
-		persistTrade(t);
-		
-		Order o = new Order();
-		o = Utils.generateStub(o);
-		persistOrder(o);
+		batchCandles(symbol, candleType, Arrays.asList(candle));
 	
-		XMLDataEvent xmlDataEvent = new XMLDataEvent();
-		xmlDataEvent = Utils.generateStub(xmlDataEvent);
-		xmlDataEvent.setId(null);
-		xmlDataEvent.setSessionId(UUID.randomUUID().toString());
-		System.out.println(Utils.toString(xmlDataEvent));
-		persist(xmlDataEvent);
-		
-		SecurityPosition sp = new SecurityPosition();
-		sp = Utils.generateStub(sp);
-		sp.setRegister(sp.getRegister());
-		merge(sp);
-		
-		
-		Signal s = new Signal();
-		s.setBuySell(BuySell.B);
-		s.setByMarket(false);
-		s.setPrice(123.45);
-		s.setQuantity(23);
-		s.setStrategy("BR1_TST");
-		s.setTime(new Date());
-		
-		DataManager.persist(s);*/
 	}
 	
 	

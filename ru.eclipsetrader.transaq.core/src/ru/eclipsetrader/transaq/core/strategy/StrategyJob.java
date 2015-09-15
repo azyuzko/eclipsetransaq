@@ -33,7 +33,7 @@ public class StrategyJob implements Callable<Holder<Double, String>> {
 	public Holder<Double, String> call() {
 	
 		HashMap<TQSymbol, QuantityCost> initPositions = new HashMap<>();
-		initPositions.put(TQSymbol.SiU5, new QuantityCost(1, 0));
+		initPositions.put(TQSymbol.SiZ5, new QuantityCost(1, 0));
 		SimpleAccount account = new SimpleAccount(INITIAL_AMOUNT, strategy, initPositions);
 		
 		// dataFeeder.feed(FeedType.TICKS, strategy, account);
