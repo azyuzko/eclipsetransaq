@@ -1,5 +1,6 @@
 package ru.eclipsetrader.transaq.core.model;
 
+
 public enum OrderStatus {
 	none,
 	active, // Активная
@@ -17,11 +18,12 @@ public enum OrderStatus {
 	wait, // Не наступило время активации
 	watching, // Ожидает наступления условия
 	
-	sl_executed,
-	sl_guardtime,
-	sl_forwarding,
+	sl_executed, // sl исполнен
+	sl_guardtime, // сработало защтное время sl
+	sl_forwarding, //
 	tp_executed,
 	tp_guardtime,
 	tp_forwarding,
-	linkwait;
+	linkwait; // ждет исполнения связанной заявки
+	
 }

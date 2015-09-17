@@ -20,13 +20,14 @@
    <vm>
    </vm>
 
+
    <plugins>
-      <plugin id="org.eclipse.ecf.console"/>
-      <plugin id="org.eclipse.ecf.osgi.services.distribution"/>
-      <plugin id="org.eclipse.ecf.osgi.services.remoteserviceadmin"/>
+      <plugin id="com.tictactec.ta.lib"/>
+      <plugin id="org.apache.felix.gogo.runtime"/>
+      <plugin id="org.apache.felix.gogo.shell"/>
+      <plugin id="org.eclipse.core.runtime"/>
       <plugin id="org.eclipse.equinox.console"/>
       <plugin id="org.eclipse.osgi"/>
-      <plugin id="org.eclipse.osgi.services"/>
       <plugin id="org.eclipse.osgi.util"/>
       <plugin id="ru.eclipsetrader.transaq.core"/>
    </plugins>

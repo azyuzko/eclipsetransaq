@@ -23,10 +23,10 @@ public class InvestingUtils {
 	static String URL = "http://ru.investing.com/common/technical_summary/api.php?action=TSB_updatePairs&pairs=$1&timeframe=$2";
 
 
-	public static Map<InvestingSymbol, InvestingRequest> parse(String data) {
+	public static Map<InvestingSymbol, InvestingCall> parse(String data) {
 		JSONObject obj = new JSONObject(data);
 		// InvestingSecurity.get(symbol).getCode()
-		Map<InvestingSymbol, InvestingRequest> result = new HashMap<InvestingSymbol, InvestingRequest>();
+		Map<InvestingSymbol, InvestingCall> result = new HashMap<InvestingSymbol, InvestingCall>();
 		for (String key : obj.keySet()) {
 			InvestingSymbol invSymbol = InvestingSymbol.getInvSymbol(Integer.valueOf(key));
 			if (invSymbol == null) continue;
@@ -36,7 +36,7 @@ public class InvestingUtils {
 			String updateTime = symObj.getString("updateTime");
 			double price = Double.valueOf(last.replace(".", "").replace(",", "."));
 			String hint = row.getString("ma");
-			InvestingRequest hr = new InvestingRequest();
+			InvestingCall hr = new InvestingCall();
 			hr.date = new Date();
 			hr.price = price;
 			hr.signal = InvestingState.fromString(hint);

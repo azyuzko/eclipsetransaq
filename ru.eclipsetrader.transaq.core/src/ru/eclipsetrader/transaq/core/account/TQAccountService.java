@@ -49,6 +49,14 @@ public class TQAccountService implements ITQAccountService, Observer<Holder<Posi
 	IAccount fortsAccount = new IAccount() {
 		
 		@Override
+		public String toString() {
+			StringBuilder sb = new StringBuilder();
+			sb.append("Free: " + getFree() + "\n");
+			fortsPosition.values().forEach(fp -> sb.append(fp.getSeccode() + " TotalNet:" + fp.getTotalnet() + " VarMargin:" + fp.getVarmargin()));
+			return sb.toString();
+		};
+		
+		@Override
 		public QuantityCost sell(TQSymbol symbol, int quantity) {
 			OrderRequest or = OrderRequest.createByMarketRequest(symbol, BuySell.S, quantity);
 			Order order = TQOrderTradeService.getInstance().createOrder(or, new OrderCallback());
@@ -205,12 +213,13 @@ public class TQAccountService implements ITQAccountService, Observer<Holder<Posi
 
 	public void persist() {
 		try {
-			/*DataManager.removeList(DataManager.getList(FortsMoneyPosition.class));
 			DataManager.removeList(DataManager.getList(FortsPosition.class));
+			DataManager.mergeList(fortsPosition.values());
+			
+			/*DataManager.removeList(DataManager.getList(FortsMoneyPosition.class));
 			DataManager.removeList(DataManager.getList(MoneyPosition.class));
 			DataManager.removeList(DataManager.getList(SecurityPosition.class));
 			DataManager.mergeList(fortsMoneyPosition.values());
-			DataManager.mergeList(fortsPosition.values());
 			DataManager.mergeList(securityPosition.values());
 			DataManager.mergeList(moneyPosition.values());*/
 		} catch (Exception e) {

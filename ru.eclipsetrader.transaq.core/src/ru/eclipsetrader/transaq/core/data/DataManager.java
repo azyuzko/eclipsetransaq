@@ -530,7 +530,12 @@ public class DataManager {
 		try {
 			em.getTransaction().begin();
 			for (T t : tList) {
-				t = em.merge(t);
+				try {
+					T t_m = em.merge(t);
+				} catch (Exception e) {
+					System.err.println("Merge error on :" + Utils.toString(t) + "\n--\n");
+					throw e;
+				}
 			}
 			em.flush();
 			em.getTransaction().commit();
@@ -583,6 +588,7 @@ public class DataManager {
 			em.getTransaction().begin();
 			for (T t : list) {
 				em.remove(t);
+				System.out.println("Removed from DB: " + t);
 			}
 			em.flush();
 			em.getTransaction().commit();

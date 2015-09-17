@@ -26,6 +26,7 @@ public class OrderRequest {
 	private Date expdate;
 	
 	private Order order; // созданный по запросу ордер
+	private String errorMessage;
 	
 	private OrderRequest(TQSymbol symbol, BuySell bs, int quantity) {
 		this.symbol = symbol;
@@ -71,6 +72,14 @@ public class OrderRequest {
 
 	public void setOrder(Order order) {
 		this.order = order;
+	}
+
+	public String getErrorMessage() {
+		return errorMessage;
+	}
+
+	public void setErrorMessage(String errorMessage) {
+		this.errorMessage = errorMessage;
 	}
 
 	public TQSymbol getSymbol() {

@@ -19,15 +19,9 @@
 	</Appenders>
 	<Loggers>
 		<logger name="TQCandleService"	level="debug" />
-		<logger name="ru.eclipsetrader.transaq.core.schedule.LoadCandlesSchedule"	level="info" />
-		<logger name="ru.eclipsetrader.transaq.core.library.TransaqLibrary"	level="info" />
-		<logger name="ru.eclipsetrader.transaq.core.orders.TQOrderTradeService"	level="info" />
-		<logger name="ru.eclipsetrader.transaq.core.instruments.Instrument"	level="info" />
-		<logger name="XMLTrace"	level="error" />
-		<logger name="Instrument"	level="info" />
+		<logger name="XMLTrace"	level="warn" />
 		<logger name="InvestingStrategy"	level="info" />		
 		<logger name="InvestingSecurity"	level="info" />
-		<logger name="Strategy"	level="info"/>
 		<Root level="info">
 			<AppenderRef ref="Console" />
 			

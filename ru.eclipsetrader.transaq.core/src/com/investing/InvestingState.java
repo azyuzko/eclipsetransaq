@@ -37,14 +37,9 @@ public enum InvestingState {
 			return "--";
 		}
 	}
-	
-	public int getCountFrom(InvestingState fromState) {
-		return this.value - fromState.value;
-	}
-	
-	public static void main(String[] args) {
-		System.out.println(InvestingState.ACTIVEBUY.getCountFrom(InvestingState.ACTIVESELL));
-		System.out.println(InvestingState.ACTIVESELL.getCountFrom(InvestingState.ACTIVEBUY));
+
+	public int getValue() {
+		return value;
 	}
 	
 }

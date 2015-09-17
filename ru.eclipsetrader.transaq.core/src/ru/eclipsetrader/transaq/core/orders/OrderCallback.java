@@ -35,5 +35,8 @@ public class OrderCallback{
 		logger.info("EXECUTED " + order.getOrderDesc());
 	}
 
+	public void onOrderMoved(Order oldOrder, Order newOrder) {
+		logger.info("Order moved from <" + oldOrder.getOrderDesc() + "> to <" + newOrder.getOrderDesc() + ">");
+	}
 	
 }

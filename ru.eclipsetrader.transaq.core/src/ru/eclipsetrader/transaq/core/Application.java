@@ -4,15 +4,8 @@ import org.eclipse.equinox.app.IApplication;
 import org.eclipse.equinox.app.IApplicationContext;
 import org.osgi.framework.BundleContext;
 
-@SuppressWarnings("restriction")
 public class Application implements IApplication {
-	
-	private static final String DEFAULT_CONTAINER_TYPE = "ecf.r_osgi.peer";
-	public static final String DEFAULT_CONTAINER_ID = "r-osgi://localhost:9278";
-
-	private static String containerType = DEFAULT_CONTAINER_TYPE;
-	private static String containerId = DEFAULT_CONTAINER_ID;
-	
+		
 	private BundleContext bundleContext;
 	private final Object appLock = new Object();
 	private boolean done = false;
@@ -35,6 +28,10 @@ public class Application implements IApplication {
 				}
 			}
 		}
+	}
+	
+	public BundleContext getContext() {
+		return bundleContext;
 	}
 
 	@Override

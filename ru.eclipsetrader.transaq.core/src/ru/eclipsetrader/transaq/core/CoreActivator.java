@@ -84,10 +84,7 @@ public class CoreActivator implements BundleActivator {
 	public void registerCommandProvider() {
 		TransaqCommandProvider commandProvider = new TransaqCommandProvider();
 		Dictionary<String, Object> props = new Hashtable<>();
-		props.put(org.osgi.framework.Constants.SERVICE_RANKING, new Integer(
-				Integer.MAX_VALUE - 100));
-		context.registerService(CommandProvider.class.getName(),
-				commandProvider, props);
+		context.registerService(CommandProvider.class.getName(), commandProvider, props);
 		System.out.println("Transaq Core: Command Provider Registered");
 	}
 

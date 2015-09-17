@@ -7,8 +7,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -80,7 +78,7 @@ public class MarketSchedule {
 	public static MarketSchedule createTransaqSchedule() {
 		MarketSchedule ms = new MarketSchedule();
 		for (DayOfWeek dayOfWeek : Arrays.asList(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY)) {
-			ms.tradeSchedule.add(	new Period(dayOfWeek, TimePeriod.of("10:00", "13:55"), TimePeriod.of("14:00", "18:45"), TimePeriod.of("19:00", "23:45")) );
+			ms.tradeSchedule.add(	new Period(dayOfWeek, TimePeriod.of("10:00", "14:00"), TimePeriod.of("14:05", "18:45"), TimePeriod.of("19:00", "23:45")) );
 			ms.connectSchedule.add(	new Period(dayOfWeek, TimePeriod.of("09:45", "23:45")) );
 		}
 		return ms;

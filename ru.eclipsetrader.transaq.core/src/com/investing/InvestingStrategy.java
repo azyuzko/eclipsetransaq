@@ -49,6 +49,7 @@ public class InvestingStrategy implements Runnable {
 		logger.info("Starting HelpRequestData service...");
 		ses.scheduleAtFixedRate(this, 5, 5, TimeUnit.SECONDS);
 		list.stream().forEach(s -> s.onStart());
+		paused = false;
 	}
 	
 	public InvestingSecurity getInvesingSecurity(InvestingSymbol investingSymbol) {
@@ -57,18 +58,22 @@ public class InvestingStrategy implements Runnable {
 
 	@Override
 	public void run() {
-		logger.debug("Running HelpRequestData call...");
-		try {
-			Map<Integer, List<InvestingSecurity>> periodMap = list.stream().collect(Collectors.groupingBy(s -> Integer.valueOf(s.getRequestPeriod())));
-
-			for (Integer period : periodMap.keySet()) {
-				String callResult = InvestingUtils.callRest(periodMap.get(period).stream().map(is -> is.getInvestingSymbol()).collect(Collectors.toList()), period);
-				Map<InvestingSymbol, InvestingRequest> result = InvestingUtils.parse(callResult);
-				result.forEach((a,b) -> getInvesingSecurity(a).processRequest(b));
+		if (!paused) {
+			logger.debug("Running HelpRequestData call...");
+			try {
+				Map<Integer, List<InvestingSecurity>> periodMap = list.stream().collect(Collectors.groupingBy(s -> Integer.valueOf(s.getRequestPeriod())));
+	
+				for (Integer period : periodMap.keySet()) {
+					String callResult = InvestingUtils.callRest(periodMap.get(period).stream().map(is -> is.getInvestingSymbol()).collect(Collectors.toList()), period);
+					Map<InvestingSymbol, InvestingCall> result = InvestingUtils.parse(callResult);
+					result.forEach((a,b) -> getInvesingSecurity(a).processRequest(b));
+				}
+				logger.debug("Completed!");
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
-			logger.debug("Completed!");
-		} catch (Exception e) {
-			e.printStackTrace();
+		} else {
+			logger.debug("Paused..");
 		}
 	}
 

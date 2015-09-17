@@ -27,6 +27,7 @@ import ru.eclipsetrader.transaq.core.trades.TQTickTradeService;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 import com.investing.InvestingStrategy;
+import com.investing.SignalProcessor;
 
 public class TransaqCommandProvider implements CommandProvider {
 
@@ -208,18 +209,21 @@ public class TransaqCommandProvider implements CommandProvider {
 			//}
 			break;
 		}
-		
 	
 		case "createorder": {
-			OrderRequest orderRequest = OrderRequest.createRequest(TQSymbol.BRV5, BuySell.B, 10.50, 1);
-			Order order = TQOrderTradeService.getInstance().createOrder(orderRequest, new OrderCallback() {
-				@Override
-				public void onCreateError(OrderRequest orderRequest,
-						Order order, String error) {
-					System.err.println("Create error " + error + "\n" + orderRequest + "\n" + order);
-				}
-			});
-			System.out.println("order = " + order);
+			/*SignalProcessor sp = new SignalProcessor(TQSymbol.EDZ5, 1);
+			sp.init();*/
+			OrderRequest orderRequest = OrderRequest.createRequest(TQSymbol.EDZ5, BuySell.S, 1.1255, 1);
+			TQOrderTradeService.getInstance().createOrder(orderRequest, new OrderCallback());
+			/*sp.processOrder(orderRequest);*/
+			break;
+		}
+		
+		case "moveorder": {
+			String orderno = ci.nextArgument();
+			Double price = Double.valueOf(ci.nextArgument());
+			//Integer quantity = Integer.valueOf(ci.nextArgument());
+			TQOrderTradeService.getInstance().moveOrder(orderno, price);
 			break;
 		}
 		

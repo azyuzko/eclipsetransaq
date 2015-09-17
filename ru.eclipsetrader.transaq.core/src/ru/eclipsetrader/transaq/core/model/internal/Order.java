@@ -22,7 +22,6 @@ import ru.eclipsetrader.transaq.core.orders.OrderCallback;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 import com.google.common.base.MoreObjects;
-import com.sun.org.apache.xpath.internal.operations.Or;
 
 @Table(name="orders")
 @Entity

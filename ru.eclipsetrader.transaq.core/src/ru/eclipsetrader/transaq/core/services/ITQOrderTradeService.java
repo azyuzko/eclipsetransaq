@@ -16,11 +16,8 @@ public interface ITQOrderTradeService {
 	Order getOrderByServerNo(String orderno);
 	
 	Order createOrder(OrderRequest orderRequest, OrderCallback callback);
-	
 	void cancelOrder(String orderno);
-	
-	void moveOrder(String orderno, double newPrice);
-	void moveOrder(String orderno, double newPrice, int quantity);
+	Order moveOrder(String orderno, double newPrice);
 	
 	StopOrder getStopOrderById(String transactionId);
 	

@@ -32,6 +32,8 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 	// список отправленных НА БИРЖУ запросов на создание заявки
 	// ключ - transactionId
 	Map<OrderRequest, OrderCallback> createRequests = Collections.synchronizedMap(new WeakHashMap<OrderRequest, OrderCallback>());
+	
+	Map<MoveOrderRequest, OrderCallback> moveOrderRequests = Collections.synchronizedMap(new WeakHashMap<MoveOrderRequest, OrderCallback>());
 
 	// ключ - orderNo
 	private Map<String, Order> orders = Collections.synchronizedMap(new HashMap<String, Order>());
@@ -72,6 +74,13 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 					callback.onCreated(orderRequest, order);
 					DataManager.merge(order);
 					return;
+				}
+			} else {
+				Optional<MoveOrderRequest> moveOrderOptional = moveOrderRequests.keySet().stream().filter(or -> or.getNewPrice() == order.getPrice()).findFirst();
+				if (moveOrderOptional.isPresent()) {
+					MoveOrderRequest moveOrderRequest = moveOrderOptional.get();
+					moveOrderRequest.movedOrder = order;
+					moveOrderRequests.remove(moveOrderRequests).onOrderMoved(moveOrderRequest.getOrder(), order);
 				}
 			}
 		}
@@ -183,13 +192,14 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 	@Override
 	public Order createOrder(OrderRequest orderRequest, OrderCallback callback) {
 		synchronized (orderRequest) {
-			/*if (orderRequest.getOrder() != null) {
+			if (orderRequest.getOrder() != null) {
 				throw new RuntimeException("OrderRequest <" + orderRequest.toString() + "> already has created order <" + orderRequest.getOrder().getOrderDesc() + ">");
-			}*/
+			}
 			String command = orderRequest.createNewOrderCommand();
 			logger.warn(orderRequest.getSymbol() + " Create new "  + orderRequest.getBuysell() + " order: " + command);						
 			CommandResult result = TransaqLibrary.SendCommand(command);
 			if (result.getTransactionId() == null || result.getTransactionId().isEmpty()) {
+				orderRequest.setErrorMessage(result.getMessage());
 				callback.onTransaqError(result);
 				return null;
 			}
@@ -198,17 +208,18 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 			createRequests.put(orderRequest, new OrderCallback() {
 				@Override
 				public void onCreated(OrderRequest orderRequest, Order order) {
+					callback.onCreated(orderRequest, order);
 					synchronized (orderRequest) {
 						orderRequest.notify();
 					}
-					callback.onCreated(orderRequest, order);
 				}
 				@Override
-				public void onCreateError(OrderRequest orderRequest,Order order, String error) {
+				public void onCreateError(OrderRequest orderRequest, Order order, String error) {
+					orderRequest.setErrorMessage(error);
+					callback.onCreateError(orderRequest, order, error);
 					synchronized (orderRequest) {
 						orderRequest.notify();
 					}
-					callback.onCreateError(orderRequest, order, error);
 				}
 			});
 			
@@ -251,52 +262,47 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 
 	}
 
-	
-	/**
-	 * Передвинуть ордер
-	 * moveflag = 
-	 * 0: не менять количество;
-	 * 1: изменить количество;
-	 * 2: при несовпадении количества с текущим – снять заявку.
-	 * @param transactionId
-	 * @param newPrice
-	 * @param quantity
-	 * @return
-	 */
-	
 	@Override
-	public void moveOrder(String orderno, double newPrice, int quantity) {
+	public Order moveOrder(String orderno, double newPrice) {
 		Order order = orders.get(orderno);
 		if (order != null) {
 			if (order.tryLock()) {
 				try {
-					String command = 
-						  "<command id=\"moveorder\">"
-						+ "<transactionid>" + order.getTransactionid() + "</transactionid>"
-						+ "<price>" + newPrice + "</price>"
-						+ "<moveflag>1</moveflag>"
-						+ "<quantity>" + quantity + "</quantity>"
-						+ "</command>";
+					if (order.getStatus() != OrderStatus.active) {
+						System.err.println("Cannot move order with status = " + order.getStatus());
+						return null;
+					}
+					MoveOrderRequest moveOrderRequest = new MoveOrderRequest(order, newPrice, 0); 
+					String command = moveOrderRequest.createRequest();
 					CommandResult result = TransaqLibrary.SendCommand(command);
 					if (!result.isSuccess()) {
 						order.onTransaqError(result);
 					}
+					moveOrderRequests.put(moveOrderRequest, new OrderCallback() {
+						@Override
+						public void onOrderMoved(Order oldOrder, Order newOrder) {
+							synchronized (moveOrderRequest) {
+								moveOrderRequest.notify();
+							}
+						}
+					});
+					synchronized (moveOrderRequest) {
+						try {
+							moveOrderRequest.wait(TIMEOUT);
+							return moveOrderRequest.getMovedOrder();
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+							moveOrderRequests.remove(moveOrderRequest);
+							return null;
+						}
+					}
+					
 				} finally {
 					order.unlock();
 				}
 			} else {
 				throw new RuntimeException("moveOrder failed! Order " + orderno + " already locked for another operation");
 			}
-		} else {
-			throw new RuntimeException("Order not found = " + orderno);
-		}
-	}
-	
-	@Override
-	public void moveOrder(String orderno, double newPrice) {
-		Order order = orders.get(orderno);
-		if (order != null) {
-			moveOrder(orderno, newPrice, order.getQuantity());
 		} else {
 			throw new RuntimeException("Order not found = " + orderno);
 		}

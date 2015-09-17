@@ -23,7 +23,8 @@ Bundle-ClassPath: lib/jna-platform.jar,
  lib/junit-4.12.jar,
  lib/commons-beanutils-1.9.2-javadoc.jar,
  lib/commons-beanutils-1.9.2.jar,
- lib/json-20141113.jar
+ lib/json-20141113.jar,
+ lib/mail.jar
 Bundle-NativeCode: 
  /win32-x86/txmlconnector.dll;processor=x86
  /win32-x86-64/txmlconnector64.dll;processor=x86_64  
