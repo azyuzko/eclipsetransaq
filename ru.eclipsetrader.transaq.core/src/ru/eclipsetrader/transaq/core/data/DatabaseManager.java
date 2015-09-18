@@ -1,17 +1,13 @@
 package ru.eclipsetrader.transaq.core.data;
 
-import java.sql.DriverManager;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
-import oracle.jdbc.driver.OracleConnection;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import ru.eclipsetrader.transaq.core.Settings;
 import ru.eclipsetrader.transaq.core.model.Quote;
 import ru.eclipsetrader.transaq.core.model.XMLDataEvent;
 import ru.eclipsetrader.transaq.core.model.XMLDataEvent.Direction;
@@ -22,8 +18,6 @@ import ru.eclipsetrader.transaq.core.util.Utils;
 public class DatabaseManager  {
 
 	// Logger logger = LogManager.getLogger("DatabaseManager");
-	
-	public static ThreadGroup dbThreadGroup = new ThreadGroup("DB thread group");
 	
 	public static final int DB_QUEUE_SIZE = 200;
 	public static final int DB_XMLDATA_QUEUE_SIZE = 1000;

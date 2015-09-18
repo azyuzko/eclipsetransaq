@@ -18,13 +18,13 @@
 	    </File>
 	</Appenders>
 	<Loggers>
-		<logger name="TQCandleService"	level="debug" />
+		<logger name="TransaqScheduleService"	level="debug" />
 		<logger name="XMLTrace"	level="warn" />
 		<logger name="InvestingStrategy"	level="info" />		
 		<logger name="InvestingSecurity"	level="info" />
 		<Root level="info">
 			<AppenderRef ref="Console" />
-			
 		</Root>
 	</Loggers>
 </Configuration>
+

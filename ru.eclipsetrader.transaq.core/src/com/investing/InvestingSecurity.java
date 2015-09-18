@@ -26,10 +26,6 @@ public class InvestingSecurity {
 		this.timeframe = timeframe;
 		this.signalProcessor = new SignalProcessor(symbol, operQuantity);
 	}
-	
-	public String getDesc() {
-		return "ST_IV_" + timeframe;
-	}
 		
 	public void processRequest(InvestingCall investingRequest) {
 		InvestingCall current = investingRequest;
@@ -37,12 +33,9 @@ public class InvestingSecurity {
 		if (requests.size() > 0) {
 			InvestingCall last = requests.get(requests.size()-1);
 			if (last.signal != current.signal) {
-				InvestingSignal investingSignal = new InvestingSignal(timeframe, last.signal, current.signal, getDesc());
-				signalProcessor.changeState(investingSignal);
+				InvestingSignal investingSignal = new InvestingSignal(investingSymbol, current.price, timeframe, current.signal);
+				signalProcessor.processSignal(investingSignal);
 			}
-		} else {
-			InvestingSignal investingSignal = new InvestingSignal(timeframe, current.signal, current.signal, getDesc());
-			signalProcessor.changeState(investingSignal);
 		}
 		requests.add(current);
 	}

@@ -10,15 +10,15 @@ import junit.framework.TestCase;
 
 import org.junit.Test;
 
-import ru.eclipsetrader.transaq.core.interfaces.ITransaqServer;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
+import ru.eclipsetrader.transaq.core.server.TransaqServer;
 import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class TestCandleService extends TestCase {
 
 	TQSymbol symbol = TQSymbol.BRV5;
 	TQCandleService instance;
-	ITransaqServer server;
+	TransaqServer server;
 	Date fromDate = Utils.parseDate("04.08.2015 10:00:00.000");
 	Date toDate = Utils.parseDate("04.08.2015 12:00:00.000");
 

@@ -1,5 +1,6 @@
 package ru.eclipsetrader.transaq.core.osgi;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.eclipse.osgi.framework.console.CommandInterpreter;
@@ -10,6 +11,7 @@ import ru.eclipsetrader.transaq.core.candle.Candle;
 import ru.eclipsetrader.transaq.core.candle.CandleType;
 import ru.eclipsetrader.transaq.core.candle.TQCandleService;
 import ru.eclipsetrader.transaq.core.exception.ConnectionException;
+import ru.eclipsetrader.transaq.core.model.BoardType;
 import ru.eclipsetrader.transaq.core.model.BuySell;
 import ru.eclipsetrader.transaq.core.model.TQSymbol;
 import ru.eclipsetrader.transaq.core.model.internal.Order;
@@ -21,6 +23,7 @@ import ru.eclipsetrader.transaq.core.orders.TQOrderTradeService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuotationService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuoteService;
 import ru.eclipsetrader.transaq.core.securities.TQSecurityService;
+import ru.eclipsetrader.transaq.core.server.TransaqScheduleService;
 import ru.eclipsetrader.transaq.core.server.TransaqServer;
 import ru.eclipsetrader.transaq.core.strategy.Strategy;
 import ru.eclipsetrader.transaq.core.trades.TQTickTradeService;
@@ -188,25 +191,16 @@ public class TransaqCommandProvider implements CommandProvider {
 			break;
 		}
 		
-		case "loadcandlesall": {
-			String timespan = ci.nextArgument();
-			if (timespan == null) {
-				ci.println("Timespan required");
-				return;
-			}
-			String count = ci.nextArgument();
-			String reset = ci.nextArgument();
+		case "loadcandles": {
+			String code = ci.nextArgument();
+			TQSymbol symbol = new TQSymbol(BoardType.FUT, code);
 			
-			CandleType candleType = CandleType.valueOf(("CANDLE_" + timespan).toUpperCase());
-			//for (TQSymbol symbol : TQSymbol.workingSymbolSet()) {
-			TQSymbol symbol = TQSymbol.BRV5;
+			for (CandleType candleType : Arrays.asList(CandleType.CANDLE_1M, CandleType.CANDLE_5M, CandleType.CANDLE_15M, CandleType.CANDLE_1H, CandleType.CANDLE_1D)) {
 				System.out.println("get candles for " + symbol + " " + candleType);
-				List<Candle> candles = TQCandleService.getInstance().getHistoryData(symbol, candleType, 
-						count == null ? 86400 / candleType.getSeconds() : Integer.valueOf(count), // по умолчанию за день
-						reset == null ? true : Boolean.valueOf(reset));
+				int count = 10000;
+				List<Candle> candles = TQCandleService.getInstance().getHistoryData(symbol, candleType, count, true);
 				System.out.println("received candles from " + candles.get(0).getDate() + " to " + candles.get(candles.size()-1).getDate());
-				// TQCandleService.getInstance().persist(symbol, candleType, candles);
-			//}
+			}
 			break;
 		}
 	
@@ -224,6 +218,12 @@ public class TransaqCommandProvider implements CommandProvider {
 			Double price = Double.valueOf(ci.nextArgument());
 			//Integer quantity = Integer.valueOf(ci.nextArgument());
 			TQOrderTradeService.getInstance().moveOrder(orderno, price);
+			break;
+		}
+		
+		case "start": {
+			TransaqScheduleService tss = new TransaqScheduleService();
+			tss.start();
 			break;
 		}
 		

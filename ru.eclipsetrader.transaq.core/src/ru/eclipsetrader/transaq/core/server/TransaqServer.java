@@ -2,6 +2,7 @@ package ru.eclipsetrader.transaq.core.server;
 
 import java.io.Closeable;
 import java.io.StringReader;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -26,18 +27,15 @@ import ru.eclipsetrader.transaq.core.event.Event;
 import ru.eclipsetrader.transaq.core.exception.CommandException;
 import ru.eclipsetrader.transaq.core.exception.ConnectionException;
 import ru.eclipsetrader.transaq.core.exception.UnimplementedException;
-import ru.eclipsetrader.transaq.core.interfaces.ITransaqServer;
 import ru.eclipsetrader.transaq.core.library.TransaqLibrary;
 import ru.eclipsetrader.transaq.core.model.ConnectionStatus;
 import ru.eclipsetrader.transaq.core.model.internal.CommandResult;
 import ru.eclipsetrader.transaq.core.model.internal.Server;
 import ru.eclipsetrader.transaq.core.model.internal.ServerSession;
-import ru.eclipsetrader.transaq.core.model.internal.ServerStatus;
 import ru.eclipsetrader.transaq.core.orders.TQOrderTradeService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuotationService;
 import ru.eclipsetrader.transaq.core.quotes.TQQuoteService;
 import ru.eclipsetrader.transaq.core.securities.TQSecurityService;
-import ru.eclipsetrader.transaq.core.server.command.ChangePasswordCommand;
 import ru.eclipsetrader.transaq.core.server.command.Command;
 import ru.eclipsetrader.transaq.core.trades.TQTickTradeService;
 import ru.eclipsetrader.transaq.core.util.Utils;
@@ -45,7 +43,7 @@ import ru.eclipsetrader.transaq.core.xml.handler.XMLHandler;
 
 import com.sun.jna.Pointer;
 
-public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Closeable {
+public class TransaqServer implements com.sun.jna.Callback, Closeable {
 	
 	static Logger logger = LogManager.getFormatterLogger(TransaqServer.class);
 	static Logger xmlLogger = LogManager.getFormatterLogger("XMLTrace");
@@ -54,9 +52,12 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 	private Server server;
 	String serverId;
 	volatile boolean hasInitialized = false;
-	volatile int timeDiff = 0; // разница между текущим и серверным временем 
+	volatile int timeDiff = 0; // разница между текущим и серверным временем
+	volatile boolean isOvernight = false;
 	SAXParser parser;
 
+	MarketSchedule marketSchedule = MarketSchedule.createTransaqSchedule();
+	
 	private Object statusLock = new Object();
 		
 	final EventHolder eventHolder = new EventHolder();
@@ -86,7 +87,7 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 
 		eventHolder.onServerStatusChange.addObserver((newStatus) -> {
 			try {
-				updateServerStatus(newStatus);
+				updateServerStatus(newStatus.getStatus(), newStatus.getError());
 			} catch (Exception e) {
 				e.printStackTrace();
 			} finally {
@@ -101,7 +102,9 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 		});
 		
 		eventHolder.onOvernightChange.addObserver((isOvernight) -> {
-			System.err.println(String.format("isOvernight is %s", isOvernight));
+			if (isOvernight != this.isOvernight) {
+				System.err.println(String.format("isOvernight has changed to %s", isOvernight));
+			}
 		});
 		
 				
@@ -136,11 +139,11 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 		}
 	}
 	
-	public void updateServerStatus(ServerStatus newStatus) {
-		if (session.getStatus() != newStatus.getStatus()) {
-			session.setStatus(newStatus.getStatus());
-			session.setTimezone(newStatus.getTimeZone());
-			logger.info("New server status: " + newStatus.getStatus());
+	public void updateServerStatus(ConnectionStatus newStatus, String error) {
+		if (session.getStatus() != newStatus) {
+			session.setStatus(newStatus);
+			// session.setTimezone(newStatus.getTimeZone());
+			logger.info("New server status: " + newStatus);
 			if (session.getStatus() == ConnectionStatus.CONNECTED) {
 				session.setConnected(new Date());
 				session.setDisconnected(null);
@@ -153,10 +156,7 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 				DataManager.merge(session);
 				onConnectEstablished.notifyObservers(this);
 			} else if (session.getStatus() == ConnectionStatus.DISCONNECTED) {
-				if (newStatus.getError() != null) {
-					System.err.println(newStatus.getError());
-				}
-				session.setError(newStatus.getError());
+				session.setError(error);
 				session.setDisconnected(new Date());
 				session.setStatus(ConnectionStatus.DISCONNECTED);
 				DataManager.merge(session);
@@ -182,7 +182,7 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 			xmlLogger.info(data.substring(0, Math.min(50, data.length()-1)) +  "...");
 		}
 		
-		// DatabaseManager.writeInputEvent(session.getSessionId(), data);
+		DatabaseManager.writeInputEvent(session.getSessionId(), data);
 		
 		try {
 			XMLHandler handler = new XMLHandler(serverId, eventHolder);
@@ -195,16 +195,20 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 		}
     }
 	
-	private void init() {
+	private void init() throws ConnectionException {
 		if (hasInitialized) {
 			logger.info("Transaq library was already initialized");
 			return;
 		}
-		TransaqLibrary.Initialize(server.getLogDir(), server.getLogLevel().getLevel());
-		if (!TransaqLibrary.SetCallbackEx(this)) {
-			TransaqLibrary.UnInitialize();
-			throw new RuntimeException("SetCallbackEx failed!");
-		};
+		try {
+			TransaqLibrary.Initialize(server.getLogDir(), server.getLogLevel().getLevel());
+			if (!TransaqLibrary.SetCallbackEx(this)) {
+				TransaqLibrary.UnInitialize();
+				throw new ConnectionException("SetCallbackEx failed!");
+			};
+		} catch (Throwable ex) {
+			throw new ConnectionException(ex);
+		}
 		hasInitialized = true;
 	}
 	
@@ -223,6 +227,11 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 	}
 
 	public void connect(Consumer<TransaqServer> callback) throws ConnectionException {
+		
+		if (!marketSchedule.canConnect(LocalDateTime.now())) {
+			throw new ConnectionException("Cannot connect now! Closest connection time = " + marketSchedule.closestConnectDateTime(LocalDateTime.now()));
+		}
+		
 		long startTime = System.currentTimeMillis();
 		
 		if (!hasInitialized) {
@@ -254,7 +263,6 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 		}
 	}
 
-	@Override
 	public void disconnect() {
 		if (session.getStatus() == ConnectionStatus.CONNECTED) {
 			session.setStatus(ConnectionStatus.DISCONNECTING);
@@ -273,35 +281,39 @@ public class TransaqServer implements ITransaqServer, com.sun.jna.Callback, Clos
 		}
 	}
 
-	public void changePass(String newPass) throws CommandException {
-		logger.warn("Changing password!");
-		ChangePasswordCommand changePasswordCommand = new ChangePasswordCommand(server.getPassword(), newPass);
-		TransaqLibrary.SendCommand(changePasswordCommand.createConnectCommand());
-	}
-	
 	public void close() {
 		if (hasInitialized) {
 			TransaqLibrary.UnInitialize();
+			hasInitialized = false;
 		}
-		DatabaseManager.dbThreadGroup.interrupt();
 	}
 	
-	public void callUpdateStatus() {
+	public ConnectionStatus updateStatus() {
 		TransaqLibrary.SendCommand(Command.SERVER_STATUS);
+		synchronized (statusLock) {
+			try {
+				statusLock.wait(Constants.CHECK_CONNECTION_TIMEOUT);
+			} catch (InterruptedException e) {
+				updateServerStatus(ConnectionStatus.DISCONNECTED, "TransaqServer.updateStatus timeout, connection has lost");
+			}
+			return getStatus();
+		}
 	}
-	
-	@Override
+
 	public Date getServerTime() {
 		return DateUtils.addSeconds(new Date(), timeDiff);
 	}
 
-	@Override
 	public String getId() {
 		return serverId;
 	}
 	
 	public String getSessionId() {
 		return session.getServerId();
+	}
+
+	public MarketSchedule getMarketSchedule() {
+		return marketSchedule;
 	}
 
 	public void onConnect() {

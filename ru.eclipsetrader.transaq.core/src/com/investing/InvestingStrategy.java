@@ -25,9 +25,9 @@ public class InvestingStrategy implements Runnable {
 	boolean paused = false;
 
 	public InvestingStrategy() {
-		//list.add( new InvestingSecurity(TQSymbol.SiZ5, InvestingSymbol.USDRUB, 1, 900));
+		list.add( new InvestingSecurity(TQSymbol.SiZ5, InvestingSymbol.USDRUB, 5, 900));
 		//list.add( new InvestingSecurity(TQSymbol.EuZ5, InvestingSymbol.EURRUB, 1, 1800));
-		list.add( new InvestingSecurity(TQSymbol.BRV5, InvestingSymbol.BRENT, 1, 900));
+		list.add( new InvestingSecurity(TQSymbol.BRV5, InvestingSymbol.BRENT, 5, 900));
 		//list.add( new InvestingSecurity(TQSymbol.RIZ5, InvestingSymbol.RTS, 1, 900));
 		
 		TransaqServer.onConnectEstablished.addObserver(onConnected);

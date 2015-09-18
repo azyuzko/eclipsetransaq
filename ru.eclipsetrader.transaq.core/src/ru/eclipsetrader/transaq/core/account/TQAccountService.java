@@ -52,7 +52,7 @@ public class TQAccountService implements ITQAccountService, Observer<Holder<Posi
 		public String toString() {
 			StringBuilder sb = new StringBuilder();
 			sb.append("Free: " + getFree() + "\n");
-			fortsPosition.values().forEach(fp -> sb.append(fp.getSeccode() + " TotalNet:" + fp.getTotalnet() + " VarMargin:" + fp.getVarmargin()));
+			fortsPosition.values().forEach(fp -> sb.append(fp.getSeccode() + "   TotalNet: " + fp.getTotalnet() + "   VarMargin: " + fp.getVarmargin() + "\n"));
 			return sb.toString();
 		};
 		
@@ -213,10 +213,10 @@ public class TQAccountService implements ITQAccountService, Observer<Holder<Posi
 
 	public void persist() {
 		try {
-			DataManager.removeList(DataManager.getList(FortsPosition.class));
+			/*DataManager.removeList(DataManager.getList(FortsPosition.class));
 			DataManager.mergeList(fortsPosition.values());
 			
-			/*DataManager.removeList(DataManager.getList(FortsMoneyPosition.class));
+			DataManager.removeList(DataManager.getList(FortsMoneyPosition.class));
 			DataManager.removeList(DataManager.getList(MoneyPosition.class));
 			DataManager.removeList(DataManager.getList(SecurityPosition.class));
 			DataManager.mergeList(fortsMoneyPosition.values());

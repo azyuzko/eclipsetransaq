@@ -20,7 +20,6 @@ import ru.eclipsetrader.transaq.core.orders.TQOrderTradeService;
 import ru.eclipsetrader.transaq.core.securities.TQSecurityService;
 import ru.eclipsetrader.transaq.core.server.TransaqServer;
 import ru.eclipsetrader.transaq.core.util.MailUtils;
-import ru.eclipsetrader.transaq.core.util.Utils;
 
 public class SignalProcessor {
 	
@@ -31,6 +30,8 @@ public class SignalProcessor {
 	
 	double step = 0;
 	QuoteGlass quoteGlass;
+	
+	LinkedList<InvestingSignal> signalQueue = new LinkedList<InvestingSignal>();
 	
 	LinkedList<Order> orderQueue = new LinkedList<Order>(); 
 	
@@ -83,15 +84,15 @@ public class SignalProcessor {
 		return TQAccountService.getInstance().getAccount(symbol);
 	}
 	
-	public void changeState(InvestingSignal investingSignal) {
-		System.err.println(symbol + " Changing state from <" + investingSignal.getFromState() + ">  to  <" + investingSignal.getToState() + ">");
+	public void processSignal(InvestingSignal investingSignal) {
+		System.err.println(symbol + " Received signal  <" + investingSignal.getToState() + ">");
 		int position = getAccount().getPosition(symbol);
-		int count = investingSignal.getToState().getValue() * operQuantity;
-		logger.debug("Current position = " + position + " Count = " + count);
-		process(investingSignal.getDesc(), count);
+		int count = investingSignal.getToState().getValue() * operQuantity - position;
+		logger.debug("Current position = " + position + ", count = " + count);
+		process(count);
 	}
 	
-	void process(String strategyName, int count) {
+	void process(int count) {
 		logger.debug("Count: " + count);
 		if (count == 0) {
 			return;
@@ -99,16 +100,14 @@ public class SignalProcessor {
 		BuySell buySell = count > 0 ? BuySell.B : BuySell.S;
 		int quantity = Math.abs(count);
 		OrderRequest orderRequest = OrderRequest.createByMarketRequest(symbol, buySell, quantity);
-		orderRequest.setBrokerref(strategyName);
+		//orderRequest.setBrokerref();
 		logger.debug("Created order request " + orderRequest);
 		Order order = TQOrderTradeService.getInstance().createOrder(orderRequest, callback);
 		
 		String message = "";
 		if (order != null) {
-			message = "Executed signal <" + buySell + "> on <" + symbol.getSeccode() + ">, quantity = " + quantity + "<br>"
-					+ TQAccountService.getInstance().getAccount(symbol).toString().replace("\n", "<br>") +
-					"<br><br><br>" +
-					Utils.toString(order).replace("\n", "<br>");
+			message = "Executed signal <b>" + buySell + "</b> on <b>" + symbol.getSeccode() + "</b>, quantity = " + quantity + "<br>"
+					+ TQAccountService.getInstance().getAccount(symbol).toString().replace("\n", "<br>");
 		} else {
 			message = "Order execution failed with message <" + orderRequest.getErrorMessage() + ">";
 		}

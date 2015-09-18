@@ -81,7 +81,7 @@ public class MailUtils {
 	
 	static InternetAddress getFromAddress() {
 		try {
-			return new InternetAddress("zyuzkoa@gmail.com", "Transaq Event");
+			return new InternetAddress("tq@gmail.com", "Event");
 		} catch (UnsupportedEncodingException e) {
 			throw new RuntimeException(e);
 		}
@@ -122,6 +122,6 @@ public class MailUtils {
 
 	public static void main(String[] args) {
 		System.out.println(System.getProperty("user.dir"));
-		sendHTMLMail("visnet@mail.ru", "Subject 1", "Test message");
+	//	sendHTMLMail("visnet@mail.ru", "Subject 1", "Test message");
 	}
 }

@@ -29,7 +29,7 @@ public class ServerSession {
 	String error;
 
 	@Enumerated(EnumType.STRING)
-	ConnectionStatus status = ConnectionStatus.DISCONNECTED;
+	volatile ConnectionStatus status = ConnectionStatus.DISCONNECTED;
 	
 	public ServerSession() {
 		super();

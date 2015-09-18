@@ -61,7 +61,7 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 				OrderCallback callback = createRequests.remove(orderRequest);
 				// оповестим
 				if (order.getOrderno().equals("0") || order.getStatus() == OrderStatus.cancelled) {
-					logger.warn("Order cancelled : " + order.getOrderDesc());
+					logger.info("Order cancelled : " + order.getOrderDesc());
 					callback.onCreateError(orderRequest, order, order.getResult());
 				} else {
 					// посмотрим, есть ли у нас этот ордер
@@ -196,7 +196,7 @@ public class TQOrderTradeService implements ITQOrderTradeService {
 				throw new RuntimeException("OrderRequest <" + orderRequest.toString() + "> already has created order <" + orderRequest.getOrder().getOrderDesc() + ">");
 			}
 			String command = orderRequest.createNewOrderCommand();
-			logger.warn(orderRequest.getSymbol() + " Create new "  + orderRequest.getBuysell() + " order: " + command);						
+			logger.info(orderRequest.getSymbol() + " Create new "  + orderRequest.getBuysell() + " order: " + command);						
 			CommandResult result = TransaqLibrary.SendCommand(command);
 			if (result.getTransactionId() == null || result.getTransactionId().isEmpty()) {
 				orderRequest.setErrorMessage(result.getMessage());

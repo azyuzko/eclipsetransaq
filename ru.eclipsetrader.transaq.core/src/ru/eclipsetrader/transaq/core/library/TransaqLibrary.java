@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.xml.sax.InputSource;
 
+import ru.eclipsetrader.transaq.core.CoreActivator;
 import ru.eclipsetrader.transaq.core.exception.CommandException;
 import ru.eclipsetrader.transaq.core.model.internal.CommandResult;
 import ru.eclipsetrader.transaq.core.util.Utils;
@@ -18,16 +19,24 @@ import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 
 public class TransaqLibrary {
-	
+
 	static Logger logger = LogManager.getLogger(TransaqLibrary.class);
 	static Logger xmlLogger = LogManager.getLogger("XMLTrace");
 
-	static ITransaqLibrary library = (ITransaqLibrary)Native.loadLibrary(
-			"x86".equals(System.getProperty("os.arch")) ? "txmlconnector" :  "txmlconnector64", 
-					ITransaqLibrary.class);;
+	static ITransaqLibrary library;
+	
+	static {
+		String libName = "x86".equals(System.getProperty("os.arch")) ? "txmlconnector"	: "txmlconnector64";
+		if ( CoreActivator.getContext() == null) { // start without osgi
+			String libDir = "x86".equals(System.getProperty("os.arch")) ? "win32-x86"	: "win32-x86-64";
+			library = (ITransaqLibrary) Native.loadLibrary(System.getProperty("user.dir") + "\\" + libDir + "\\" + libName, ITransaqLibrary.class);
+		} else {
+			library = (ITransaqLibrary) Native.loadLibrary(libName, ITransaqLibrary.class);
+		}
+	}
 
 	public static void Initialize(String path, int level) {
-		//System.setProperty("jna.encoding", "UTF-8");
+		// System.setProperty("jna.encoding", "UTF-8");
 		Pointer pResult = library.Initialize(path, level);
 		if (pResult != null) {
 			String error = pResult.getString(0);
@@ -44,9 +53,9 @@ public class TransaqLibrary {
 	}
 
 	public static CommandResult SendCommand(String data) {
-		
-		//DatabaseManager.writeOutputEvent(data);
-		
+
+		// DatabaseManager.writeOutputEvent(data);
+
 		if (xmlLogger.isDebugEnabled()) {
 			xmlLogger.debug("Send " + data);
 		}
@@ -54,7 +63,8 @@ public class TransaqLibrary {
 			Pointer pResult = library.SendCommand(data);
 			String result = pResult.getString(0);
 			if (xmlLogger.isDebugEnabled()) {
-				xmlLogger.debug("SendCommand result = " + result.replace("\n", ""));
+				xmlLogger.debug("SendCommand result = "
+						+ result.replace("\n", ""));
 			}
 			library.FreeMemory(pResult);
 			ResultHandler handler = new ResultHandler();
@@ -65,7 +75,7 @@ public class TransaqLibrary {
 				throw new CommandException(e);
 			}
 			CommandResult commandResult = handler.getCommandResult();
-			if (!commandResult.isSuccess()) { 
+			if (!commandResult.isSuccess()) {
 				throw new CommandException(commandResult);
 			}
 			return commandResult;
@@ -93,5 +103,4 @@ public class TransaqLibrary {
 		}
 	}
 
-	
 }

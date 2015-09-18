@@ -1,25 +1,37 @@
 package com.investing;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDateTime;
 
-import ru.eclipsetrader.transaq.core.model.internal.Trade;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 
-
+@Entity
 public class InvestingSignal {
-	String code;
+
+	@Enumerated(EnumType.STRING)
+	InvestingSymbol investingSymbol; // инструмент
 	
-	int timeframe;
-	InvestingState fromState;
-	InvestingState toState;
+	double price; // цена, по которой сработал сигнал
 	
-	List<Trade> trades = new ArrayList<Trade>();
+	@Temporal(TemporalType.TIMESTAMP)
+	final LocalDateTime dateTime; // время создания сигнала
 	
-	public InvestingSignal(int timeframe, InvestingState fromState, InvestingState toState, String desc) {
+	int timeframe;  // таймфрейм
+	@Enumerated(EnumType.STRING)
+	InvestingState state;   // в какой состояние перейти
+
+	boolean executed;	// был ли исполнен сигнал
+	LocalDateTime executionDateTime; // время исполнения сигнала
+	
+	public InvestingSignal(InvestingSymbol investingSymbol, double price, int timeframe, InvestingState state) {
+		this.investingSymbol = investingSymbol;
+		this.price = price;
 		this.timeframe = timeframe;
-		this.fromState = fromState;
-		this.toState = toState;
-		this.code = desc;
+		this.state = state;
+		this.dateTime = LocalDateTime.now();
 	}
 
 	public int getTimeframe() {
@@ -30,28 +42,35 @@ public class InvestingSignal {
 		this.timeframe = timeframe;
 	}
 
-	public InvestingState getFromState() {
-		return fromState;
-	}
-
-	public void setFromState(InvestingState fromState) {
-		this.fromState = fromState;
-	}
-
 	public InvestingState getToState() {
-		return toState;
+		return state;
 	}
 
 	public void setToState(InvestingState toState) {
-		this.toState = toState;
+		this.state = toState;
 	}
 
-	public String getDesc() {
-		return code;
+	public InvestingSymbol getInvestingSymbol() {
+		return investingSymbol;
 	}
 
-	public void setDesc(String desc) {
-		this.code = desc;
+	public double getPrice() {
+		return price;
 	}
+
+
+	public boolean isExecuted() {
+		return executed;
+	}
+
+	public void setExecuted(boolean executed) {
+		this.executed = executed;
+	}
+
+	public LocalDateTime getDateTime() {
+		return dateTime;
+	}
+
+	
 
 }

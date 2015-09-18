@@ -54,7 +54,7 @@ public class CoreActivator implements BundleActivator {
 		}
 	}
 
-	static BundleContext getContext() {
+	public static BundleContext getContext() {
 		return context;
 	}
 
@@ -64,12 +64,18 @@ public class CoreActivator implements BundleActivator {
 		registerCommandProvider();
 
 		registerServices();
+		
+		registerScheduleServices();
 
 /*		Thread thread = new Thread(() -> {
 			TransaqServerManager.getInstance().connect(Constants.DEFAULT_SERVER_ID);
 		});
 		thread.setDaemon(true);
 		thread.start();*/
+	}
+	
+	public void registerScheduleServices() {
+		
 	}
 
 	public void registerServices() {
